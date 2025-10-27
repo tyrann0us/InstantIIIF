@@ -1,0 +1,28 @@
+{
+  "name": "tyrann0us/instantiiif",
+  "description": "MediaWiki Foreign FileRepo that hotlinks images from IIIF sources (Presentation API v2/v3).",
+  "license": "MIT",
+  "type": "library",
+  "require": {
+    "php": ">=8.4",
+    "ubl/php-iiif-prezi-reader": "^0.3.0"
+  },
+  "require-dev": {
+    "phpstan/phpstan": "^2.1",
+    "syde/phpcs": "^1.0"
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "config": {
+    "allow-plugins": {
+      "dealerdirect/phpcodesniffer-composer-installer": true
+    },
+    "optimize-autoloader": true,
+    "sort-packages": true
+  },
+  "scripts": {
+    "phpcs": "@php ./vendor/bin/phpcs",
+    "phpcs:fix": "@php ./vendor/bin/phpcbf",
+    "phpstan": "@php ./vendor/bin/phpstan analyse --memory-limit=1G"
+  }
+}

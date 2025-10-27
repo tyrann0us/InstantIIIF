@@ -1,0 +1,8 @@
+parameters:
+  level: 8
+  paths:
+    - src/
+  treatPhpDocTypesAsCertain: false
+  scanFiles:
+    - .phpstan/stubs/MediaWiki.stub.php
+    - .phpstan/stubs/MediaWikiNamespaced.stub.php
