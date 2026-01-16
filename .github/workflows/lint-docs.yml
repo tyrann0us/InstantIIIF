@@ -1,0 +1,12 @@
+name: 'Lint documentation'
+on:
+  workflow_dispatch: null
+  pull_request:
+    paths:
+      - README.md
+      - 'docs/**/*.md'
+jobs:
+  wp-scripts-lint:
+    uses: inpsyde/reusable-workflows/.github/workflows/wp-scripts-lint.yml@main
+    with:
+      LINT_TOOLS: '["md-docs"]'
