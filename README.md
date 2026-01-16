@@ -34,6 +34,7 @@ $wgForeignFileRepos[] = [
 
 $wgInstantIIIFDefaultTimeout = 8; // optional
 ```
+
 > [!NOTE]
 > Currently, [Deutsche Fotothek](https://www.deutschefotothek.de/) is the only IIIF provider supported.
 
