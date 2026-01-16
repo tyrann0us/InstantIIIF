@@ -21,15 +21,15 @@ class Hooks
 
     /**
      * Adds data-iiif-title spoofed ending to <img>.
-     * Example: “File:df_dk_0007450.jpg”
+     * Example: "File:df_dk_0007450.jpg"
      *
      * @param array<string, mixed> $imgAttrs
-     * @param array<string, mixed> $linkAttrs
+     * @param array<string, mixed>|bool $linkAttrs
      */
     public static function onThumbnailBeforeProduceHTML(
         ThumbnailImage $thumb,
         array &$imgAttrs,
-        array &$linkAttrs
+        array|bool &$linkAttrs
     ): bool {
 
         $file = $thumb->getFile();
