@@ -1,0 +1,20 @@
+{
+    "name": "instantiiif",
+    "description": "MediaWiki extension to provide a `FileRepo` for file links (`[[File:...]]`) that hotlinks images from IIIF sources (Presentation API v2/v3).",
+    "license": "MIT",
+    "version": "1.0.0",
+    "author": {
+        "name": "Syde GmbH",
+        "email": "hello@syde.com",
+        "url": "https://syde.com/"
+    },
+    "engines": {
+        "node": "~18.0"
+    },
+    "devDependencies": {
+        "@wordpress/scripts": "^30.0.0"
+    },
+    "scripts": {
+        "lint:md": "wp-scripts lint-md-docs README.md docs/**/*.md"
+    }
+}
