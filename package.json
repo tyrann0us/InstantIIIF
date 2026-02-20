@@ -12,7 +12,7 @@
         "node": "~18.0"
     },
     "devDependencies": {
-        "@wordpress/scripts": "^31.4.0"
+        "@wordpress/scripts": "^31.5.0"
     },
     "scripts": {
         "lint:md": "wp-scripts lint-md-docs README.md docs/**/*.md"
