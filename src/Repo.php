@@ -17,6 +17,11 @@ class Repo extends FileRepo
      */
     public function __construct(array $info)
     {
+        // FileBackendGroup requires 'directory' for auto-backend creation;
+        // IIIF has no local storage, so we default to the upload dir.
+        if (!isset($info['directory'])) {
+            $info['directory'] = $GLOBALS['wgUploadDirectory'] ?? '';
+        }
         parent::__construct($info);
         $this->iiifSources = $info['iiifSources'] ?? [];
     }
