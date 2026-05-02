@@ -2,17 +2,34 @@
   "name": "tyrann0us/instantiiif",
   "description": "MediaWiki Foreign FileRepo that hotlinks images from IIIF sources (Presentation API v2/v3).",
   "license": "MIT",
-  "type": "library",
+  "type": "mediawiki-extension",
+  "keywords": [
+    "mediawiki",
+    "iiif",
+    "images",
+    "digital-humanities"
+  ],
   "require": {
-    "php": ">=8.4",
-    "ubl/php-iiif-prezi-reader": "^0.3.0"
+    "php": ">=8.2"
   },
   "require-dev": {
+    "deptrac/deptrac": "^4.4",
     "phpstan/phpstan": "^2.1",
+    "phpunit/phpunit": "^11.0",
     "syde/phpcs": "^1.0"
   },
   "minimum-stability": "dev",
   "prefer-stable": true,
+  "autoload": {
+    "psr-4": {
+      "MediaWiki\\Extension\\InstantIIIF\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "MediaWiki\\Extension\\InstantIIIF\\Tests\\": "tests/phpunit/"
+    }
+  },
   "config": {
     "allow-plugins": {
       "dealerdirect/phpcodesniffer-composer-installer": true
@@ -21,8 +38,11 @@
     "sort-packages": true
   },
   "scripts": {
+    "deptrac": "@php ./vendor/bin/deptrac analyse --config-file=deptrac.yaml",
     "phpcs": "@php ./vendor/bin/phpcs",
     "phpcs:fix": "@php ./vendor/bin/phpcbf",
-    "phpstan": "@php ./vendor/bin/phpstan analyse --memory-limit=1G"
+    "phpstan": "@php ./vendor/bin/phpstan analyse --memory-limit=1G",
+    "test": "@php ./vendor/bin/phpunit",
+    "test:coverage": "@php ./vendor/bin/phpunit --coverage-html=temp/coverage"
   }
 }

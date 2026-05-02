@@ -1,0 +1,58 @@
+{
+  "name": "InstantIIIF",
+  "version": "0.1.0",
+  "author": [
+    "Philipp Bammes"
+  ],
+  "licenseName": "MIT",
+  "type": "other",
+  "requires": {
+    "MediaWiki": ">= 1.39"
+  },
+  "load_composer_autoloader": true,
+  "AutoloadNamespaces": {
+    "MediaWiki\\Extension\\InstantIIIF\\": "includes/"
+  },
+  "config": {
+    "InstantIIIFDefaultTimeout": {
+      "value": 5,
+      "description": "HTTP timeout in seconds for IIIF fetches"
+    }
+  },
+  "manifest_version": 2,
+  "ResourceFileModulePaths": {
+    "localBasePath": "",
+    "remoteExtPath": "InstantIIIF"
+  },
+  "APIListModules": {
+    "iiifsearch": "MediaWiki\\Extension\\InstantIIIF\\Api\\ApiQueryIiifSearch"
+  },
+  "ResourceModules": {
+    "ext.instantIIIF.mmvTitlePatch": {
+      "scripts": [ "resources/mmv-title-patch.js" ],
+      "targets": [ "desktop", "mobile" ],
+      "dependencies": [ "mediawiki.Title" ],
+      "position": "top"
+    },
+    "ext.instantIIIF.veProvider": {
+      "scripts": [
+        "resources/ve-iiif-provider.js"
+      ],
+      "dependencies": [
+        "mediawiki.api",
+        "mediawiki.widgets",
+        "oojs",
+        "oojs-ui-core"
+      ],
+      "targets": [ "desktop", "mobile" ]
+    }
+  },
+  "Hooks": {
+    "BeforePageDisplay": [
+      "MediaWiki\\Extension\\InstantIIIF\\Hooks::onBeforePageDisplay"
+    ],
+    "ThumbnailBeforeProduceHTML": [
+      "MediaWiki\\Extension\\InstantIIIF\\Hooks::onThumbnailBeforeProduceHTML"
+    ]
+  }
+}

@@ -1,9 +1,6 @@
 <?php
 /**
  * PHPStan stubs for MediaWiki global classes used by InstantIIIF.
- *
- * These stubs provide type information for static analysis without
- * requiring MediaWiki to be installed.
  */
 
 // Global constants
@@ -93,42 +90,6 @@ class MWNamespace {
     public static function getCanonicalName(int $index): string|false {}
 }
 
-class ApiQueryBase {
-    /** @var ApiQuery */
-    protected $mQuery;
-
-    public function __construct(ApiQuery $query, string $moduleName) {}
-    public function execute(): void {}
-
-    /** @return array<string, mixed> */
-    public function extractRequestParams(): array {}
-    public function getModuleName(): string {}
-    public function getResult(): ApiResult {}
-
-    /** @return array<string, array<string, mixed>> */
-    public function getAllowedParams(): array {}
-
-    /** @return array<string, string> */
-    protected function getExamplesMessages(): array {}
-}
-
-class ApiQuery {
-}
-
-class ApiResult {
-    /**
-     * @param array<string|int>|null $path
-     * @param string|int $name
-     * @param mixed $value
-     */
-    public function addValue($path, $name, $value): bool {}
-}
-
-class GlobalVarConfig {
-    /** @return mixed */
-    public function get(string $name) {}
-}
-
 class WANObjectCache {
     public function makeKey(string ...$components): string {}
     /**
@@ -143,18 +104,10 @@ class WANObjectCache {
 
 class MWHttpRequest {
     public function execute(): StatusValue {}
-    public function getContent(): string {}
+    public function getContent(): ?string {}
 }
 
 class StatusValue {
     public function isOK(): bool {}
     public function isGood(): bool {}
-}
-
-class RepoGroup {
-    /** @return array<string, array<string, mixed>> */
-    public function getLocalInfo(): array {}
-    /** @return array<int, array<string, mixed>> */
-    public function getForeignInfo(): array {}
-    public function getRepo(string $name): ?FileRepo {}
 }

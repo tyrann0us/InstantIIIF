@@ -9,6 +9,7 @@
 # IDE & System Files
 /.DS_Store
 /.idea/
+/.vscode/
 
 # Logs & Cache
 *.log
@@ -18,9 +19,8 @@
 # Package Management
 /node_modules/
 /vendor/
-npm-debug.log*
+package-lock.json
+composer.lock
 
 # Temporary Files & Directories
 /temp/
-/assets/
-typings/

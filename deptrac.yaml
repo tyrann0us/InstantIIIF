@@ -1,0 +1,28 @@
+deptrac:
+  paths:
+    - ./src
+  exclude_files:
+    - '#.*test.*#i'
+  layers:
+    - name: Domain
+      collectors:
+        - type: classLike
+          value: ^MediaWiki\\Extension\\InstantIIIF\\Domain\\.*
+    - name: Application
+      collectors:
+        - type: classLike
+          value: ^MediaWiki\\Extension\\InstantIIIF\\Application\\.*
+    - name: Infrastructure
+      collectors:
+        - type: classLike
+          value: ^MediaWiki\\Extension\\InstantIIIF\\Infrastructure\\.*
+  ruleset:
+    # Domain has NO dependencies on other layers
+    Domain: ~
+    # Application depends only on Domain
+    Application:
+      - Domain
+    # Infrastructure depends on Application and Domain
+    Infrastructure:
+      - Application
+      - Domain

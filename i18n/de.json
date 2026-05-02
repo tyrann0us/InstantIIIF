@@ -4,5 +4,6 @@
       "Philipp Bammes"
     ]
   },
+  "instantiiif-desc": "MediaWiki Foreign FileRepo, das Bilder aus IIIF-Quellen (Presentation API v2/v3) hotlinkt.",
   "iiif-unresolved": "IIIF-Bild für diese Datei konnte nicht aufgelöst werden."
 }
