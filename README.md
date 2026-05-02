@@ -46,6 +46,7 @@ $wgForeignFileRepos[] = [
     'name'  => 'iiif',
     'class' => \MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\Repo::class,
     'hashLevels' => 0,
+    'directory' => $wgUploadDirectory,
     'iiifSources' => [
         [
             'id' => 'fotothek',
