@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace MediaWiki\Extension\InstantIIIF;
 
 use FileRepo;
-use Title;
+use MediaWiki\Title\Title;
 
 class Repo extends FileRepo
 {
