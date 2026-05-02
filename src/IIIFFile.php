@@ -388,6 +388,7 @@ class IIIFFile extends File
      *     manifestObj: object
      * }|null
      */
+    // phpcs:ignore SlevomatCodingStandard.Complexity.Cognitive.ComplexityTooHigh -- Pending full refactor
     protected function ensureResolved(): ?array
     {
         if ($this->resolved !== null) {
@@ -430,6 +431,10 @@ class IIIFFile extends File
             }
             $manifestRaw = json_decode($json, true) ?: [];
 
+            if ($this->isErrorManifest($manifestRaw)) {
+                continue;
+            }
+
             $this->resolved = [
                 'provider' => (string) ($src['id'] ?? 'default'),
                 'objectId' => $objId,
@@ -442,6 +447,22 @@ class IIIFFile extends File
 
         $this->resolved = null;
         return null;
+    }
+
+    /** @param array<string, mixed> $manifest */
+    private function isErrorManifest(array $manifest): bool
+    {
+        $label = $manifest['label'] ?? '';
+        if (is_string($label) && str_starts_with($label, 'error:')) {
+            return true;
+        }
+
+        $canvasId = $manifest['sequences'][0]['canvases'][0]['@id'] ?? '';
+        if (is_string($canvasId) && str_starts_with($canvasId, 'error/')) {
+            return true;
+        }
+
+        return false;
     }
 
     protected function removeImageExtension(string $filename): string
