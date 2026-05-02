@@ -7,8 +7,8 @@ namespace MediaWiki\Extension\InstantIIIF;
 use File;
 use MediaTransformError;
 use MediaWiki\MediaWikiServices;
+use MediaWiki\Title\Title;
 use ThumbnailImage;
-use Title;
 use Ubl\Iiif\Tools\IiifHelper;
 
 /**

@@ -9,7 +9,7 @@
   "license-name": "MIT",
   "type": "other",
   "requires": {
-    "MediaWiki": ">= 1.39"
+    "MediaWiki": ">= 1.44"
   },
   "load_composer_autoloader": true,
   "AutoloadNamespaces": {

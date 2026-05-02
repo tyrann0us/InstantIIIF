@@ -7,6 +7,8 @@
  */
 
 // Global constants
+use MediaWiki\Title\Title;
+
 define('MEDIATYPE_BITMAP', 'BITMAP');
 define('NS_FILE', 6);
 
@@ -51,16 +53,6 @@ class File {
      * @return ThumbnailImage|MediaTransformError
      */
     public function transform($params, $flags = 0) {}
-}
-
-class Title {
-    public static function newFromText(string $text, int $defaultNamespace = 0): ?Title {}
-    public static function makeTitleSafe(int $ns, string $title, string $fragment = '', string $interwiki = ''): ?Title {}
-    public function getDBkey(): string {}
-    public function getText(): string {}
-    public function getNamespace(): int {}
-    public function getNsText(): string {}
-    public function getPrefixedText(): string {}
 }
 
 class ThumbnailImage {
