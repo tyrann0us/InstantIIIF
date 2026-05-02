@@ -388,6 +388,7 @@ class IIIFFile extends File
      *     manifestObj: object
      * }|null
      */
+    // phpcs:ignore SlevomatCodingStandard.Complexity.Cognitive.ComplexityTooHigh -- Pending full refactor
     protected function ensureResolved(): ?array
     {
         if ($this->resolved !== null) {
