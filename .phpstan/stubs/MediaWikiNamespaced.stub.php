@@ -3,6 +3,18 @@
  * PHPStan stubs for MediaWiki namespaced classes.
  */
 
+namespace MediaWiki\Title;
+
+class Title {
+    public static function newFromText(string $text, int $defaultNamespace = 0): ?Title {}
+    public static function makeTitleSafe(int $ns, string $title, string $fragment = '', string $interwiki = ''): ?Title {}
+    public function getDBkey(): string {}
+    public function getText(): string {}
+    public function getNamespace(): int {}
+    public function getNsText(): string {}
+    public function getPrefixedText(): string {}
+}
+
 namespace MediaWiki;
 
 class MediaWikiServices {
