@@ -1,10 +1,12 @@
 {
   "name": "InstantIIIF",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "author": [
-    "Philipp Bammes"
+    "[https://github.com/tyrann0us Philipp Bammes]"
   ],
-  "licenseName": "MIT",
+  "url": "https://github.com/tyrann0us/InstantIIIF",
+  "descriptionmsg": "instantiiif-desc",
+  "license-name": "MIT",
   "type": "other",
   "requires": {
     "MediaWiki": ">= 1.39"
@@ -20,15 +22,27 @@
     }
   },
   "manifest_version": 2,
+  "MessagesDirs": {
+    "InstantIIIF": [
+      "i18n"
+    ]
+  },
   "ResourceFileModulePaths": {
     "localBasePath": "",
     "remoteExtPath": "InstantIIIF"
   },
   "ResourceModules": {
     "ext.instantIIIF.mmvTitlePatch": {
-      "scripts": [ "resources/mmv-title-patch.js" ],
-      "targets": [ "desktop", "mobile" ],
-      "dependencies": [ "mediawiki.Title" ],
+      "scripts": [
+        "resources/mmv-title-patch.js"
+      ],
+      "targets": [
+        "desktop",
+        "mobile"
+      ],
+      "dependencies": [
+        "mediawiki.Title"
+      ],
       "position": "top"
     }
   },

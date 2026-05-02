@@ -2,7 +2,12 @@
   "name": "tyrann0us/instantiiif",
   "description": "MediaWiki Foreign FileRepo that hotlinks images from IIIF sources (Presentation API v2/v3).",
   "license": "MIT",
-  "type": "library",
+  "type": "mediawiki-extension",
+  "keywords": [
+    "mediawiki",
+    "iiif",
+    "images"
+  ],
   "require": {
     "php": ">=8.4",
     "ubl/php-iiif-prezi-reader": "^0.3.0"
