@@ -17,15 +17,22 @@ class Title {
 
 namespace MediaWiki;
 
+use GlobalVarConfig;
+use MediaWiki\Http\HttpRequestFactory;
+use RepoGroup;
+use WANObjectCache;
+
 class MediaWikiServices {
     public static function getInstance(): self {}
-    public function getMainConfig(): \GlobalVarConfig {}
-    public function getMainWANObjectCache(): \WANObjectCache {}
-    public function getHttpRequestFactory(): \MediaWiki\Http\HttpRequestFactory {}
-    public function getRepoGroup(): \RepoGroup {}
+    public function getMainConfig(): GlobalVarConfig {}
+    public function getMainWANObjectCache(): WANObjectCache {}
+    public function getHttpRequestFactory(): HttpRequestFactory {}
+    public function getRepoGroup(): RepoGroup {}
 }
 
 namespace MediaWiki\Http;
+
+use MWHttpRequest;
 
 class HttpRequestFactory {
     /**
@@ -33,7 +40,20 @@ class HttpRequestFactory {
      * @param array<string, mixed> $options
      * @param string|null $caller
      */
-    public function create(string $url, array $options = [], ?string $caller = null): \MWHttpRequest {}
+    public function create(string $url, array $options = [], ?string $caller = null): MWHttpRequest {}
+}
+
+namespace MediaWiki\Page;
+
+use File;
+use OutputPage;
+
+class ImageHistoryList {
+    public function getOutput(): OutputPage {}
+}
+
+class ImagePage {
+    public function getDisplayedFile(): File {}
 }
 
 namespace Wikimedia\ParamValidator;

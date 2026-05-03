@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace MediaWiki\Extension\InstantIIIF;
 
+use File;
+use MediaWiki\Page\ImageHistoryList;
+use MediaWiki\Page\ImagePage;
 use MWNamespace;
 use OutputPage;
 use Skin;
@@ -58,5 +61,58 @@ class Hooks
             $imgAttrs['data-file-height'] = $thumb->getHeight();
         }
         return true;
+    }
+
+    /**
+     * Hide the file history section for IIIF files — version history is meaningless
+     * for hotlinked remote resources, and the single auto-generated row shows
+     * misleading data (no user, today's date).
+     *
+     * Suppressing the row alone still leaves the section heading rendered by
+     * ImageHistoryPseudoPager::getBody(), so we also inject CSS to hide it.
+     *
+     * Also hide the file info below the image; it shows 0 bytes file size.
+     *
+     * @param ImageHistoryList $imageHistoryList
+     * @param File $file
+     * @param string &$line
+     * @param string|null &$css
+     * @return bool
+     */
+    public static function onImagePageFileHistoryLine(
+        ImageHistoryList $imageHistoryList,
+        File $file,
+        string &$line,
+        ?string &$css
+    ): bool {
+
+        if (!$file instanceof IIIFFile) {
+            return true;
+        }
+
+        $imageHistoryList->getOutput()->addInlineStyle(
+            'h2#filehistory, #mw-imagepage-section-filehistory { display: none; }' .
+            ' span.fileInfo { display: none; }'
+        );
+        $line = '';
+        return false;
+    }
+
+    /**
+     * Remove the "File history" entry from the file page TOC for IIIF files.
+     *
+     * @param ImagePage $page
+     * @param string[] &$toc
+     */
+    public static function onImagePageShowTOC(ImagePage $page, array &$toc): void
+    {
+        if (!$page->getDisplayedFile() instanceof IIIFFile) {
+            return;
+        }
+
+        $toc = array_values(array_filter(
+            $toc,
+            static fn (string $item) => !str_contains($item, '#filehistory')
+        ));
     }
 }

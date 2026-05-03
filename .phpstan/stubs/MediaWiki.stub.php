@@ -76,6 +76,7 @@ class MediaTransformError {
 class OutputPage {
     /** @param string|string[] $modules */
     public function addModules($modules): void {}
+    public function addInlineStyle(string $style): void {}
 }
 
 class Skin {

@@ -52,6 +52,12 @@
     ],
     "ThumbnailBeforeProduceHTML": [
       "MediaWiki\\Extension\\InstantIIIF\\Hooks::onThumbnailBeforeProduceHTML"
+    ],
+    "ImagePageFileHistoryLine": [
+      "MediaWiki\\Extension\\InstantIIIF\\Hooks::onImagePageFileHistoryLine"
+    ],
+    "ImagePageShowTOC": [
+      "MediaWiki\\Extension\\InstantIIIF\\Hooks::onImagePageShowTOC"
     ]
   }
 }
