@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace MediaWiki\Extension\InstantIIIF;
 
 use File;
+use MediaWiki\Context\IContextSource;
 use MediaWiki\Page\ImageHistoryList;
 use MediaWiki\Page\ImagePage;
 use MWNamespace;
@@ -36,7 +37,7 @@ class Hooks
     ): bool {
 
         $file = $thumb->getFile();
-        if ($file instanceof \MediaWiki\Extension\InstantIIIF\IIIFFile) {
+        if ($file instanceof IIIFFile) {
             $title = $file->getTitle();
             if ($title === null) {
                 return true;
@@ -114,5 +115,36 @@ class Hooks
             $toc,
             static fn (string $item) => !str_contains($item, '#filehistory')
         ));
+    }
+
+    /**
+     * Suppress the spurious upload date from extmetadata for IIIF files.
+     *
+     * FormatMetadata falls back to wfTimestamp($file->getTimestamp()), which
+     * returns "now" for IIIF files (no local storage → getTimestamp() is false).
+     * The value cannot simply be set to '' because CommonsMetadata's
+     * normalizeMetadataTimestamps() would re-parse the empty string back into
+     * "now" via wfTimestamp. The '<>' sentinel survives that step (wfTimestamp
+     * returns false for non-date strings) and is stripped to '' by MMV's
+     * parseExtmeta, which then skips the "Uploaded" label for falsy values.
+     *
+     * @param array<string, mixed> &$combinedMeta
+     * @param File $file
+     * @param IContextSource $context
+     * @param bool $single
+     * @param int|null &$maxCacheTime
+     */
+    public static function onGetExtendedMetadata(
+        array &$combinedMeta,
+        File $file,
+        IContextSource $context,
+        bool $single,
+        ?int &$maxCacheTime
+    ): void {
+
+        if (!$file instanceof IIIFFile) {
+            return;
+        }
+        $combinedMeta['DateTime'] = ['value' => '<>', 'source' => 'extension'];
     }
 }
