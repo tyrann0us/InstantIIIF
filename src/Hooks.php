@@ -118,12 +118,15 @@ class Hooks
     }
 
     /**
-     * Remove the wrong upload date from extmetadata for IIIF files.
+     * Suppress the spurious upload date from extmetadata for IIIF files.
      *
-     * FormatMetadata generates a DateTime fallback via
-     * wfTimestamp(TS_ISO_8601, $file->getTimestamp()).
-     * Since IIIFFile::getTimestamp() returns false (no local storage), wfTimestamp interprets
-     * false as "now" and produces today's date. MMV then displays it as "Uploaded: <today>".
+     * FormatMetadata falls back to wfTimestamp($file->getTimestamp()), which
+     * returns "now" for IIIF files (no local storage → getTimestamp() is false).
+     * The value cannot simply be set to '' because CommonsMetadata's
+     * normalizeMetadataTimestamps() would re-parse the empty string back into
+     * "now" via wfTimestamp. The '<>' sentinel survives that step (wfTimestamp
+     * returns false for non-date strings) and is stripped to '' by MMV's
+     * parseExtmeta, which then skips the "Uploaded" label for falsy values.
      *
      * @param array<string, mixed> &$combinedMeta
      * @param File $file
@@ -142,10 +145,6 @@ class Hooks
         if (!$file instanceof IIIFFile) {
             return;
         }
-        // Value must survive CommonsMetadata's normalizeMetadataTimestamps (which converts
-        // empty strings to "now" via wfTimestamp) and MMV's parseExtmeta which strips HTML
-        // tags and skips display when the result is falsy.
         $combinedMeta['DateTime'] = ['value' => '<>', 'source' => 'mediawiki-metadata'];
-        $maxCacheTime = 0;
     }
 }
