@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace MediaWiki\Extension\InstantIIIF;
 
 use File;
+use MediaWiki\Context\IContextSource;
 use MediaWiki\Page\ImageHistoryList;
 use MediaWiki\Page\ImagePage;
 use MWNamespace;
@@ -36,7 +37,7 @@ class Hooks
     ): bool {
 
         $file = $thumb->getFile();
-        if ($file instanceof \MediaWiki\Extension\InstantIIIF\IIIFFile) {
+        if ($file instanceof IIIFFile) {
             $title = $file->getTitle();
             if ($title === null) {
                 return true;
@@ -114,5 +115,37 @@ class Hooks
             $toc,
             static fn (string $item) => !str_contains($item, '#filehistory')
         ));
+    }
+
+    /**
+     * Remove the wrong upload date from extmetadata for IIIF files.
+     *
+     * FormatMetadata generates a DateTime fallback via
+     * wfTimestamp(TS_ISO_8601, $file->getTimestamp()).
+     * Since IIIFFile::getTimestamp() returns false (no local storage), wfTimestamp interprets
+     * false as "now" and produces today's date. MMV then displays it as "Uploaded: <today>".
+     *
+     * @param array<string, mixed> &$combinedMeta
+     * @param File $file
+     * @param IContextSource $context
+     * @param bool $single
+     * @param int|null &$maxCacheTime
+     */
+    public static function onGetExtendedMetadata(
+        array &$combinedMeta,
+        File $file,
+        IContextSource $context,
+        bool $single,
+        ?int &$maxCacheTime
+    ): void {
+
+        if (!$file instanceof IIIFFile) {
+            return;
+        }
+        // Value must survive CommonsMetadata's normalizeMetadataTimestamps (which converts
+        // empty strings to "now" via wfTimestamp) and MMV's parseExtmeta which strips HTML
+        // tags and skips display when the result is falsy.
+        $combinedMeta['DateTime'] = ['value' => '<>', 'source' => 'mediawiki-metadata'];
+        $maxCacheTime = 0;
     }
 }

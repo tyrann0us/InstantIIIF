@@ -58,6 +58,9 @@
     ],
     "ImagePageShowTOC": [
       "MediaWiki\\Extension\\InstantIIIF\\Hooks::onImagePageShowTOC"
+    ],
+    "GetExtendedMetadata": [
+      "MediaWiki\\Extension\\InstantIIIF\\Hooks::onGetExtendedMetadata"
     ]
   }
 }
