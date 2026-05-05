@@ -145,6 +145,6 @@ class Hooks
         if (!$file instanceof IIIFFile) {
             return;
         }
-        $combinedMeta['DateTime'] = ['value' => '<>', 'source' => 'mediawiki-metadata'];
+        $combinedMeta['DateTime'] = ['value' => '<>', 'source' => 'extension'];
     }
 }
