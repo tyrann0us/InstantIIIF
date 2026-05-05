@@ -43,6 +43,11 @@ class HttpRequestFactory {
     public function create(string $url, array $options = [], ?string $caller = null): MWHttpRequest {}
 }
 
+namespace MediaWiki\Context;
+
+interface IContextSource {
+}
+
 namespace MediaWiki\Page;
 
 use File;
