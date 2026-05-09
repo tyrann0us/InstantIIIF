@@ -32,9 +32,9 @@
     "remoteExtPath": "InstantIIIF"
   },
   "ResourceModules": {
-    "ext.instantIIIF.mmvTitlePatch": {
+    "ext.instantIIIF.mmvPatch": {
       "scripts": [
-        "resources/mmv-title-patch.js"
+        "resources/mmv-patch.js"
       ],
       "targets": [
         "desktop",

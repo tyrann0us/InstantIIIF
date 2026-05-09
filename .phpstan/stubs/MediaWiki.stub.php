@@ -144,6 +144,20 @@ class StatusValue {
     public function isGood(): bool {}
 }
 
+/**
+ * @param string $key
+ * @param mixed ...$params
+ * @return Message
+ */
+function wfMessage(string $key, ...$params): Message {}
+
+class Message {
+    public function text(): string {}
+    public function plain(): string {}
+    public function parse(): string {}
+    public function inContentLanguage(): self {}
+}
+
 class RepoGroup {
     /** @return array<string, array<string, mixed>> */
     public function getLocalInfo(): array {}

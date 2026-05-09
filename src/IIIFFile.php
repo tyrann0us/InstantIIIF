@@ -124,8 +124,11 @@ class IIIFFile extends File
     }
 
     /**
-     * Human-readable landing page for the object.
-     * v3: `homepage`, v2: `related`, fallback: provider metadata label mapping
+     * Human-readable landing page for the object at the IIIF provider.
+     * v3: `homepage`, v2: `related`, fallback: provider metadata label mapping.
+     *
+     * Exposed by the API as `descriptionurl`; MMV uses it for the share
+     * link, embed credit link, and "More details" button.
      */
     // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound -- MediaWiki File override
     public function getDescriptionUrl(): string
@@ -148,6 +151,24 @@ class IIIFFile extends File
         }
 
         return $this->extractUrlFromMetadata($resolved);
+    }
+
+    /**
+     * Return the same URL as getDescriptionUrl().
+     *
+     * The base File class returns null, which causes the API to omit the
+     * `descriptionshorturl` field.  MMV then passes `undefined` into
+     * HtmlUtils.wrapAndJquerify(), crashing with "unknown type undefined".
+     *
+     * Called by ApiQueryImageInfo — not referenced directly in this extension.
+     *
+     * @noinspection PhpUnused
+     * @return string
+     */
+    // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound -- MediaWiki File override
+    public function getDescriptionShortUrl(): string
+    {
+        return $this->getDescriptionUrl();
     }
 
     /**
@@ -377,6 +398,23 @@ class IIIFFile extends File
     {
         $pageNum = (int) $page;
         return $pageNum >= 1 ? $pageNum : 1;
+    }
+
+    /**
+     * @return array{
+     *     provider: string,
+     *     objectId: string,
+     *     manifestUrl: string,
+     *     manifestRaw: array<string, mixed>,
+     *     manifestObj: object
+     * }|null
+     */
+
+    /** @return array<string, mixed>|null */
+    // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound -- MediaWiki File override
+    public function getResolvedManifest(): ?array
+    {
+        return $this->ensureResolved();
     }
 
     /**
