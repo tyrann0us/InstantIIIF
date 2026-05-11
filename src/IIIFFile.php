@@ -9,7 +9,6 @@ use MediaTransformError;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Title\Title;
 use ThumbnailImage;
-use Ubl\Iiif\Tools\IiifHelper;
 
 /**
  * Virtual File that hotlinks images from a remote IIIF Image Service using
@@ -22,8 +21,7 @@ class IIIFFile extends File
      *     provider: string,
      *     objectId: string,
      *     manifestUrl: string,
-     *     manifestRaw: array<string, mixed>,
-     *     manifestObj: object
+     *     manifestRaw: array<string, mixed>
      * }|null
      */
     protected ?array $resolved = null;
@@ -138,14 +136,14 @@ class IIIFFile extends File
             return '';
         }
 
-        $manifestObj = $resolved['manifestObj'];
+        $manifest = $resolved['manifestRaw'];
 
-        $homepageUrl = $this->extractHomepageFromManifest($manifestObj);
+        $homepageUrl = $this->extractHomepageUrl($manifest);
         if ($homepageUrl !== null) {
             return $homepageUrl;
         }
 
-        $relatedUrl = $this->extractRelatedFromManifest($manifestObj);
+        $relatedUrl = $this->extractRelatedUrl($manifest);
         if ($relatedUrl !== null) {
             return $relatedUrl;
         }
@@ -171,61 +169,62 @@ class IIIFFile extends File
         return $this->getDescriptionUrl();
     }
 
+    /* -------------------- Description URL extraction -------------------- */
+
     /**
-     * Extract homepage URL from a manifest object (v3 style).
+     * Extract homepage URL from manifest (v3: `homepage` field).
+     *
+     * @param array<string, mixed> $manifest
      */
-    private function extractHomepageFromManifest(object $manifestObj): ?string
+    private function extractHomepageUrl(array $manifest): ?string
     {
-        if (!method_exists($manifestObj, 'getHomepage')) {
+        $homepage = $manifest['homepage'] ?? null;
+        if ($homepage === null) {
             return null;
         }
 
-        try {
-            $homepage = $manifestObj->getHomepage();
-            return $this->extractIdFromResource($homepage);
-        } catch (\Throwable $exception) {
-            return null;
-        }
+        return $this->extractHttpUrl($homepage);
     }
 
     /**
-     * Extract related URL from a manifest object (v2 style).
+     * Extract related URL from manifest (v2: `related` field).
+     *
+     * @param array<string, mixed> $manifest
      */
-    private function extractRelatedFromManifest(object $manifestObj): ?string
+    private function extractRelatedUrl(array $manifest): ?string
     {
-        if (!method_exists($manifestObj, 'getRelated')) {
+        $related = $manifest['related'] ?? null;
+        if ($related === null) {
             return null;
         }
 
-        try {
-            $related = $manifestObj->getRelated();
-            if (is_string($related) && preg_match('~^https?://~', $related)) {
-                return $related;
-            }
-            return $this->extractIdFromResource($related);
-        } catch (\Throwable $exception) {
-            return null;
-        }
+        return $this->extractHttpUrl($related);
     }
 
     /**
-     * Extract ID from a resource object or array.
+     * Extract an HTTP(S) URL from a value that may be a string, an object
+     * with `@id`/`id`, or an array of such objects.
      */
-    private function extractIdFromResource(mixed $resource): ?string
+    private function extractHttpUrl(mixed $value): ?string
     {
-        if (is_object($resource) && method_exists($resource, 'getId')) {
-            $resourceId = $resource->getId();
-            if (is_string($resourceId) && preg_match('~^https?://~', $resourceId)) {
-                return $resourceId;
-            }
+        // Plain URL string.
+        if (is_string($value) && preg_match('~^https?://~', $value)) {
+            return $value;
         }
 
-        if (is_array($resource) && isset($resource[0])) {
-            $first = $resource[0];
-            if (is_object($first) && method_exists($first, 'getId')) {
-                $resourceId = $first->getId();
-                if (is_string($resourceId) && preg_match('~^https?://~', $resourceId)) {
-                    return $resourceId;
+        // Single object with @id or id.
+        if (is_array($value)) {
+            $id = $value['@id'] ?? $value['id'] ?? null;
+            if (is_string($id) && preg_match('~^https?://~', $id)) {
+                return $id;
+            }
+
+            // Array of objects — use the first one.
+            $first = $value[0] ?? null;
+            if (is_array($first)) {
+                $id = $first['@id'] ?? $first['id'] ?? null;
+                if (is_string($id) && preg_match('~^https?://~', $id)) {
+                    return $id;
                 }
             }
         }
@@ -400,16 +399,6 @@ class IIIFFile extends File
         return $pageNum >= 1 ? $pageNum : 1;
     }
 
-    /**
-     * @return array{
-     *     provider: string,
-     *     objectId: string,
-     *     manifestUrl: string,
-     *     manifestRaw: array<string, mixed>,
-     *     manifestObj: object
-     * }|null
-     */
-
     /** @return array<string, mixed>|null */
     // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound -- MediaWiki File override
     public function getResolvedManifest(): ?array
@@ -422,8 +411,7 @@ class IIIFFile extends File
      *     provider: string,
      *     objectId: string,
      *     manifestUrl: string,
-     *     manifestRaw: array<string, mixed>,
-     *     manifestObj: object
+     *     manifestRaw: array<string, mixed>
      * }|null
      */
     // phpcs:ignore SlevomatCodingStandard.Complexity.Cognitive.ComplexityTooHigh -- Pending full refactor
@@ -462,11 +450,6 @@ class IIIFFile extends File
                 continue;
             }
 
-            // Reader is mandatory; parse once.
-            $manifestObj = IiifHelper::loadIiifResource($json);
-            if ($manifestObj === null) {
-                continue;
-            }
             $manifestRaw = json_decode($json, true) ?: [];
 
             if ($this->isErrorManifest($manifestRaw)) {
@@ -478,7 +461,6 @@ class IIIFFile extends File
                 'objectId' => $objId,
                 'manifestUrl' => $manifestUrl,
                 'manifestRaw' => $manifestRaw,
-                'manifestObj' => $manifestObj,
             ];
             return $this->resolved;
         }
@@ -532,7 +514,7 @@ class IIIFFile extends File
         if (!$resolved) {
             return null;
         }
-        return $this->extractServiceFromReader($resolved['manifestObj'], $page);
+        return $this->extractServiceId($resolved['manifestRaw'], $page);
     }
 
     /**
@@ -545,7 +527,7 @@ class IIIFFile extends File
         if (!$resolved) {
             return [0, 0];
         }
-        return $this->extractCanvasDimsFromReader($resolved['manifestObj'], $page);
+        return $this->extractCanvasDimensions($resolved['manifestRaw'], $page);
     }
 
     /**
@@ -585,7 +567,7 @@ class IIIFFile extends File
     }
 
     /**
-     * Passt angefragte w/h an die vom Dienst unterstützten Limits an.
+     * Clamp requested w/h to the limits supported by the image service.
      *
      * @return array{0: int, 1: int}
      */
@@ -762,101 +744,94 @@ class IIIFFile extends File
         return $arr;
     }
 
-    /* -------------------- Reader-based extraction -------------------- */
+    /* -------------------- Raw JSON manifest extraction -------------------- */
 
-    private function extractServiceFromReader(object $manifestObj, int $page): ?string
+    /**
+     * Get the list of canvases from the manifest.
+     * v2: sequences[0].canvases, v3: items.
+     *
+     * @param array<string, mixed> $manifest
+     * @return array<int, array<string, mixed>>
+     */
+    private function getCanvases(array $manifest): array
     {
-        $idx = max(0, $page - 1);
-        $canvases = $this->getCanvasesFromManifest($manifestObj);
+        // v3
+        if (isset($manifest['items']) && is_array($manifest['items'])) {
+            return $manifest['items'];
+        }
 
-        if (!$canvases || !isset($canvases[$idx])) {
+        // v2
+        $canvases = $manifest['sequences'][0]['canvases'] ?? null;
+        if (is_array($canvases)) {
+            return $canvases;
+        }
+
+        return [];
+    }
+
+    /**
+     * Extract the IIIF Image API service @id for a given page.
+     *
+     * @param array<string, mixed> $manifest
+     */
+    private function extractServiceId(array $manifest, int $page): ?string
+    {
+        $canvases = $this->getCanvases($manifest);
+        $idx = max(0, $page - 1);
+        if (!isset($canvases[$idx]) || !is_array($canvases[$idx])) {
             return null;
         }
         $canvas = $canvases[$idx];
 
-        // Try v3 path first.
+        // v3: items[0].items[0].body.service[0].@id (or .id)
         $serviceId = $this->extractServiceFromV3Canvas($canvas);
         if ($serviceId !== null) {
             return $serviceId;
         }
 
-        // Fall back to v2 path.
+        // v2: images[0].resource.service.@id
         return $this->extractServiceFromV2Canvas($canvas);
     }
 
     /**
-     * @return array<mixed>|null
+     * v3 canvas: items (AnnotationPage) → items (Annotation) → body → service.
+     *
+     * @param array<string, mixed> $canvas
      */
-    // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound -- internal accessor
-    private function getCanvasesFromManifest(object $manifestObj): ?array
+    private function extractServiceFromV3Canvas(array $canvas): ?string
     {
-        $canvases = method_exists($manifestObj, 'getItems')
-            ? $manifestObj->getItems()
-            : null;
-
-        if (!$canvases && method_exists($manifestObj, 'getSequences')) {
-            $seq = $manifestObj->getSequences()[0] ?? null;
-            $canvases = $seq ? $seq->getCanvases() : null;
+        $body = $canvas['items'][0]['items'][0]['body'] ?? null;
+        if (!is_array($body)) {
+            return null;
         }
 
-        return $canvases;
+        $service = $body['service'] ?? null;
+        return $this->extractServiceIdFromField($service);
     }
 
-    private function extractServiceFromV3Canvas(object $canvas): ?string
+    /**
+     * v2 canvas: images[0].resource.service.
+     *
+     * @param array<string, mixed> $canvas
+     */
+    private function extractServiceFromV2Canvas(array $canvas): ?string
     {
-        $items = method_exists($canvas, 'getItems') ? $canvas->getItems() : null;
-        if (!$items) {
+        $resource = $canvas['images'][0]['resource'] ?? null;
+        if (!is_array($resource)) {
             return null;
         }
 
-        $annopage = $items[0] ?? null;
-        if (!is_object($annopage)) {
-            return null;
-        }
-        $annos = method_exists($annopage, 'getItems') ? $annopage->getItems() : null;
-        $anno = $annos[0] ?? null;
-        if (!is_object($anno)) {
-            return null;
-        }
-        $body = method_exists($anno, 'getBody') ? $anno->getBody() : null;
-
-        if (is_object($body) && method_exists($body, 'getService')) {
-            $svc = $body->getService();
-            if (is_object($svc) && method_exists($svc, 'getId')) {
-                return rtrim($svc->getId(), '/');
-            }
+        $service = $resource['service'] ?? null;
+        $id = $this->extractServiceIdFromField($service);
+        if ($id !== null) {
+            return $id;
         }
 
-        return null;
-    }
-
-    private function extractServiceFromV2Canvas(object $canvas): ?string
-    {
-        if (!method_exists($canvas, 'getImages')) {
-            return null;
-        }
-
-        $img = $canvas->getImages()[0] ?? null;
-        if (!is_object($img) || !method_exists($img, 'getResource')) {
-            return null;
-        }
-
-        $res = $img->getResource();
-        if (!is_object($res)) {
-            return null;
-        }
-
-        if (method_exists($res, 'getService')) {
-            $svc = $res->getService();
-            if (is_object($svc) && method_exists($svc, 'getId')) {
-                return rtrim($svc->getId(), '/');
-            }
-        }
-
-        if (method_exists($res, 'getId')) {
-            $resourceId = $res->getId();
+        // Fallback: try to derive service base from the resource @id URL.
+        $resourceId = $resource['@id'] ?? null;
+        if (is_string($resourceId)) {
             $pattern = '#^(.*?/iiif/2/[^/]+)#';
-            if (is_string($resourceId) && preg_match($pattern, $resourceId, $match)) {
+            if (preg_match($pattern, $resourceId, $match)) {
                 return $match[1];
             }
         }
@@ -865,26 +840,58 @@ class IIIFFile extends File
     }
 
     /**
+     * Extract the service base URL from a `service` field.
+     * Handles both a single service object and an array of services.
+     */
+    private function extractServiceIdFromField(mixed $service): ?string
+    {
+        if (!is_array($service)) {
+            return null;
+        }
+
+        // Single service object with @id or id key.
+        $id = $service['@id'] ?? $service['id'] ?? null;
+        if (is_string($id)) {
+            return rtrim($id, '/');
+        }
+
+        // Array of service objects — use the first entry.
+        $first = $service[0] ?? null;
+        if (is_array($first)) {
+            $id = $first['@id'] ?? $first['id'] ?? null;
+            if (is_string($id)) {
+                return rtrim($id, '/');
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Extract canvas dimensions for a given page.
+     *
+     * @param array<string, mixed> $manifest
      * @return array{0: int, 1: int}
      */
-    private function extractCanvasDimsFromReader(object $manifestObj, int $page): array
+    private function extractCanvasDimensions(array $manifest, int $page): array
     {
+        $canvases = $this->getCanvases($manifest);
         $idx = max(0, $page - 1);
-        $canvases = $this->getCanvasesFromManifest($manifestObj);
-
-        if (!$canvases || !isset($canvases[$idx])) {
+        if (!isset($canvases[$idx]) || !is_array($canvases[$idx])) {
             return [0, 0];
         }
         $canvas = $canvases[$idx];
-        if (!is_object($canvas)) {
-            return [0, 0];
-        }
 
-        $width = method_exists($canvas, 'getWidth') ? (int) $canvas->getWidth() : 0;
-        $height = method_exists($canvas, 'getHeight') ? (int) $canvas->getHeight() : 0;
+        $width = (int) ($canvas['width'] ?? 0);
+        $height = (int) ($canvas['height'] ?? 0);
         return [$width, $height];
     }
 
+    /**
+     * Resolve a IIIF value that may be a plain string, a v2 language object
+     * (`{ "@value": "...", "@language": "..." }`), a v3 language map
+     * (`{ "en": ["..."], "de": ["..."] }`), or an array of language objects.
+     */
     private function stringFromMaybeLangMap(mixed $value): string
     {
         if (is_string($value)) {
@@ -895,13 +902,21 @@ class IIIFFile extends File
             return '';
         }
 
+        // v2 single language object.
         if (isset($value['@value']) && is_string($value['@value'])) {
             return $value['@value'];
         }
 
-        foreach ($value as $langVals) {
-            if (is_array($langVals) && isset($langVals[0]) && is_string($langVals[0])) {
-                return $langVals[0];
+        // v2 array of language objects.
+        $first = $value[0] ?? null;
+        if (is_array($first) && isset($first['@value']) && is_string($first['@value'])) {
+            return $first['@value'];
+        }
+
+        // v3 language map — pick the first available translation.
+        foreach ($value as $langValues) {
+            if (is_array($langValues) && isset($langValues[0]) && is_string($langValues[0])) {
+                return $langValues[0];
             }
         }
 
