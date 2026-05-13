@@ -25,9 +25,44 @@ class FileRepo {
     public function getName(): string {}
 }
 
+class MediaTransformOutput {
+}
+
+abstract class MediaHandler {
+    /** @return array<string, string> */
+    public function getParamMap(): array {}
+    /** @param string $name @param mixed $value */
+    public function validateParam($name, $value): bool {}
+    /** @param array<string, mixed> $params @return string|false */
+    public function makeParamString($params) {}
+    /** @param string $str @return array<string, mixed>|false */
+    public function parseParamString($str) {}
+    /** @param mixed $state @param string $path @return array<string, mixed> */
+    public function getSizeAndMetadata($state, $path): array {}
+    /** @param File $file */
+    public function mustRender($file): bool {}
+    /** @param File $file */
+    public function isExpensiveToThumbnail($file): bool {}
+    /**
+     * @param File $image
+     * @param string $dstPath
+     * @param string $dstUrl
+     * @param array<string, mixed> $params
+     * @param int $flags
+     * @return MediaTransformOutput
+     */
+    abstract public function doTransform($image, $dstPath, $dstUrl, $params, $flags = 0);
+}
+
+abstract class ImageHandler extends MediaHandler {
+}
+
 class File {
     /** @var FileRepo */
     public $repo;
+
+    /** @var MediaHandler|false */
+    protected $handler;
 
     /**
      * @param Title $title
@@ -39,6 +74,10 @@ class File {
     public function getSize(): int {}
     public function getMimeType(): string {}
     public function getMediaType(): string {}
+    public function isMultipage(): bool {}
+    public function pageCount(): int {}
+    /** @return MediaHandler|false */
+    public function getHandler() {}
     /** @param int $page */
     public function getWidth($page = 1): int {}
     /** @param int $page */
@@ -55,7 +94,7 @@ class File {
     public function transform($params, $flags = 0) {}
 }
 
-class ThumbnailImage {
+class ThumbnailImage extends MediaTransformOutput {
     /**
      * @param File $file
      * @param string $url
@@ -66,7 +105,6 @@ class ThumbnailImage {
     public function getFile(): File {}
     public function getWidth(): int {}
     public function getHeight(): int {}
-    public function getUrl(): string {}
 }
 
 class MediaTransformError {
@@ -92,29 +130,9 @@ class ApiQueryBase {
 
     public function __construct(ApiQuery $query, string $moduleName) {}
     public function execute(): void {}
-
-    /** @return array<string, mixed> */
-    public function extractRequestParams(): array {}
-    public function getModuleName(): string {}
-    public function getResult(): ApiResult {}
-
-    /** @return array<string, array<string, mixed>> */
-    public function getAllowedParams(): array {}
-
-    /** @return array<string, string> */
-    protected function getExamplesMessages(): array {}
 }
 
 class ApiQuery {
-}
-
-class ApiResult {
-    /**
-     * @param array<string|int>|null $path
-     * @param string|int $name
-     * @param mixed $value
-     */
-    public function addValue($path, $name, $value): bool {}
 }
 
 class GlobalVarConfig {
@@ -141,7 +159,6 @@ class MWHttpRequest {
 
 class StatusValue {
     public function isOK(): bool {}
-    public function isGood(): bool {}
 }
 
 /**
@@ -156,12 +173,4 @@ class Message {
     public function plain(): string {}
     public function parse(): string {}
     public function inContentLanguage(): self {}
-}
-
-class RepoGroup {
-    /** @return array<string, array<string, mixed>> */
-    public function getLocalInfo(): array {}
-    /** @return array<int, array<string, mixed>> */
-    public function getForeignInfo(): array {}
-    public function getRepo(string $name): ?FileRepo {}
 }

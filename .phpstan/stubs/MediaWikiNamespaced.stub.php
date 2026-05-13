@@ -8,8 +8,6 @@ namespace MediaWiki\Title;
 class Title {
     public static function newFromText(string $text, int $defaultNamespace = 0): ?Title {}
     public function getDBkey(): string {}
-    public function getText(): string {}
-    public function getNamespace(): int {}
     public function getNsText(): string {}
 }
 
