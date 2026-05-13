@@ -28,7 +28,7 @@ class FileRepo {
 class MediaTransformOutput {
 }
 
-class MediaHandler {
+abstract class MediaHandler {
     /** @return array<string, string> */
     public function getParamMap(): array {}
     /** @param string $name @param mixed $value */
