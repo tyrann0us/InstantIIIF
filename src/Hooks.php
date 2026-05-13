@@ -60,6 +60,12 @@ class Hooks
             // Bonus: Include dimensions (helps MMV).
             $imgAttrs['data-file-width'] = $thumb->getWidth();
             $imgAttrs['data-file-height'] = $thumb->getHeight();
+
+            // For multi-page documents, include the page number so that
+            // the JS patch can forward it to MMV's ThumbnailInfo API call.
+            if ($file->isMultipage()) {
+                $imgAttrs['data-iiif-page'] = $file->lastTransformPage();
+            }
         }
         return true;
     }

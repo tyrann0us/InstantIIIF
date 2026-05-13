@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace MediaWiki\Extension\InstantIIIF;
 
 use File;
+use MediaHandler;
 use MediaTransformError;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Title\Title;
@@ -29,7 +30,14 @@ class IIIFFile extends File
     /** @var array<string, array<string, mixed>> Cache for info.json per image service id */
     protected array $infoJsonMap = [];
 
+    /**
+     * Page number from the most recent transform() call.
+     * Read by Hooks::onThumbnailBeforeProduceHTML to set data-iiif-page.
+     */
+    protected int $lastTransformPage = 1;
+
     /** Provider-specific label mapping to find landing/homepage URL in `metadata` */
+    /** @var array<string, list<string>> */
     private const LANDING_META_KEYS = [
         'deutsche-fotothek' => ['Link zum Werk'],
     ];
@@ -71,6 +79,46 @@ class IIIFFile extends File
     }
 
     /**
+     * Return the custom IIIFHandler instead of JpegHandler.
+     *
+     * The base File class picks the handler via getMimeType() (image/jpeg
+     * → JpegHandler), which does not support the `page` parameter.
+     * Overriding here lets us use IIIFHandler with multi-page support.
+     *
+     * @return MediaHandler|false
+     */
+    // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound, Syde.Functions.ReturnTypeDeclaration.NoReturnType -- MediaWiki File override
+    public function getHandler()
+    {
+        if (!$this->handler) {
+            $this->handler = new IIIFHandler();
+        }
+        return $this->handler;
+    }
+
+    /**
+     * A manifest with more than one canvas represents a multi-page document.
+     * This tells MediaWiki to pass the `page=` parameter through to
+     * getWidth(), getHeight(), and transform().
+     */
+    public function isMultipage(): bool
+    {
+        return $this->pageCount() > 1;
+    }
+
+    /**
+     * Number of pages (canvases) in the IIIF manifest.
+     */
+    public function pageCount(): int
+    {
+        $resolved = $this->ensureResolved();
+        if (!$resolved) {
+            return 0;
+        }
+        return count($this->getCanvases($resolved['manifestRaw']));
+    }
+
+    /**
      * @param int $page
      */
     // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound, Syde.Functions.ArgumentTypeDeclaration.NoArgumentType -- MediaWiki File override
@@ -80,9 +128,10 @@ class IIIFFile extends File
         if (!$resolved) {
             return 0;
         }
-        $dims = $this->getCanvasDimensions($this->normalizePage($page));
+        $page = $this->normalizePage($page);
+        $dims = $this->getCanvasDimensions($page);
         if ($dims[0] && $dims[1]) {
-            return (int) $dims[0];
+            return $dims[0];
         }
         $svc = $this->getServiceIdForPage($page);
         $info = $svc ? $this->ensureInfoJsonFor($svc) : [];
@@ -99,9 +148,10 @@ class IIIFFile extends File
         if (!$resolved) {
             return 0;
         }
-        $dims = $this->getCanvasDimensions($this->normalizePage($page));
+        $page = $this->normalizePage($page);
+        $dims = $this->getCanvasDimensions($page);
         if ($dims[0] && $dims[1]) {
-            return (int) $dims[1];
+            return $dims[1];
         }
         $svc = $this->getServiceIdForPage($page);
         $info = $svc ? $this->ensureInfoJsonFor($svc) : [];
@@ -270,9 +320,10 @@ class IIIFFile extends File
      * @return ThumbnailImage|MediaTransformError
      */
     // phpcs:ignore Syde.Functions.ArgumentTypeDeclaration.NoArgumentType, Syde.Functions.ReturnTypeDeclaration.NoReturnType -- MediaWiki File override
-    public function transform($params, $flags = 0)
+    public function transform($params, $flags = 0): MediaTransformError|ThumbnailImage
     {
         $page = $this->normalizePage($params['page'] ?? 1);
+        $this->lastTransformPage = $page;
         $svc = $this->getServiceIdForPage($page);
         if (!$svc) {
             return new MediaTransformError(
@@ -396,7 +447,7 @@ class IIIFFile extends File
     protected function normalizePage(mixed $page): int
     {
         $pageNum = (int) $page;
-        return $pageNum >= 1 ? $pageNum : 1;
+        return max($pageNum, 1);
     }
 
     /** @return array<string, mixed>|null */
@@ -404,6 +455,16 @@ class IIIFFile extends File
     public function getResolvedManifest(): ?array
     {
         return $this->ensureResolved();
+    }
+
+    /**
+     * Page number from the most recent transform() call.
+     * Used by Hooks::onThumbnailBeforeProduceHTML to set data-iiif-page.
+     */
+    // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound -- needed by hook
+    public function lastTransformPage(): int
+    {
+        return $this->lastTransformPage;
     }
 
     /**
@@ -502,9 +563,10 @@ class IIIFFile extends File
     // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound -- internal accessor
     protected function getProviderConfig(): array
     {
-        /** @var Repo $repo */
-        $repo = $this->repo;
-        return $repo->iiifSources();
+        if (!$this->repo instanceof Repo) {
+            return [];
+        }
+        return $this->repo->iiifSources();
     }
 
     // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound -- internal accessor
