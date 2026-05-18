@@ -6,6 +6,7 @@ namespace MediaWiki\Extension\InstantIIIF;
 
 use File;
 use MediaWiki\Context\IContextSource;
+use MediaWiki\Context\RequestContext;
 use MediaWiki\Page\ImageHistoryList;
 use MediaWiki\Page\ImagePage;
 use MWNamespace;
@@ -17,15 +18,43 @@ class Hooks
 {
     /**
      * Load the RL module on every page.
+     *
+     * On File: pages with an IIIF file, also pass the provider URL as a
+     * JS config variable so the client-side code can fix the shared-upload
+     * description link (which would otherwise point to the local URL
+     * because getDescriptionUrl() now returns the wiki page URL).
      */
     public static function onBeforePageDisplay(OutputPage $out, Skin $skin): void
     {
         $out->addModules(['ext.instantIIIF.mmvPatch']);
+
+        $title = $out->getTitle();
+        if ($title === null || $title->getNamespace() !== NS_FILE) {
+            return;
+        }
+
+        $services = \MediaWiki\MediaWikiServices::getInstance();
+        $file = $services->getRepoGroup()->findFile($title);
+        if (!$file instanceof IIIFFile) {
+            return;
+        }
+
+        $providerUrl = $file->getProviderUrl();
+        if ($providerUrl !== '') {
+            $out->addJsConfigVars('wgIIIFProviderUrl', $providerUrl);
+        }
     }
 
     /**
      * Adds data-iiif-title spoofed ending to <img>.
      * Example: "File:df_dk_0007450.jpg"
+     *
+     * Also fixes the link target for IIIF thumbnails:
+     * - file-link context (main image on file detail page): point to the
+     *   correct page's full-resolution IIIF URL instead of always page 1.
+     * - desc-link context (article thumbnails, prev/next on file pages):
+     *   already handled by passing `page` to ThumbnailImage, which makes
+     *   getDescLinkAttribs() add `?page=N` automatically.
      *
      * @param array<string, mixed> $imgAttrs
      * @param array<string, mixed>|bool $linkAttrs
@@ -37,36 +66,86 @@ class Hooks
     ): bool {
 
         $file = $thumb->getFile();
-        if ($file instanceof IIIFFile) {
-            $title = $file->getTitle();
-            if ($title === null) {
-                return true;
-            }
+        if (!$file instanceof IIIFFile) {
+            return true;
+        }
 
-            // Localized namespace text for NS_FILE (e.g., "File").
-            $nsText = $title->getNsText();
-            if ($nsText === '') {
-                // Fallback, but should not happen here
-                $nsText = MWNamespace::getCanonicalName(NS_FILE) ?: 'File';
-            }
+        $title = $file->getTitle();
+        if ($title === null) {
+            return true;
+        }
 
-            // DB-Key = Title without a namespace, with underscores (no spaces).
-            $dbKey = $title->getDBkey();
+        // Localized namespace text for NS_FILE (e.g., "File").
+        $nsText = $title->getNsText();
+        if ($nsText === '') {
+            // Fallback, but should not happen here
+            $nsText = MWNamespace::getCanonicalName(NS_FILE) ?: 'File';
+        }
 
-            // MultimediaViewer requires the file to have a valid image file extension,
-            // so we spoof one here.
-            $imgAttrs['data-iiif-title'] = sprintf('%s:%s.jpg', $nsText, $dbKey);
+        // DB-Key = Title without a namespace, with underscores (no spaces).
+        $dbKey = $title->getDBkey();
 
-            // Bonus: Include dimensions (helps MMV).
-            $imgAttrs['data-file-width'] = $thumb->getWidth();
-            $imgAttrs['data-file-height'] = $thumb->getHeight();
+        // MultimediaViewer requires the file to have a valid image file extension,
+        // so we spoof one here.
+        $imgAttrs['data-iiif-title'] = sprintf('%s:%s.jpg', $nsText, $dbKey);
 
-            // For multi-page documents, include the page number so that
-            // the JS patch can forward it to MMV's ThumbnailInfo API call.
-            if ($file->isMultipage()) {
-                $imgAttrs['data-iiif-page'] = $file->lastTransformPage();
+        // Bonus: Include dimensions (helps MMV).
+        $imgAttrs['data-file-width'] = $thumb->getWidth();
+        $imgAttrs['data-file-height'] = $thumb->getHeight();
+
+        $page = $file->lastTransformPage();
+
+        // For multi-page documents, include the page number and the
+        // full-resolution URL for that page.  The JS patch uses the page
+        // number for the ThumbnailInfo API call and the full URL to fix
+        // the image link in the MMV overlay (which otherwise always
+        // points to page 1 because getUrl() is not page-aware).
+        if ($file->isMultipage()) {
+            $imgAttrs['data-iiif-page'] = $page;
+            if ($page > 1) {
+                $fullUrl = $file->getUrlForPage($page);
+                if ($fullUrl !== '') {
+                    $imgAttrs['data-iiif-full-url'] = $fullUrl;
+                }
             }
         }
+
+        // Fix file-link context: when the link points to the raw IIIF URL
+        // (main image on file detail page), replace it with the correct
+        // page's full-resolution URL instead of always page 1.
+        if (
+            is_array($linkAttrs)
+            && isset($linkAttrs['href'])
+            && !isset($linkAttrs['class'])
+            && $page > 1
+            && $file->isMultipage()
+        ) {
+            $pageUrl = $file->getUrlForPage($page);
+            if ($pageUrl !== '') {
+                $linkAttrs['href'] = $pageUrl;
+            }
+        }
+
+        // On file detail pages, mark prev/next navigation thumbnails of
+        // the *same* file so the JS module can prevent MMV from
+        // intercepting their clicks (they should navigate, not open the
+        // lightbox).  Identified by: desc-link class + same title as page.
+        if (
+            is_array($linkAttrs)
+            && isset($linkAttrs['class'])
+            && str_contains($linkAttrs['class'], 'mw-file-description')
+            && $file->isMultipage()
+        ) {
+            $pageTitle = RequestContext::getMain()->getTitle();
+            if (
+                $pageTitle !== null
+                && $pageTitle->getNamespace() === NS_FILE
+                && $pageTitle->getDBkey() === $title->getDBkey()
+            ) {
+                $imgAttrs['data-iiif-navigate'] = '1';
+            }
+        }
+
         return true;
     }
 
@@ -185,10 +264,10 @@ class Hooks
         }
 
         // v2: license, v3: rights — both are URLs to the license document.
-        // Falls back to the provider landing page (getDescriptionUrl).
+        // Falls back to the provider landing page (getProviderUrl).
         $licenseUrl = self::extractString($manifest['rights'] ?? $manifest['license'] ?? '');
         if ($licenseUrl === '') {
-            $licenseUrl = $file->getDescriptionUrl();
+            $licenseUrl = $file->getProviderUrl();
         }
         if ($licenseUrl !== '') {
             $combinedMeta['LicenseUrl'] = ['value' => $licenseUrl, 'source' => 'extension'];

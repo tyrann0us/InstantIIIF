@@ -1,3 +1,38 @@
+// On file detail pages, prevent MMV from intercepting prev/next
+// navigation links for IIIF multi-page documents.  The PHP hook
+// marks these <img> elements with data-iiif-navigate="1".
+// Removing the mw-file-description class from their parent <a>
+// makes MMV's bootstrap skip them (it collects via
+// '.mw-file-description img').
+//
+// This runs via mw.hook('wikipage.content') which fires in
+// registration order — our module loads with position:top, so
+// our handler is registered (and runs) before MMV's bootstrap.
+mw.hook( 'wikipage.content' ).add( function () {
+    document.querySelectorAll( 'img[data-iiif-navigate]' ).forEach( function ( img ) {
+        var link = img.closest( 'a.mw-file-description' );
+        if ( link ) {
+            link.classList.remove( 'mw-file-description' );
+        }
+    } );
+
+    // On file detail pages the shared-upload description text contains a
+    // link to getDescriptionUrl().  Since that now returns the local wiki
+    // URL (for MMV), the link would point back to the same page.  Replace
+    // it with the external provider URL passed via JS config.
+    var providerUrl = mw.config.get( 'wgIIIFProviderUrl' );
+    if ( providerUrl ) {
+        document.querySelectorAll( '.sharedUploadNotice a' ).forEach( function ( a ) {
+            var href = a.getAttribute( 'href' );
+            // Match links that point to the local file page (the circular reference).
+            // The href may be relative (/wiki/...) or absolute (https://...).
+            if ( href && ( href.indexOf( '/wiki/' ) === 0 || href.indexOf( location.origin ) === 0 ) ) {
+                a.href = providerUrl;
+            }
+        } );
+    }
+} );
+
 mw.loader.using( 'mediawiki.Title' ).then( function () {
     const orig = mw.Title.newFromImg;
     mw.Title.newFromImg = function ( img ) {
@@ -51,8 +86,9 @@ mw.loader.using( 'mediawiki.Title' ).then( function () {
         } );
     }
 
-    // --- Share-URL fix and state tracking via mmv-metadata ---
+    // --- IIIF state tracking and MMV patches via mmv-metadata ---
     let isCurrentImageIiif = false;
+    let currentIiifFullUrl = null;
     let shareSetPatched = false;
 
     // mmv-metadata is a jQuery event — native addEventListener cannot catch it.
@@ -65,19 +101,38 @@ mw.loader.using( 'mediawiki.Title' ).then( function () {
             return;
         }
 
-        // Share-URL fix: MMV appends #/media/File:… via Config.getMediaHash().
-        // That fragment only makes sense on local wiki pages; on an external
-        // IIIF provider URL it is meaningless.
+        // Fix the image link in the MMV overlay for multi-page documents.
+        // MMV wraps the displayed image in an <a> whose href is imageInfo.url
+        // (from getUrl()), which always points to page 1.  Replace it with
+        // the correct page's full-resolution URL from data-iiif-full-url.
+        currentIiifFullUrl = null;
+        if ( image.thumbnail && image.thumbnail.hasAttribute( 'data-iiif-full-url' ) ) {
+            currentIiifFullUrl = image.thumbnail.getAttribute( 'data-iiif-full-url' );
+            var mmvImage = document.querySelector( '.mw-mmv-image a' );
+            if ( mmvImage ) {
+                mmvImage.href = currentIiifFullUrl;
+            }
+        }
+
+        // Share-URL fix: MMV builds the share URL from descriptionUrl, which
+        // for IIIF files points to the external provider.  Replace it with
+        // the local wiki file page URL so the share link is useful within
+        // the wiki.  The local URL is derived from the spoofed title in
+        // data-iiif-title (e.g. "Datei:Df_dk_0007450.jpg").
         if ( !shareSetPatched ) {
             mw.loader.using( 'mmv.ui.reuse' ).then( function ( require ) {
                 const Share = require( 'mmv.ui.reuse' ).Share;
                 const origSet = Share.prototype.set;
                 Share.prototype.set = function ( image ) {
                     origSet.call( this, image );
-                    if ( isCurrentImageIiif ) {
-                        const val = this.$pageInput.val();
-                        if ( val && val.includes( '#' ) ) {
-                            this.$pageInput.val( val.replace( /#.*$/, '' ) );
+                    if ( isCurrentImageIiif && image.thumbnail ) {
+                        const iiifTitle = image.thumbnail.getAttribute( 'data-iiif-title' );
+                        if ( iiifTitle ) {
+                            try {
+                                const title = new mw.Title( iiifTitle );
+                                const localUrl = title.getUrl();
+                                this.$pageInput.val( localUrl );
+                            } catch ( err ) {}
                         }
                     }
                 };

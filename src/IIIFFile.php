@@ -172,14 +172,70 @@ class IIIFFile extends File
     }
 
     /**
-     * Human-readable landing page for the object at the IIIF provider.
-     * v3: `homepage`, v2: `related`, fallback: provider metadata label mapping.
+     * Build the full-resolution IIIF Image API URL for a specific page.
      *
-     * Exposed by the API as `descriptionurl`; MMV uses it for the share
-     * link, embed credit link, and "More details" button.
+     * Unlike getUrl() (always page 1), this returns the URL for any page.
+     * Used by the ThumbnailBeforeProduceHTML hook to fix the main-image
+     * link on file detail pages for multi-page documents.
+     */
+    // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound -- public API for hooks
+    public function getUrlForPage(int $page): string
+    {
+        $page = $this->normalizePage($page);
+        $svc = $this->getServiceIdForPage($page);
+        return $svc ? $this->buildImageUrl($svc, 'full') : '';
+    }
+
+    /**
+     * Local wiki file page URL for this IIIF file.
+     *
+     * Exposed by the API as `descriptionurl`; consumed by MMV for the
+     * "More details" button, share link, and embed credit link.
+     *
+     * Returning the local URL (instead of the provider URL) ensures that
+     * all MMV-generated links point to the wiki.  The external provider
+     * URL is available via getProviderUrl() and used for license fallback
+     * and the shared-upload description text.
      */
     // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound -- MediaWiki File override
     public function getDescriptionUrl(): string
+    {
+        $title = $this->getTitle();
+        if ($title === null) {
+            return '';
+        }
+        return $title->getFullURL('', false, PROTO_HTTPS);
+    }
+
+    /**
+     * Return the same URL as getDescriptionUrl().
+     *
+     * The base File class returns null, which causes the API to omit the
+     * `descriptionshorturl` field.  MMV then passes `undefined` into
+     * HtmlUtils.wrapAndJquerify(), crashing with "unknown type undefined".
+     *
+     * Called by ApiQueryImageInfo — not referenced directly in this extension.
+     *
+     * @noinspection PhpUnused
+     * @return string
+     */
+    // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound -- MediaWiki File override
+    public function getDescriptionShortUrl(): string
+    {
+        return $this->getDescriptionUrl();
+    }
+
+    /**
+     * Human-readable landing page for the object at the IIIF provider.
+     * v3: `homepage`, v2: `related`, fallback: provider metadata label mapping.
+     *
+     * Used for:
+     * - Shared-upload description text (ImagePage)
+     * - License URL fallback in extmetadata
+     * - JS config var for fixing the shared-upload link on file pages
+     */
+    // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound -- public API for hooks
+    public function getProviderUrl(): string
     {
         $resolved = $this->ensureResolved();
         if (!$resolved) {
@@ -199,24 +255,6 @@ class IIIFFile extends File
         }
 
         return $this->extractUrlFromMetadata($resolved);
-    }
-
-    /**
-     * Return the same URL as getDescriptionUrl().
-     *
-     * The base File class returns null, which causes the API to omit the
-     * `descriptionshorturl` field.  MMV then passes `undefined` into
-     * HtmlUtils.wrapAndJquerify(), crashing with "unknown type undefined".
-     *
-     * Called by ApiQueryImageInfo — not referenced directly in this extension.
-     *
-     * @noinspection PhpUnused
-     * @return string
-     */
-    // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound -- MediaWiki File override
-    public function getDescriptionShortUrl(): string
-    {
-        return $this->getDescriptionUrl();
     }
 
     /* -------------------- Description URL extraction -------------------- */
@@ -338,7 +376,7 @@ class IIIFFile extends File
 
         $originalDims = $this->getOriginalDimensions($page, $svc);
 
-        return $this->createThumbnail($svc, $width, $height, $originalDims);
+        return $this->createThumbnail($svc, $width, $height, $originalDims, $page);
     }
 
     /**
@@ -370,7 +408,8 @@ class IIIFFile extends File
         string $svc,
         int $width,
         int $height,
-        array $originalDims
+        array $originalDims,
+        int $page = 1
     ): ThumbnailImage {
 
         [$origWidth, $origHeight] = $originalDims;
@@ -380,25 +419,27 @@ class IIIFFile extends File
             return new ThumbnailImage($this, $url, false, [
                 'width' => $origWidth,
                 'height' => $origHeight,
+                'page' => $page,
             ]);
         }
 
         if ($width && !$height) {
-            return $this->createWidthOnlyThumbnail($svc, $width, $origWidth, $origHeight);
+            return $this->createWidthOnlyThumbnail($svc, $width, $origWidth, $origHeight, $page);
         }
 
         if ($height && !$width) {
-            return $this->createHeightOnlyThumbnail($svc, $height, $origWidth, $origHeight);
+            return $this->createHeightOnlyThumbnail($svc, $height, $origWidth, $origHeight, $page);
         }
 
-        return $this->createBothDimensionsThumbnail($svc, $width, $height);
+        return $this->createBothDimensionsThumbnail($svc, $width, $height, $page);
     }
 
     private function createWidthOnlyThumbnail(
         string $svc,
         int $width,
         int $origWidth,
-        int $origHeight
+        int $origHeight,
+        int $page = 1
     ): ThumbnailImage {
 
         [$clampedWidth, $clampedHeight] = $this->clampSizeToService($svc, $width, 0);
@@ -408,6 +449,7 @@ class IIIFFile extends File
         return new ThumbnailImage($this, $url, false, [
             'width' => $clampedWidth,
             'height' => $clampedHeight,
+            'page' => $page,
         ]);
     }
 
@@ -415,7 +457,8 @@ class IIIFFile extends File
         string $svc,
         int $height,
         int $origWidth,
-        int $origHeight
+        int $origHeight,
+        int $page = 1
     ): ThumbnailImage {
 
         [$clampedWidth, $clampedHeight] = $this->clampSizeToService($svc, 0, $height);
@@ -425,13 +468,15 @@ class IIIFFile extends File
         return new ThumbnailImage($this, $url, false, [
             'width' => $clampedWidth,
             'height' => $clampedHeight,
+            'page' => $page,
         ]);
     }
 
     private function createBothDimensionsThumbnail(
         string $svc,
         int $width,
-        int $height
+        int $height,
+        int $page = 1
     ): ThumbnailImage {
 
         [$clampedWidth, $clampedHeight] = $this->clampSizeToService($svc, $width, $height);
@@ -439,6 +484,7 @@ class IIIFFile extends File
         return new ThumbnailImage($this, $url, false, [
             'width' => $clampedWidth,
             'height' => $clampedHeight,
+            'page' => $page,
         ]);
     }
 

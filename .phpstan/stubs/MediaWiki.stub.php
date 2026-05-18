@@ -11,6 +11,8 @@ use MediaWiki\Title\Title;
 
 define('MEDIATYPE_BITMAP', 'BITMAP');
 define('NS_FILE', 6);
+define('PROTO_RELATIVE', 2);
+define('PROTO_HTTPS', 1);
 
 /**
  * @phpstan-type RepoInfo array{name?: string, class?: string, iiifSources?: array}
@@ -115,6 +117,9 @@ class OutputPage {
     /** @param string|string[] $modules */
     public function addModules($modules): void {}
     public function addInlineStyle(string $style): void {}
+    public function getTitle(): ?Title {}
+    /** @param string $name @param mixed $value */
+    public function addJsConfigVars(string $name, mixed $value): void {}
 }
 
 class Skin {
@@ -159,6 +164,15 @@ class MWHttpRequest {
 
 class StatusValue {
     public function isOK(): bool {}
+}
+
+class RepoGroup {
+    /**
+     * @param Title|string $title
+     * @param array<string, mixed> $options
+     * @return File|false
+     */
+    public function findFile($title, array $options = []) {}
 }
 
 /**
