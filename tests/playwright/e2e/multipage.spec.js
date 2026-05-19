@@ -64,12 +64,23 @@ test.describe( 'Multi-page IIIF documents', () => {
 	test( 'AC 9: prev/next navigation thumbnails are marked with data-iiif-navigate', async ( { page } ) => {
 		await page.goto( '/wiki/File:Df_dk_multipage.jpg?page=2' );
 
+		// Debug: check module state and any JS errors.
+		await page.waitForFunction( () => typeof mw !== 'undefined' && mw.loader, { timeout: 5_000 } );
+		const moduleState = await page.evaluate( () => mw.loader.getState( 'ext.instantIIIF.mmvPatch' ) );
+		console.log( 'DEBUG mmvPatch module state:', moduleState );
+		const errors = await page.evaluate( () => {
+			const errs = [];
+			document.querySelectorAll( 'img[data-iiif-navigate]' ).forEach( ( img ) => {
+				errs.push( 'navigate-img found, parent class: ' + ( img.parentElement?.className || 'none' ) );
+			} );
+			return errs;
+		} );
+		console.log( 'DEBUG navigate-imgs:', JSON.stringify( errors ) );
+
 		const navigateImgs = page.locator( 'img[data-iiif-navigate="1"]' );
 		const count = await navigateImgs.count();
 
 		if ( count > 0 ) {
-			// The JS module removes mw-file-description from parent <a> via
-			// mw.hook('wikipage.content').  Wait for the first one to be processed.
 			const firstParent = navigateImgs.first().locator( 'xpath=..' );
 			await expect( firstParent ).not.toHaveClass( /mw-file-description/, { timeout: 10_000 } );
 

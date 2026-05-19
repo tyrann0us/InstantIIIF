@@ -16,7 +16,13 @@ test.describe( 'MultimediaViewer overlay', () => {
 	test( 'AC 3: clicking an IIIF thumbnail opens MMV', async ( { page } ) => {
 		await page.goto( '/wiki/Mei%C3%9Fen_Rathaus' );
 
-		// Click the thumbnail to open MMV.
+		// Debug: check if thumbnail exists and module state.
+		const thumbCount = await page.locator( 'a.mw-file-description img' ).count();
+		const thumbSrc = thumbCount > 0
+			? await page.locator( 'a.mw-file-description img' ).first().getAttribute( 'src' )
+			: 'NO THUMB FOUND';
+		console.log( 'DEBUG AC3: thumbs=' + thumbCount + ' src=' + thumbSrc );
+
 		const thumb = page.locator( 'a.mw-file-description img' ).first();
 		await expect( thumb ).toBeVisible( { timeout: 10_000 } );
 		await thumb.click();

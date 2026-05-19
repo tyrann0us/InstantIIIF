@@ -28,19 +28,14 @@ test.describe( 'File detail page (single-page IIIF)', () => {
 	} );
 
 	test( 'AC 4: shared-upload notice links to provider, not back to wiki', async ( { page } ) => {
-		await page.goto( '/wiki/File:Df_dk_0007450.jpg', { waitUntil: 'networkidle' } );
-
-		// Debug: check if the PHP hook set the JS config variable.
-		const providerUrl = await page.evaluate( () => mw.config.get( 'wgIIIFProviderUrl' ) );
-		console.log( 'DEBUG wgIIIFProviderUrl:', providerUrl );
+		await page.goto( '/wiki/File:Df_dk_0007450.jpg' );
 
 		const notice = page.locator( '.sharedUploadNotice' );
 		if ( await notice.count() > 0 ) {
+			// The JS module replaces this link asynchronously via
+			// mw.hook('wikipage.content') — use a polling assertion.
 			const link = notice.locator( 'a' ).first();
-			const href = await link.getAttribute( 'href' );
-
-			expect( href ).not.toContain( 'localhost:8080' );
-			expect( href ).toContain( 'deutschefotothek.de' );
+			await expect( link ).toHaveAttribute( 'href', /deutschefotothek\.de/ );
 		}
 	} );
 
