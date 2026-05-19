@@ -1,0 +1,52 @@
+{
+  "@context": "http://iiif.io/api/presentation/3/context.json",
+  "id": "https://example.org/iiif/3/manifest.json",
+  "type": "Manifest",
+  "label": {
+    "en": ["Test Manifest v3"],
+    "de": ["Test-Manifest v3"]
+  },
+  "rights": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "requiredStatement": {
+    "label": { "en": ["Attribution"] },
+    "value": { "en": ["Example Institution"] }
+  },
+  "homepage": [
+    {
+      "id": "https://example.org/object/12345",
+      "type": "Text",
+      "format": "text/html"
+    }
+  ],
+  "items": [
+    {
+      "id": "https://example.org/iiif/3/canvas/1",
+      "type": "Canvas",
+      "width": 5000,
+      "height": 7000,
+      "items": [
+        {
+          "id": "https://example.org/iiif/3/canvas/1/annopage",
+          "type": "AnnotationPage",
+          "items": [
+            {
+              "id": "https://example.org/iiif/3/canvas/1/anno",
+              "type": "Annotation",
+              "body": {
+                "id": "https://example.org/iiif/image/v3/img001/full/max/0/default.jpg",
+                "type": "Image",
+                "service": [
+                  {
+                    "id": "https://example.org/iiif/image/v3/img001",
+                    "type": "ImageService3",
+                    "profile": "level2"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

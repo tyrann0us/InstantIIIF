@@ -1,0 +1,83 @@
+{
+  "@context": "http://iiif.io/api/presentation/2/context.json",
+  "@type": "sc:Manifest",
+  "@id": "https://fotothek.slub-dresden.de/iiif/2/df_dk_multipage/manifest.json",
+  "label": "Meißen. Kornhaus (Mehrseitiges Dokument)",
+  "attribution": "SLUB / Deutsche Fotothek",
+  "metadata": [
+    {
+      "label": "Link zum Werk",
+      "value": "https://www.deutschefotothek.de/documents/obj/87654321"
+    }
+  ],
+  "sequences": [
+    {
+      "@type": "sc:Sequence",
+      "canvases": [
+        {
+          "@type": "sc:Canvas",
+          "@id": "https://fotothek.slub-dresden.de/iiif/2/df_dk_multipage/canvas/1",
+          "label": "Seite 1",
+          "width": 4000,
+          "height": 5500,
+          "images": [
+            {
+              "@type": "oa:Annotation",
+              "resource": {
+                "@type": "dctypes:Image",
+                "@id": "https://fotothek.slub-dresden.de/iiif/2/df_dk_multipage_001/full/full/0/default.jpg",
+                "service": {
+                  "@id": "https://fotothek.slub-dresden.de/iiif/2/df_dk_multipage_001",
+                  "@context": "http://iiif.io/api/image/2/context.json",
+                  "profile": "http://iiif.io/api/image/2/level2.json"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "@type": "sc:Canvas",
+          "@id": "https://fotothek.slub-dresden.de/iiif/2/df_dk_multipage/canvas/2",
+          "label": "Seite 2",
+          "width": 3800,
+          "height": 5200,
+          "images": [
+            {
+              "@type": "oa:Annotation",
+              "resource": {
+                "@type": "dctypes:Image",
+                "@id": "https://fotothek.slub-dresden.de/iiif/2/df_dk_multipage_002/full/full/0/default.jpg",
+                "service": {
+                  "@id": "https://fotothek.slub-dresden.de/iiif/2/df_dk_multipage_002",
+                  "@context": "http://iiif.io/api/image/2/context.json",
+                  "profile": "http://iiif.io/api/image/2/level2.json"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "@type": "sc:Canvas",
+          "@id": "https://fotothek.slub-dresden.de/iiif/2/df_dk_multipage/canvas/3",
+          "label": "Seite 3",
+          "width": 4100,
+          "height": 5600,
+          "images": [
+            {
+              "@type": "oa:Annotation",
+              "resource": {
+                "@type": "dctypes:Image",
+                "@id": "https://fotothek.slub-dresden.de/iiif/2/df_dk_multipage_003/full/full/0/default.jpg",
+                "service": {
+                  "@id": "https://fotothek.slub-dresden.de/iiif/2/df_dk_multipage_003",
+                  "@context": "http://iiif.io/api/image/2/context.json",
+                  "profile": "http://iiif.io/api/image/2/level2.json"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
