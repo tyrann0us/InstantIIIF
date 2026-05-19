@@ -17,6 +17,8 @@
     "phpunit/phpunit": "^11.0",
     "syde/phpcs": "^1.0"
   },
+  "minimum-stability": "dev",
+  "prefer-stable": true,
   "autoload": {
     "psr-4": {
       "MediaWiki\\Extension\\InstantIIIF\\": "src/"
@@ -27,8 +29,6 @@
       "MediaWiki\\Extension\\InstantIIIF\\Tests\\": "tests/phpunit/"
     }
   },
-  "minimum-stability": "dev",
-  "prefer-stable": true,
   "config": {
     "allow-plugins": {
       "dealerdirect/phpcodesniffer-composer-installer": true
