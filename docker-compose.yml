@@ -1,0 +1,28 @@
+services:
+  wiki:
+    image: mediawiki:1.44
+    ports:
+      - '8080:80'
+    volumes:
+      - .:/var/www/html/extensions/InstantIIIF:ro
+      - wiki-data:/var/www/data
+    depends_on:
+      iiif-mock:
+        condition: service_healthy
+    environment:
+      - PHP_INI_MEMORY_LIMIT=256M
+
+  iiif-mock:
+    image: node:18-alpine
+    working_dir: /app
+    volumes:
+      - .:/app:ro
+    command: node .docker/mock-iiif-server.js
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:8111/health']
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  wiki-data:
