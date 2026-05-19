@@ -32,6 +32,9 @@ $wgUpgradeKey = 'e2e-test-upgrade-key';
 # Disable email.
 $wgEnableEmail = false;
 
+# Load Vector skin (default in MW 1.44).
+wfLoadSkin( 'Vector' );
+
 # Enable MultimediaViewer (comes with MW core since 1.44).
 wfLoadExtension( 'MultimediaViewer' );
 $wgMediaViewerEnableByDefault = true;
@@ -43,6 +46,7 @@ wfLoadExtension( 'InstantIIIF' );
 $wgForeignFileRepos[] = [
     'name' => 'iiif-test',
     'class' => \MediaWiki\Extension\InstantIIIF\Repo::class,
+    'directory' => '/tmp/iiif-repo',
     'hashLevels' => 0,
     'iiifSources' => [
         [
