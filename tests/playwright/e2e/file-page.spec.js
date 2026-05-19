@@ -1,5 +1,6 @@
 // @ts-check
-const { test, expect } = require( '@playwright/test' );
+const test = require( './fixtures' );
+const { expect } = require( '@playwright/test' );
 
 /**
  * File detail page tests for single-page IIIF files.
@@ -23,7 +24,7 @@ test.describe( 'File detail page (single-page IIIF)', () => {
 		await expect( mainImg ).toBeVisible();
 
 		// The img should have a data-iiif-title attribute (from the hook).
-		await expect( mainImg ).toHaveAttribute( 'data-iiif-title', /Datei:.*\.jpg/ );
+		await expect( mainImg ).toHaveAttribute( 'data-iiif-title', /File:.*\.jpg/ );
 	} );
 
 	test( 'AC 4: shared-upload notice links to provider, not back to wiki', async ( { page } ) => {

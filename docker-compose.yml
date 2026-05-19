@@ -15,6 +15,8 @@ services:
   iiif-mock:
     image: node:20-alpine
     working_dir: /app
+    ports:
+      - '8111:8111'
     volumes:
       - .:/app:ro
     command: node .docker/mock-iiif-server.js

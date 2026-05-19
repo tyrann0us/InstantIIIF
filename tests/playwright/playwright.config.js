@@ -8,7 +8,7 @@ module.exports = defineConfig( {
 	use: {
 		baseURL: 'http://localhost:8080',
 		screenshot: 'only-on-failure',
-		trace: 'on-first-retry'
+		trace: 'on-first-retry',
 	},
 	projects: [
 		{

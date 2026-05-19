@@ -39,10 +39,8 @@ const MANIFEST_MAP = {
 	v3_test: 'manifest-v3.json'
 };
 
-function rewriteManifest( json, objectId, host ) {
-	// Replace all IIIF service/resource URLs with URLs pointing to this mock server.
+function rewriteManifest( json, host ) {
 	let text = JSON.stringify( json );
-	// Replace any https://...iiif/2/... URLs with our mock base.
 	text = text.replace(
 		/https?:\/\/[^"]*?\/iiif\/2\//g,
 		host + '/iiif/2/'
@@ -68,7 +66,7 @@ function serveManifest( res, objectId, host ) {
 		return;
 	}
 
-	const rewritten = rewriteManifest( raw, objectId, host );
+	const rewritten = rewriteManifest( raw, host );
 	const body = JSON.stringify( rewritten, null, 2 );
 	res.writeHead( 200, {
 		'Content-Type': 'application/ld+json',

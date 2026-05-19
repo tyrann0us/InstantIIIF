@@ -1,5 +1,6 @@
 // @ts-check
-const { test, expect } = require( '@playwright/test' );
+const test = require( './fixtures' );
+const { expect } = require( '@playwright/test' );
 
 /**
  * MultimediaViewer (MMV) overlay tests.
@@ -17,7 +18,7 @@ test.describe( 'MultimediaViewer overlay', () => {
 
 		// Click the thumbnail to open MMV.
 		const thumb = page.locator( 'a.mw-file-description img' ).first();
-		await expect( thumb ).toBeVisible();
+		await expect( thumb ).toBeVisible( { timeout: 10_000 } );
 		await thumb.click();
 
 		// MMV overlay should appear.

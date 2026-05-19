@@ -1,5 +1,6 @@
 // @ts-check
-const { test, expect } = require( '@playwright/test' );
+const test = require( './fixtures' );
+const { expect } = require( '@playwright/test' );
 
 /**
  * Multi-page IIIF document tests.
@@ -61,19 +62,18 @@ test.describe( 'Multi-page IIIF documents', () => {
 	} );
 
 	test( 'AC 9: prev/next navigation thumbnails are marked with data-iiif-navigate', async ( { page } ) => {
-		// Navigate to the file detail page for the multipage document.
 		await page.goto( '/wiki/File:Df_dk_multipage.jpg?page=2' );
 
-		// On the file detail page, prev/next thumbnails of the same file
-		// should have data-iiif-navigate="1".
 		const navigateImgs = page.locator( 'img[data-iiif-navigate="1"]' );
 		const count = await navigateImgs.count();
 
-		// There should be at least one (prev or next page thumbnail).
 		if ( count > 0 ) {
-			// The parent <a> should NOT have the mw-file-description class
-			// (removed by JS to prevent MMV interception).
-			for ( let i = 0; i < count; i++ ) {
+			// The JS module removes mw-file-description from parent <a> via
+			// mw.hook('wikipage.content').  Wait for the first one to be processed.
+			const firstParent = navigateImgs.first().locator( 'xpath=..' );
+			await expect( firstParent ).not.toHaveClass( /mw-file-description/, { timeout: 10_000 } );
+
+			for ( let i = 1; i < count; i++ ) {
 				const parentLink = navigateImgs.nth( i ).locator( 'xpath=..' );
 				const className = await parentLink.getAttribute( 'class' ) || '';
 				expect( className ).not.toContain( 'mw-file-description' );
