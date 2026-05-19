@@ -28,6 +28,11 @@ fi
 
 # Overwrite LocalSettings with our test config.
 cp /var/www/html/extensions/InstantIIIF/.docker/LocalSettings.php /var/www/html/LocalSettings.php
+chown www-data:www-data /var/www/html/LocalSettings.php
+
+# Ensure www-data can access the SQLite database (exec runs as root).
+chown -R www-data:www-data /var/www/data
+chmod -R 755 /var/www/data
 
 # Run database updates (in case schema changed).
 php maintenance/run.php update --quick
