@@ -15,11 +15,17 @@ $wgDBtype = 'sqlite';
 $wgDBname = 'testwiki';
 $wgSQLiteDataDir = '/var/www/data';
 
-# Disable caching for test predictability.
+# Disable object caching for test predictability.
 $wgMainCacheType = CACHE_NONE;
 $wgSessionCacheType = CACHE_NONE;
-$wgCacheDirectory = false;
 $wgObjectCaches['default'] = ['class' => HashBagOStuff::class];
+
+# Use file-based localisation cache to avoid SQLite contention.
+# Without this, concurrent requests to load.php and index.php cause
+# DBTransactionStateError which breaks ALL ResourceLoader modules.
+$wgCacheDirectory = '/tmp/mw-cache';
+$wgLocalisationCacheConf['store'] = 'file';
+$wgLocalisationCacheConf['manualRecache'] = false;
 
 # Enable uploads dir (required for FileRepo).
 $wgUploadDirectory = '/var/www/html/images';

@@ -5,6 +5,7 @@ services:
       - '8080:80'
     volumes:
       - .:/var/www/html/extensions/InstantIIIF:ro
+      - /var/www/html/extensions/InstantIIIF/vendor
       - wiki-data:/var/www/data
     depends_on:
       iiif-mock:

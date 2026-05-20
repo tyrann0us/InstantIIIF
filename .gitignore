@@ -1,6 +1,7 @@
 # Code Style & Testing
 /phpcs.xml
 /phpunit.xml
+/test-results/
 
 # Environment & Configuration
 /.env*

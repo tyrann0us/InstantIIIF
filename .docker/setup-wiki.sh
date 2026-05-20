@@ -34,8 +34,15 @@ chown www-data:www-data /var/www/html/LocalSettings.php
 chown -R www-data:www-data /var/www/data
 chmod -R 755 /var/www/data
 
+# Create cache directory for localisation cache (avoids SQLite contention).
+mkdir -p /tmp/mw-cache
+chown www-data:www-data /tmp/mw-cache
+
 # Run database updates (in case schema changed).
 php maintenance/run.php update --quick
+
+# Rebuild localisation cache into files (prevents DB queries from load.php).
+php maintenance/run.php rebuildLocalisationCache --quiet
 
 # Create test pages with IIIF file references.
 echo "Creating test pages..."

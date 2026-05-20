@@ -16,21 +16,16 @@ test.describe( 'Multi-page IIIF documents', () => {
 	test( 'AC 6: article thumbnails for different pages link to file page with ?page=N', async ( { page } ) => {
 		await page.goto( '/wiki/Kornhaus_Mehrseitig' );
 
-		// There should be multiple thumbnails for the same multipage file.
+		// Wait for thumbnails to render (polling assertion avoids flakiness
+		// on first page load when MediaWiki is still building caches).
 		const thumbLinks = page.locator( 'a.mw-file-description' );
-		const count = await thumbLinks.count();
-		expect( count ).toBeGreaterThanOrEqual( 2 );
+		await expect( thumbLinks.first() ).toBeVisible();
 
 		// Check that page=2 and page=3 links exist.
-		const hrefs = [];
-		for ( let i = 0; i < count; i++ ) {
-			hrefs.push( await thumbLinks.nth( i ).getAttribute( 'href' ) );
-		}
-
-		const hasPage2 = hrefs.some( ( h ) => h && h.includes( 'page=2' ) );
-		const hasPage3 = hrefs.some( ( h ) => h && h.includes( 'page=3' ) );
-		expect( hasPage2 ).toBe( true );
-		expect( hasPage3 ).toBe( true );
+		const page2Link = page.locator( 'a.mw-file-description[href*="page=2"]' );
+		const page3Link = page.locator( 'a.mw-file-description[href*="page=3"]' );
+		await expect( page2Link ).toBeVisible();
+		await expect( page3Link ).toBeVisible();
 	} );
 
 	test( 'AC 7: each page thumbnail has data-iiif-page attribute', async ( { page } ) => {
@@ -64,18 +59,11 @@ test.describe( 'Multi-page IIIF documents', () => {
 	test( 'AC 9: prev/next navigation thumbnails are marked with data-iiif-navigate', async ( { page } ) => {
 		await page.goto( '/wiki/File:Df_dk_multipage.jpg?page=2' );
 
-		// Debug: check module state and any JS errors.
-		await page.waitForFunction( () => typeof mw !== 'undefined' && mw.loader, { timeout: 5_000 } );
-		const moduleState = await page.evaluate( () => mw.loader.getState( 'ext.instantIIIF.mmvPatch' ) );
-		console.log( 'DEBUG mmvPatch module state:', moduleState );
-		const errors = await page.evaluate( () => {
-			const errs = [];
-			document.querySelectorAll( 'img[data-iiif-navigate]' ).forEach( ( img ) => {
-				errs.push( 'navigate-img found, parent class: ' + ( img.parentElement?.className || 'none' ) );
-			} );
-			return errs;
-		} );
-		console.log( 'DEBUG navigate-imgs:', JSON.stringify( errors ) );
+		await page.waitForFunction( () =>
+			typeof mw !== 'undefined' &&
+			mw.loader.getState( 'ext.instantIIIF.mmvPatch' ) === 'ready',
+		{ timeout: 10_000 }
+		);
 
 		const navigateImgs = page.locator( 'img[data-iiif-navigate="1"]' );
 		const count = await navigateImgs.count();

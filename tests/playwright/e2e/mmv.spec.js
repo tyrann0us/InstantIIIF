@@ -8,42 +8,38 @@ const { expect } = require( '@playwright/test' );
  * AC 3:  Title spoofing → MMV opens for IIIF images
  * AC 10: "More details" button links to local wiki URL
  * AC 11: Share URL is a local wiki URL
- * AC 13: Non-IIIF images (if any) still work normally
  */
+
+async function waitForMmvPatch( page ) {
+	await page.waitForFunction( () =>
+		typeof mw !== 'undefined' &&
+		mw.loader.getState( 'ext.instantIIIF.mmvPatch' ) === 'ready',
+	{ timeout: 10_000 }
+	);
+}
+
+async function openMmv( page ) {
+	const thumb = page.locator( 'a.mw-file-description img' ).first();
+	await expect( thumb ).toBeVisible( { timeout: 10_000 } );
+	await waitForMmvPatch( page );
+	await thumb.click();
+	await expect( page.locator( '.mw-mmv-image' ) ).toBeVisible( { timeout: 10_000 } );
+}
 
 test.describe( 'MultimediaViewer overlay', () => {
 
 	test( 'AC 3: clicking an IIIF thumbnail opens MMV', async ( { page } ) => {
 		await page.goto( '/wiki/Mei%C3%9Fen_Rathaus' );
-
-		// Debug: check if thumbnail exists and module state.
-		const thumbCount = await page.locator( 'a.mw-file-description img' ).count();
-		const thumbSrc = thumbCount > 0
-			? await page.locator( 'a.mw-file-description img' ).first().getAttribute( 'src' )
-			: 'NO THUMB FOUND';
-		console.log( 'DEBUG AC3: thumbs=' + thumbCount + ' src=' + thumbSrc );
-
-		const thumb = page.locator( 'a.mw-file-description img' ).first();
-		await expect( thumb ).toBeVisible( { timeout: 10_000 } );
-		await thumb.click();
-
-		// MMV overlay should appear.
-		const mmvOverlay = page.locator( '.mw-mmv-image' );
-		await expect( mmvOverlay ).toBeVisible( { timeout: 10_000 } );
+		await openMmv( page );
 	} );
 
 	test( 'AC 10: "More details" button links to local wiki file page', async ( { page } ) => {
 		await page.goto( '/wiki/Mei%C3%9Fen_Rathaus' );
+		await openMmv( page );
 
-		// Open MMV.
-		await page.locator( 'a.mw-file-description img' ).first().click();
-		await expect( page.locator( '.mw-mmv-image' ) ).toBeVisible( { timeout: 10_000 } );
-
-		// Find the "More details" / file page link in MMV.
 		const detailsLink = page.locator( '.mw-mmv-title a' ).first();
 		if ( await detailsLink.count() > 0 ) {
 			const href = await detailsLink.getAttribute( 'href' );
-			// Should point to the local wiki, not to the IIIF provider.
 			expect( href ).toMatch( /\/wiki\/.*:.*\.jpg/i );
 			expect( href ).not.toContain( 'iiif-mock' );
 		}
@@ -51,17 +47,12 @@ test.describe( 'MultimediaViewer overlay', () => {
 
 	test( 'AC 11: share URL uses local wiki URL', async ( { page } ) => {
 		await page.goto( '/wiki/Mei%C3%9Fen_Rathaus' );
+		await openMmv( page );
 
-		// Open MMV.
-		await page.locator( 'a.mw-file-description img' ).first().click();
-		await expect( page.locator( '.mw-mmv-image' ) ).toBeVisible( { timeout: 10_000 } );
-
-		// Open the share/reuse panel if available.
 		const reuseButton = page.locator( '.mw-mmv-reuse-button' );
 		if ( await reuseButton.count() > 0 ) {
 			await reuseButton.click();
 
-			// The share URL input should contain a local wiki URL.
 			const shareInput = page.locator( '.mw-mmv-share input[type="text"]' );
 			if ( await shareInput.count() > 0 ) {
 				const shareUrl = await shareInput.inputValue();
