@@ -17,13 +17,13 @@ jobs:
       PHP_VERSION: '${{ matrix.php }}'
   coding-standards-php:
     uses: inpsyde/reusable-workflows/.github/workflows/coding-standards-php.yml@main
-    secrets:
-      COMPOSER_AUTH_JSON: '${{secrets.PACKAGIST_AUTH_JSON}}'
     with:
       PHP_VERSION: '8.4'
   static-analysis-php:
     uses: inpsyde/reusable-workflows/.github/workflows/static-analysis-php.yml@main
-    secrets:
-      COMPOSER_AUTH_JSON: '${{secrets.PACKAGIST_AUTH_JSON}}'
+    with:
+      PHP_VERSION: '8.4'
+  unit-tests-php:
+    uses: inpsyde/reusable-workflows/.github/workflows/tests-unit-php.yml@main
     with:
       PHP_VERSION: '8.4'

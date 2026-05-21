@@ -427,7 +427,7 @@ class IIIFFile extends File
             return $this->createWidthOnlyThumbnail($svc, $width, $origWidth, $origHeight, $page);
         }
 
-        if ($height && !$width) {
+        if (!$width) {
             return $this->createHeightOnlyThumbnail($svc, $height, $origWidth, $origHeight, $page);
         }
 

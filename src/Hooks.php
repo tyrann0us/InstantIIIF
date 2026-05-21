@@ -59,6 +59,7 @@ class Hooks
      * @param array<string, mixed> $imgAttrs
      * @param array<string, mixed>|bool $linkAttrs
      */
+    // phpcs:ignore Syde.Functions.FunctionLength.TooLong, SlevomatCodingStandard.Complexity.Cognitive.ComplexityTooHigh -- Pending full refactor
     public static function onThumbnailBeforeProduceHTML(
         ThumbnailImage $thumb,
         array &$imgAttrs,
