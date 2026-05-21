@@ -18,6 +18,8 @@ $wgSQLiteDataDir = '/var/www/data';
 # Disable object caching for test predictability.
 $wgMainCacheType = CACHE_NONE;
 $wgSessionCacheType = CACHE_NONE;
+$wgMessageCacheType = CACHE_NONE;
+$wgJobTypeConf['default'] = [ 'class' => 'JobQueueMemory' ];
 $wgObjectCaches['default'] = ['class' => HashBagOStuff::class];
 
 # Use file-based localisation cache to avoid SQLite contention.

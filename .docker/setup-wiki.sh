@@ -70,15 +70,6 @@ Page 3:
 [[File:Df_dk_multipage.jpg|thumb|300px|page=3|Kornhaus page 3]]
 WIKITEXT
 
-# Warm up parser cache by loading each test page once.
-# Without this, the first Playwright request hits a cold cache and may
-# time out while MediaWiki fetches IIIF manifests for the first time.
-echo "Warming up parser cache..."
-curl -sf http://localhost/wiki/Mei%C3%9Fen_Rathaus > /dev/null 2>&1 || true
-curl -sf http://localhost/wiki/Kornhaus_Mehrseitig > /dev/null 2>&1 || true
-curl -sf http://localhost/wiki/File:Df_dk_0007450.jpg > /dev/null 2>&1 || true
-curl -sf "http://localhost/wiki/File:Df_dk_multipage.jpg?page=2" > /dev/null 2>&1 || true
-
 echo "Wiki setup complete."
 echo "Access at http://localhost:8080/wiki/Main_Page"
 echo "Admin login: Admin / testpassword123"
