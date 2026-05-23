@@ -14,10 +14,21 @@
   },
   "require-dev": {
     "phpstan/phpstan": "^2.1",
+    "phpunit/phpunit": "^11.0",
     "syde/phpcs": "^1.0"
   },
   "minimum-stability": "dev",
   "prefer-stable": true,
+  "autoload": {
+    "psr-4": {
+      "MediaWiki\\Extension\\InstantIIIF\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "MediaWiki\\Extension\\InstantIIIF\\Tests\\": "tests/phpunit/"
+    }
+  },
   "config": {
     "allow-plugins": {
       "dealerdirect/phpcodesniffer-composer-installer": true
@@ -28,6 +39,8 @@
   "scripts": {
     "phpcs": "@php ./vendor/bin/phpcs",
     "phpcs:fix": "@php ./vendor/bin/phpcbf",
-    "phpstan": "@php ./vendor/bin/phpstan analyse --memory-limit=1G"
+    "phpstan": "@php ./vendor/bin/phpstan analyse --memory-limit=1G",
+    "tests": "@php ./vendor/bin/phpunit",
+    "tests:coverage": "@php ./vendor/bin/phpunit --coverage-text"
   }
 }

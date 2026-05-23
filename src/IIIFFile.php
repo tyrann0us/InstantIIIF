@@ -7,6 +7,7 @@ namespace MediaWiki\Extension\InstantIIIF;
 use File;
 use MediaHandler;
 use MediaTransformError;
+use MediaWiki\Context\RequestContext;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Title\Title;
 use ThumbnailImage;
@@ -40,6 +41,19 @@ class IIIFFile extends File
     /** @var array<string, list<string>> */
     private const LANDING_META_KEYS = [
         'deutsche-fotothek' => ['Link zum Werk'],
+        'slub-dresden' => ['PURL', 'Persistent URL'],
+    ];
+
+    /**
+     * Provider-specific label mapping to find a license URL inside the
+     * `metadata` array. Used as a fallback when the manifest has no
+     * top-level `license`/`rights` field (e.g., SLUB manifests).
+     *
+     * @var array<string, list<string>>
+     */
+    private const LICENSE_META_KEYS = [
+        'slub-dresden' => ['Rechteinformationen', 'Rights'],
+        'slub' => ['Rechteinformationen', 'Rights'],
     ];
 
     /**
@@ -161,25 +175,159 @@ class IIIFFile extends File
     // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound -- MediaWiki File override
     public function getFullUrl(): string
     {
-        $svc = $this->getServiceIdForPage(1);
-        return $svc ? $this->buildImageUrl($svc, 'full') : '';
+        return $this->getUrl();
     }
 
+    /**
+     * Return the IIIF Image API URL for the currently selected page.
+     *
+     * Resolution order:
+     *  1. `?page=N` on the current request — set when the user is viewing
+     *     a file detail page at `/wiki/File:Foo?page=6`. Anchored to the
+     *     request URL so it isn't overwritten by subsequent transform()
+     *     calls (e.g. for the prev/next thumbnails, whose transforms
+     *     update `lastTransformPage` after the main image was rendered).
+     *  2. `lastTransformPage` — used in the imageinfo API flow, where the
+     *     request URL has no `?page=` parameter but MediaWiki calls
+     *     transform() with `iiurlparam=pageN-Wpx` before reading `url`.
+     *  3. Page 1 as the safe default.
+     *
+     * This way both the "Original file" link on a file description page
+     * (rendered after several transforms) and the imageinfo `url` field
+     * (a single transform per API request) resolve to the canvas the
+     * caller actually meant.
+     */
     // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound -- MediaWiki File override
     public function getUrl(): string
     {
-        return $this->getFullUrl();
+        $page = $this->resolveCurrentPage();
+        $svc = $this->getServiceIdForPage($page);
+        return $svc ? $this->buildImageUrl($svc, 'full') : '';
+    }
+
+    /**
+     * Resolve the page number to use for non-thumb URL methods.
+     */
+    private function resolveCurrentPage(): int
+    {
+        $request = RequestContext::getMain()->getRequest();
+        $requestPage = (int) $request->getVal('page', '0');
+        if ($requestPage > 0) {
+            return $this->normalizePage($requestPage);
+        }
+        return $this->lastTransformPage;
+    }
+
+    /**
+     * Build the full-resolution IIIF Image API URL for a specific page.
+     *
+     * Unlike getUrl() (always page 1), this returns the URL for any page.
+     * Used by the ThumbnailBeforeProduceHTML hook to fix the main-image
+     * link on file detail pages for multi-page documents.
+     */
+    // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound -- public API for hooks
+    public function getUrlForPage(int $page): string
+    {
+        $page = $this->normalizePage($page);
+        $svc = $this->getServiceIdForPage($page);
+        return $svc ? $this->buildImageUrl($svc, 'full') : '';
+    }
+
+    /**
+     * Local wiki file page URL for this IIIF file.
+     *
+     * Exposed by the API as `descriptionurl`; consumed by MMV for the
+     * "More details" button, share link, and embed credit link.
+     *
+     * Returning the local URL (instead of the provider URL) ensures that
+     * all MMV-generated links point to the wiki. The external provider
+     * URL is available via getProviderUrl() and used for license fallback
+     * and the shared-upload description text.
+     */
+    // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound -- MediaWiki File override
+    public function getDescriptionUrl(): string
+    {
+        $title = $this->canonicalLocalTitle();
+        if ($title === null) {
+            return '';
+        }
+        $page = $this->resolveCurrentPage();
+        $query = $page > 1 ? 'page=' . $page : '';
+        return $title->getFullURL($query, false, PROTO_HTTPS);
+    }
+
+    /**
+     * Return the Title pointing at the *real* wiki file page for this
+     * IIIF file — i.e. with the spoofed `.jpg` extension stripped off.
+     *
+     * MMV requires file titles to carry a recognised image extension,
+     * which Hooks::onThumbnailBeforeProduceHTML provides by appending
+     * ".jpg" to extension-less DB keys. When MMV later round-trips
+     * that spoofed title back through the imageinfo API, the IIIFFile
+     * here carries the doctored title (e.g. "Bsb11610364.jpg"), but
+     * the wiki page that actually catalogues the file's usage lives
+     * at the un-spoofed dbkey ("Bsb11610364"). Linking back to the
+     * spoofed title would 404 the "File usage" listing.
+     *
+     * IIIF object IDs in the wild are extension-less (BSB IDs, SLUB
+     * shelfmarks, Fotothek `df_*` codes), so dropping `.jpg` always
+     * resolves to the canonical wiki title for the kinds of files
+     * this extension handles.
+     */
+    private function canonicalLocalTitle(): ?Title
+    {
+        $title = $this->getTitle();
+        if ($title === null) {
+            return null;
+        }
+        $dbKey = $title->getDBkey();
+        $stripped = $this->removeImageExtension($dbKey);
+        if ($stripped === $dbKey || $stripped === '') {
+            return $title;
+        }
+        $clean = Title::makeTitleSafe($title->getNamespace(), $stripped);
+        return $clean ?? $title;
+    }
+
+    /**
+     * Return the provider's landing-page URL for use as the file's
+     * "short" description URL.
+     *
+     * MMV uses `descriptionShortUrl` for the credit "Link" inside the
+     * download-dialog attribution (plain + HTML) and the HTML embed's
+     * trailing `<a>Link</a>`. Returning the provider URL
+     * here means a re-user who copies that snippet links back to the
+     * original work at the institution that holds it, not to a local
+     * wiki page (which would be a circular reference for re-users
+     * outside the wiki).
+     *
+     * Falls back to the local file-page URL when no provider URL is
+     * available — the base File class returns null, which causes the
+     * API to omit the field and MMV to crash in HtmlUtils.
+     *
+     * Called by ApiQueryImageInfo — not referenced directly in this
+     * extension.
+     *
+     * @noinspection PhpUnused
+     */
+    // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound -- MediaWiki File override
+    public function getDescriptionShortUrl(): string
+    {
+        $providerUrl = $this->getProviderUrl();
+        return $providerUrl !== '' ? $providerUrl : $this->getDescriptionUrl();
     }
 
     /**
      * Human-readable landing page for the object at the IIIF provider.
      * v3: `homepage`, v2: `related`, fallback: provider metadata label mapping.
      *
-     * Exposed by the API as `descriptionurl`; MMV uses it for the share
-     * link, embed credit link, and "More details" button.
+     * Used for:
+     * - Shared-upload description text (ImagePage)
+     * - License URL fallback in extmetadata
+     * - JS config var for fixing the shared-upload link on file pages
      */
-    // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound -- MediaWiki File override
-    public function getDescriptionUrl(): string
+    // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound -- public API for hooks
+    public function getProviderUrl(): string
     {
         $resolved = $this->ensureResolved();
         if (!$resolved) {
@@ -199,24 +347,6 @@ class IIIFFile extends File
         }
 
         return $this->extractUrlFromMetadata($resolved);
-    }
-
-    /**
-     * Return the same URL as getDescriptionUrl().
-     *
-     * The base File class returns null, which causes the API to omit the
-     * `descriptionshorturl` field.  MMV then passes `undefined` into
-     * HtmlUtils.wrapAndJquerify(), crashing with "unknown type undefined".
-     *
-     * Called by ApiQueryImageInfo — not referenced directly in this extension.
-     *
-     * @noinspection PhpUnused
-     * @return string
-     */
-    // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound -- MediaWiki File override
-    public function getDescriptionShortUrl(): string
-    {
-        return $this->getDescriptionUrl();
     }
 
     /* -------------------- Description URL extraction -------------------- */
@@ -296,20 +426,105 @@ class IIIFFile extends File
             return '';
         }
 
-        $labels = array_map('mb_strtolower', self::LANDING_META_KEYS[$provider]);
-        foreach (($manifest['metadata'] ?? []) as $metadataItem) {
-            $label = $this->stringFromMaybeLangMap($metadataItem['label'] ?? '');
-            $value = $metadataItem['value'] ?? '';
-            if (
-                in_array(mb_strtolower($label), $labels, true)
-                && is_string($value)
-                && preg_match('~^https?://~', $value)
-            ) {
+        return $this->findUrlInMetadata(
+            $manifest['metadata'] ?? [],
+            self::LANDING_META_KEYS[$provider]
+        );
+    }
+
+    /**
+     * Locate a label-matching metadata entry and return any HTTP(S) URL it
+     * contains. Values may be plain URL strings, HTML fragments
+     * (`<a href="…">…</a>`), language maps, or arrays thereof — providers
+     * differ a lot here, especially SLUB which embeds links inside HTML.
+     *
+     * @param array<int, mixed> $metadata
+     * @param list<string> $labels
+     */
+    private function findUrlInMetadata(array $metadata, array $labels): string
+    {
+        $needles = array_map('mb_strtolower', $labels);
+        foreach ($metadata as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $label = mb_strtolower($this->stringFromMaybeLangMap($item['label'] ?? ''));
+            if (!in_array($label, $needles, true)) {
+                continue;
+            }
+            $url = $this->extractUrlFromValue($item['value'] ?? '');
+            if ($url !== '') {
+                return $url;
+            }
+        }
+        return '';
+    }
+
+    /**
+     * Pull the first HTTP(S) URL out of a metadata `value`. Accepts:
+     *  - plain URL string ("https://…")
+     *  - HTML containing <a href="…">
+     *  - v2/v3 language object/map shapes (recursively resolved)
+     *  - array of any of the above
+     */
+    private function extractUrlFromValue(mixed $value): string
+    {
+        if (is_string($value)) {
+            if (preg_match('~^https?://~', $value)) {
                 return $value;
+            }
+            if (
+                preg_match('~href=["\']([^"\']+)["\']~i', $value, $match)
+                && preg_match('~^https?://~', $match[1])
+            ) {
+                return $match[1];
+            }
+            return '';
+        }
+
+        if (!is_array($value)) {
+            return '';
+        }
+
+        // Language map / object — resolve to string first, then re-parse.
+        $resolved = $this->stringFromMaybeLangMap($value);
+        if ($resolved !== '') {
+            $url = $this->extractUrlFromValue($resolved);
+            if ($url !== '') {
+                return $url;
+            }
+        }
+
+        // Array of values — try each.
+        foreach ($value as $entry) {
+            $url = $this->extractUrlFromValue($entry);
+            if ($url !== '') {
+                return $url;
             }
         }
 
         return '';
+    }
+
+    /**
+     * Find a license URL inside the manifest's `metadata` field for
+     * providers that don't expose a top-level `license`/`rights` (e.g.
+     * SLUB embeds the license as an HTML link in `Rechteinformationen`).
+     *
+     * @param array<string, mixed> $resolved
+     */
+    // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound -- public API for hooks
+    public function getLicenseUrlFromMetadata(array $resolved): string
+    {
+        $provider = $resolved['provider'] ?? null;
+        if (!$provider || !isset(self::LICENSE_META_KEYS[$provider])) {
+            return '';
+        }
+        $manifest = $resolved['manifestRaw'] ?? [];
+        return $this->findUrlInMetadata(
+            $manifest['metadata'] ?? [],
+            self::LICENSE_META_KEYS[$provider]
+        );
     }
 
     /* -------------------- Transform (thumbnails) -------------------- */
@@ -338,7 +553,7 @@ class IIIFFile extends File
 
         $originalDims = $this->getOriginalDimensions($page, $svc);
 
-        return $this->createThumbnail($svc, $width, $height, $originalDims);
+        return $this->createThumbnail($svc, $width, $height, $originalDims, $page);
     }
 
     /**
@@ -370,7 +585,8 @@ class IIIFFile extends File
         string $svc,
         int $width,
         int $height,
-        array $originalDims
+        array $originalDims,
+        int $page = 1
     ): ThumbnailImage {
 
         [$origWidth, $origHeight] = $originalDims;
@@ -380,25 +596,27 @@ class IIIFFile extends File
             return new ThumbnailImage($this, $url, false, [
                 'width' => $origWidth,
                 'height' => $origHeight,
+                'page' => $page,
             ]);
         }
 
         if ($width && !$height) {
-            return $this->createWidthOnlyThumbnail($svc, $width, $origWidth, $origHeight);
+            return $this->createWidthOnlyThumbnail($svc, $width, $origWidth, $origHeight, $page);
         }
 
-        if ($height && !$width) {
-            return $this->createHeightOnlyThumbnail($svc, $height, $origWidth, $origHeight);
+        if (!$width) {
+            return $this->createHeightOnlyThumbnail($svc, $height, $origWidth, $origHeight, $page);
         }
 
-        return $this->createBothDimensionsThumbnail($svc, $width, $height);
+        return $this->createBothDimensionsThumbnail($svc, $width, $height, $page);
     }
 
     private function createWidthOnlyThumbnail(
         string $svc,
         int $width,
         int $origWidth,
-        int $origHeight
+        int $origHeight,
+        int $page = 1
     ): ThumbnailImage {
 
         [$clampedWidth, $clampedHeight] = $this->clampSizeToService($svc, $width, 0);
@@ -408,6 +626,7 @@ class IIIFFile extends File
         return new ThumbnailImage($this, $url, false, [
             'width' => $clampedWidth,
             'height' => $clampedHeight,
+            'page' => $page,
         ]);
     }
 
@@ -415,7 +634,8 @@ class IIIFFile extends File
         string $svc,
         int $height,
         int $origWidth,
-        int $origHeight
+        int $origHeight,
+        int $page = 1
     ): ThumbnailImage {
 
         [$clampedWidth, $clampedHeight] = $this->clampSizeToService($svc, 0, $height);
@@ -425,13 +645,15 @@ class IIIFFile extends File
         return new ThumbnailImage($this, $url, false, [
             'width' => $clampedWidth,
             'height' => $clampedHeight,
+            'page' => $page,
         ]);
     }
 
     private function createBothDimensionsThumbnail(
         string $svc,
         int $width,
-        int $height
+        int $height,
+        int $page = 1
     ): ThumbnailImage {
 
         [$clampedWidth, $clampedHeight] = $this->clampSizeToService($svc, $width, $height);
@@ -439,6 +661,7 @@ class IIIFFile extends File
         return new ThumbnailImage($this, $url, false, [
             'width' => $clampedWidth,
             'height' => $clampedHeight,
+            'page' => $page,
         ]);
     }
 
@@ -950,38 +1173,110 @@ class IIIFFile extends File
     }
 
     /**
+     * Preferred languages for resolving IIIF language maps / arrays.
+     *
+     * Picks (in order): the wiki's content language, then English as a
+     * sensible fallback (IIIF manifests in the wild almost always carry
+     * an English translation).
+     *
+     * @return list<string>
+     */
+    protected function preferredLanguages(): array
+    {
+        $langs = [];
+        try {
+            $contentLang = MediaWikiServices::getInstance()
+                ->getContentLanguage()
+                ->getCode();
+            if ($contentLang !== '') {
+                $langs[] = $contentLang;
+            }
+        } catch (\Throwable $unused) {
+            // Services unavailable (extreme bootstrap failure) — fall
+            // through to English.
+            unset($unused);
+        }
+        if (!in_array('en', $langs, true)) {
+            $langs[] = 'en';
+        }
+        return $langs;
+    }
+
+    /**
      * Resolve a IIIF value that may be a plain string, a v2 language object
      * (`{ "@value": "...", "@language": "..." }`), a v3 language map
      * (`{ "en": ["..."], "de": ["..."] }`), or an array of language objects.
+     *
+     * Falls back through the wiki's content language to English when
+     * multiple translations are available.
      */
     private function stringFromMaybeLangMap(mixed $value): string
     {
         if (is_string($value)) {
             return $value;
         }
-
         if (!is_array($value)) {
             return '';
         }
-
         // v2 single language object.
         if (isset($value['@value']) && is_string($value['@value'])) {
             return $value['@value'];
         }
-
-        // v2 array of language objects.
-        $first = $value[0] ?? null;
-        if (is_array($first) && isset($first['@value']) && is_string($first['@value'])) {
-            return $first['@value'];
+        $preferred = $this->preferredLanguages();
+        // v2 list of language objects.
+        if (isset($value[0]) && is_array($value[0]) && isset($value[0]['@value'])) {
+            return $this->pickFromLanguageObjectList($value, $preferred);
         }
+        // v3 language map.
+        return $this->pickFromLanguageMap($value, $preferred);
+    }
 
-        // v3 language map — pick the first available translation.
+    /**
+     * v2 list of language objects: `[{"@language":"de","@value":"…"}, …]`.
+     *
+     * @param array<int, mixed> $entries
+     * @param list<string> $preferred
+     */
+    private function pickFromLanguageObjectList(array $entries, array $preferred): string
+    {
+        foreach ($preferred as $lang) {
+            foreach ($entries as $entry) {
+                if (
+                    is_array($entry)
+                    && ($entry['@language'] ?? null) === $lang
+                    && is_string($entry['@value'] ?? null)
+                ) {
+                    return $entry['@value'];
+                }
+            }
+        }
+        foreach ($entries as $entry) {
+            if (is_array($entry) && is_string($entry['@value'] ?? null)) {
+                return $entry['@value'];
+            }
+        }
+        return '';
+    }
+
+    /**
+     * v3 language map: `{"de": ["…"], "en": ["…"]}`.
+     *
+     * @param array<string, mixed> $value
+     * @param list<string> $preferred
+     */
+    private function pickFromLanguageMap(array $value, array $preferred): string
+    {
+        foreach ($preferred as $lang) {
+            $candidate = $value[$lang] ?? null;
+            if (is_array($candidate) && isset($candidate[0]) && is_string($candidate[0])) {
+                return $candidate[0];
+            }
+        }
         foreach ($value as $langValues) {
             if (is_array($langValues) && isset($langValues[0]) && is_string($langValues[0])) {
                 return $langValues[0];
             }
         }
-
         return '';
     }
 }

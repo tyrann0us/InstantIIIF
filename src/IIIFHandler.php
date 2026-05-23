@@ -119,7 +119,7 @@ class IIIFHandler extends ImageHandler
 
     /**
      * IIIF images are always remote — there is no local file to read
-     * dimensions from.  Return an empty array so that MediaWiki falls
+     * dimensions from. Return an empty array so that MediaWiki falls
      * back to File::getWidth() / File::getHeight(), which IIIFFile
      * overrides to query the manifest / info.json.
      *

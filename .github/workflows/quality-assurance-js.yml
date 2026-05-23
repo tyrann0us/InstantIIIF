@@ -1,0 +1,10 @@
+name: 'JS Quality Assurance'
+on:
+  pull_request:
+    paths:
+      - '**.js'
+      - 'package.json'
+      - 'package-lock.json'
+jobs:
+  unit-tests-js:
+    uses: inpsyde/reusable-workflows/.github/workflows/tests-unit-js.yml@main
