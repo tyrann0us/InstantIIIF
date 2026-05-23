@@ -8,3 +8,5 @@ on:
 jobs:
   wp-scripts-lint:
     uses: inpsyde/reusable-workflows/.github/workflows/wp-scripts-lint.yml@main
+    with:
+      LINT_TOOLS: '["js", "md-docs"]'
