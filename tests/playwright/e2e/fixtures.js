@@ -12,12 +12,12 @@ const base = require( '@playwright/test' );
 module.exports = base.test.extend( {
 	page: async ( { page }, use ) => {
 		await page.route( /http:\/\/iiif-mock:8111\//, ( route ) => {
-			const url = route.request().url().replace(
-				'http://iiif-mock:8111/',
-				'http://localhost:8111/'
-			);
+			const url = route
+				.request()
+				.url()
+				.replace( 'http://iiif-mock:8111/', 'http://localhost:8111/' );
 			route.continue( { url } );
 		} );
 		await use( page );
-	}
+	},
 } );

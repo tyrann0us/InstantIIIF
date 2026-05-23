@@ -14,21 +14,30 @@ const path = require( 'path' );
 /**
  * Build a fresh mw mock and attach it (plus jQuery) to the given window.
  * Returns helper handles so tests can inspect and trigger behaviour.
+ * @param {Window} win
  */
 function createMwEnv( win ) {
 	// ── jQuery (minimal, just what mmv-patch.js needs) ──────────
 
+	function resolveElements( selector ) {
+		if ( typeof selector === 'string' ) {
+			return Array.from( win.document.querySelectorAll( selector ) );
+		}
+		if ( selector.nodeType ) {
+			return [ selector ];
+		}
+		return Array.from( selector );
+	}
+
 	function jQueryFactory( selector ) {
 		const wrap = {
-			_el: typeof selector === 'string'
-				? Array.from( win.document.querySelectorAll( selector ) )
-				: ( selector.nodeType ? [ selector ] : Array.from( selector ) ),
+			_el: resolveElements( selector ),
 			on( event, handler ) {
 				wrap._el.forEach( ( el ) => {
-					if ( !el.__jqHandlers ) {
+					if ( ! el.__jqHandlers ) {
 						el.__jqHandlers = {};
 					}
-					if ( !el.__jqHandlers[ event ] ) {
+					if ( ! el.__jqHandlers[ event ] ) {
 						el.__jqHandlers[ event ] = [];
 					}
 					el.__jqHandlers[ event ].push( handler );
@@ -43,17 +52,19 @@ function createMwEnv( win ) {
 					el.value = v;
 				} );
 				return wrap;
-			}
+			},
 		};
 		return wrap;
 	}
 
 	/**
 	 * Trigger a jQuery-style event on document (used by mmv-metadata).
+	 * @param {string} eventName
+	 * @param {Object} [extraProps]
 	 */
 	function triggerJqEvent( eventName, extraProps ) {
 		const doc = win.document;
-		if ( !doc.__jqHandlers || !doc.__jqHandlers[ eventName ] ) {
+		if ( ! doc.__jqHandlers || ! doc.__jqHandlers[ eventName ] ) {
 			return;
 		}
 		const evt = Object.assign( { type: eventName }, extraProps || {} );
@@ -76,21 +87,23 @@ function createMwEnv( win ) {
 		},
 		set( key, value ) {
 			configStore[ key ] = value;
-		}
+		},
 	};
 
 	// ── mw.hook ─────────────────────────────────────────────────
 
 	const hookRegistry = {};
 	function mwHook( name ) {
-		if ( !hookRegistry[ name ] ) {
+		if ( ! hookRegistry[ name ] ) {
 			hookRegistry[ name ] = { _handlers: [] };
 			hookRegistry[ name ].add = function ( fn ) {
 				hookRegistry[ name ]._handlers.push( fn );
 				return hookRegistry[ name ];
 			};
 			hookRegistry[ name ].fire = function ( ...args ) {
-				hookRegistry[ name ]._handlers.forEach( ( fn ) => fn( ...args ) );
+				hookRegistry[ name ]._handlers.forEach( ( fn ) =>
+					fn( ...args )
+				);
 			};
 		}
 		return hookRegistry[ name ];
@@ -100,15 +113,17 @@ function createMwEnv( win ) {
 
 	const moduleRegistry = {};
 	const mwLoader = {
-		using( moduleName ) {
+		using() {
 			return Promise.resolve( function require( name ) {
 				return moduleRegistry[ name ] || {};
 			} );
-		}
+		},
 	};
 
 	/**
 	 * Register a fake module that mw.loader.using() will return.
+	 * @param {string} name
+	 * @param {Object} exports
 	 */
 	function registerModule( name, exports ) {
 		moduleRegistry[ name ] = exports;
@@ -123,7 +138,7 @@ function createMwEnv( win ) {
 
 		getUrl( query ) {
 			const base = '/wiki/' + this._text.replace( / /g, '_' );
-			if ( !query ) {
+			if ( ! query ) {
 				return base;
 			}
 			if ( typeof query === 'string' ) {
@@ -133,7 +148,9 @@ function createMwEnv( win ) {
 			for ( const k in query ) {
 				if ( Object.prototype.hasOwnProperty.call( query, k ) ) {
 					parts.push(
-						encodeURIComponent( k ) + '=' + encodeURIComponent( query[ k ] )
+						encodeURIComponent( k ) +
+							'=' +
+							encodeURIComponent( query[ k ] )
 					);
 				}
 			}
@@ -156,7 +173,7 @@ function createMwEnv( win ) {
 		config: mwConfig,
 		hook: mwHook,
 		loader: mwLoader,
-		Title: MwTitle
+		Title: MwTitle,
 	};
 
 	win.mw = mw;
@@ -168,13 +185,14 @@ function createMwEnv( win ) {
 		config: mwConfig,
 		hookRegistry,
 		registerModule,
-		triggerJqEvent
+		triggerJqEvent,
 	};
 }
 
 /**
  * Load and execute mmv-patch.js in the current JSDOM window context.
  * Must be called after createMwEnv().
+ * @param {Window} win
  */
 function loadMmvPatch( win ) {
 	const code = fs.readFileSync(
@@ -182,7 +200,14 @@ function loadMmvPatch( win ) {
 		'utf-8'
 	);
 	// Execute the script in the window's global context.
-	const fn = new Function( 'window', 'document', 'mw', '$', 'location', code );
+	const fn = new Function(
+		'window',
+		'document',
+		'mw',
+		'$',
+		'location',
+		code
+	);
 	fn( win, win.document, win.mw, win.$, win.location );
 }
 

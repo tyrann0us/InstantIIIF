@@ -37,8 +37,12 @@ describe( 'data-iiif-navigate class removal', () => {
 		const navigateLink = document.querySelector( 'a[href*="page=2"]' );
 		const otherLink = document.querySelector( 'a[href*="Other"]' );
 
-		expect( navigateLink.classList.contains( 'mw-file-description' ) ).toBe( false );
-		expect( otherLink.classList.contains( 'mw-file-description' ) ).toBe( true );
+		expect( navigateLink.classList.contains( 'mw-file-description' ) ).toBe(
+			false
+		);
+		expect( otherLink.classList.contains( 'mw-file-description' ) ).toBe(
+			true
+		);
 	} );
 
 	test( 'does nothing when no navigate-marked images exist', () => {
@@ -66,12 +70,17 @@ describe( 'shared-upload notice link fix', () => {
 			</div>
 		` );
 
-		env.config.set( 'wgIIIFProviderUrl', 'https://www.deutschefotothek.de/documents/obj/12345' );
+		env.config.set(
+			'wgIIIFProviderUrl',
+			'https://www.deutschefotothek.de/documents/obj/12345'
+		);
 		loadMmvPatch( window );
 		env.mw.hook( 'wikipage.content' ).fire();
 
 		const link = document.querySelector( '.sharedUploadNotice a' );
-		expect( link.href ).toBe( 'https://www.deutschefotothek.de/documents/obj/12345' );
+		expect( link.href ).toBe(
+			'https://www.deutschefotothek.de/documents/obj/12345'
+		);
 	} );
 
 	test( 'replaces absolute local link with provider URL', () => {
@@ -124,7 +133,9 @@ describe( 'shared-upload notice link fix', () => {
 
 describe( 'mw.Title.newFromImg override', () => {
 	test( 'returns title from data-iiif-title attribute', async () => {
-		buildDom( '<img id="t" data-iiif-title="File:Df_dk_0007450.jpg" src="/thumb.jpg" />' );
+		buildDom(
+			'<img id="t" data-iiif-title="File:Df_dk_0007450.jpg" src="/thumb.jpg" />'
+		);
 
 		loadMmvPatch( window );
 		// The Title override is set inside mw.loader.using('mediawiki.Title').then(...)
@@ -139,7 +150,9 @@ describe( 'mw.Title.newFromImg override', () => {
 	} );
 
 	test( 'falls back to data-mwtitle attribute', async () => {
-		buildDom( '<img id="t" data-mwtitle="File:Regular.jpg" src="/thumb.jpg" />' );
+		buildDom(
+			'<img id="t" data-mwtitle="File:Regular.jpg" src="/thumb.jpg" />'
+		);
 
 		loadMmvPatch( window );
 		await new Promise( ( r ) => setTimeout( r, 0 ) );
@@ -155,7 +168,6 @@ describe( 'mw.Title.newFromImg override', () => {
 		buildDom( '<img id="t" src="/thumb.jpg" />' );
 
 		const origResult = { _text: 'original' };
-		const origFn = env.mw.Title.newFromImg;
 		env.mw.Title.newFromImg = () => origResult;
 
 		loadMmvPatch( window );
@@ -171,7 +183,9 @@ describe( 'mw.Title.newFromImg override', () => {
 	} );
 
 	test( 'handles jQuery-wrapped img elements', async () => {
-		buildDom( '<img id="t" data-iiif-title="File:Test.jpg" src="/thumb.jpg" />' );
+		buildDom(
+			'<img id="t" data-iiif-title="File:Test.jpg" src="/thumb.jpg" />'
+		);
 
 		loadMmvPatch( window );
 		await new Promise( ( r ) => setTimeout( r, 0 ) );
@@ -199,7 +213,12 @@ describe( 'ThumbnailInfo page patch', () => {
 		// Set up fake ThumbnailInfo module.
 		const getCalls = [];
 		function FakeThumbnailInfo() {}
-		FakeThumbnailInfo.prototype.get = function ( file, sampleUrl, width, height ) {
+		FakeThumbnailInfo.prototype.get = function (
+			file,
+			sampleUrl,
+			width,
+			height
+		) {
 			getCalls.push( { file, sampleUrl, width, height } );
 			return { then: () => {} };
 		};
@@ -213,7 +232,12 @@ describe( 'ThumbnailInfo page patch', () => {
 
 		// Call the patched ThumbnailInfo.get with the page-2 URL.
 		const instance = new FakeThumbnailInfo();
-		instance.get( 'File:Test.jpg', 'https://iiif.example/img002/full/800,/0/default.jpg', 600, 400 );
+		instance.get(
+			'File:Test.jpg',
+			'https://iiif.example/img002/full/800,/0/default.jpg',
+			600,
+			400
+		);
 
 		expect( getCalls.length ).toBe( 1 );
 		expect( getCalls[ 0 ].sampleUrl ).toContain( '#page2-600px' );
@@ -227,7 +251,12 @@ describe( 'ThumbnailInfo page patch', () => {
 
 		const getCalls = [];
 		function FakeThumbnailInfo() {}
-		FakeThumbnailInfo.prototype.get = function ( file, sampleUrl, width, height ) {
+		FakeThumbnailInfo.prototype.get = function (
+			file,
+			sampleUrl,
+			width,
+			height
+		) {
 			getCalls.push( { file, sampleUrl, width, height } );
 			return { then: () => {} };
 		};
@@ -254,7 +283,12 @@ describe( 'ThumbnailInfo page patch', () => {
 
 		const getCalls = [];
 		function FakeThumbnailInfo() {}
-		FakeThumbnailInfo.prototype.get = function ( file, sampleUrl, width, height ) {
+		FakeThumbnailInfo.prototype.get = function (
+			file,
+			sampleUrl,
+			width,
+			height
+		) {
 			getCalls.push( { file, sampleUrl, width, height } );
 			return { then: () => {} };
 		};
@@ -265,7 +299,12 @@ describe( 'ThumbnailInfo page patch', () => {
 		await new Promise( ( r ) => setTimeout( r, 10 ) );
 
 		const instance = new FakeThumbnailInfo();
-		instance.get( 'File:Test.jpg', 'https://iiif.example/img002/full/800,/0/default.jpg', 0, 0 );
+		instance.get(
+			'File:Test.jpg',
+			'https://iiif.example/img002/full/800,/0/default.jpg',
+			0,
+			0
+		);
 
 		expect( getCalls[ 0 ].sampleUrl ).toContain( '#page2-300px' );
 	} );
@@ -277,17 +316,22 @@ describe( 'MMV image link fix via mmv-metadata', () => {
 	test( 'replaces MMV overlay image link with data-iiif-full-url', async () => {
 		const thumbnailEl = document.createElement( 'img' );
 		thumbnailEl.setAttribute( 'data-iiif-title', 'File:Test.jpg' );
-		thumbnailEl.setAttribute( 'data-iiif-full-url', 'https://iiif.example/page2/full/full/0/default.jpg' );
+		thumbnailEl.setAttribute(
+			'data-iiif-full-url',
+			'https://iiif.example/page2/full/full/0/default.jpg'
+		);
 
-		buildDom( '<div class="mw-mmv-image"><a href="https://iiif.example/page1/full/full/0/default.jpg">image</a></div>' );
+		buildDom(
+			'<div class="mw-mmv-image"><a href="https://iiif.example/page1/full/full/0/default.jpg">image</a></div>'
+		);
 
-		env.registerModule( 'mmv', { ThumbnailInfo: function () {} } );
+		env.registerModule( 'mmv', { ThumbnailInfo: class {} } );
 		env.registerModule( 'mmv.ui.reuse', {
 			Share: ( function () {
 				function S() {}
 				S.prototype.set = function () {};
 				return S;
-			}() )
+			} )(),
 		} );
 
 		loadMmvPatch( window );
@@ -295,11 +339,16 @@ describe( 'MMV image link fix via mmv-metadata', () => {
 
 		// Fire mmv-metadata event with our thumbnail.
 		env.triggerJqEvent( 'mmv-metadata', {
-			image: { thumbnail: thumbnailEl, src: 'https://iiif.example/thumb.jpg' }
+			image: {
+				thumbnail: thumbnailEl,
+				src: 'https://iiif.example/thumb.jpg',
+			},
 		} );
 
 		const mmvLink = document.querySelector( '.mw-mmv-image a' );
-		expect( mmvLink.href ).toBe( 'https://iiif.example/page2/full/full/0/default.jpg' );
+		expect( mmvLink.href ).toBe(
+			'https://iiif.example/page2/full/full/0/default.jpg'
+		);
 	} );
 
 	test( 'does not touch MMV link when data-iiif-full-url is absent', async () => {
@@ -307,23 +356,29 @@ describe( 'MMV image link fix via mmv-metadata', () => {
 		thumbnailEl.setAttribute( 'data-iiif-title', 'File:Test.jpg' );
 		// No data-iiif-full-url — page 1 scenario.
 
-		const originalHref = 'https://iiif.example/page1/full/full/0/default.jpg';
-		buildDom( `<div class="mw-mmv-image"><a href="${ originalHref }">image</a></div>` );
+		const originalHref =
+			'https://iiif.example/page1/full/full/0/default.jpg';
+		buildDom(
+			`<div class="mw-mmv-image"><a href="${ originalHref }">image</a></div>`
+		);
 
-		env.registerModule( 'mmv', { ThumbnailInfo: function () {} } );
+		env.registerModule( 'mmv', { ThumbnailInfo: class {} } );
 		env.registerModule( 'mmv.ui.reuse', {
 			Share: ( function () {
 				function S() {}
 				S.prototype.set = function () {};
 				return S;
-			}() )
+			} )(),
 		} );
 
 		loadMmvPatch( window );
 		await new Promise( ( r ) => setTimeout( r, 10 ) );
 
 		env.triggerJqEvent( 'mmv-metadata', {
-			image: { thumbnail: thumbnailEl, src: 'https://iiif.example/thumb.jpg' }
+			image: {
+				thumbnail: thumbnailEl,
+				src: 'https://iiif.example/thumb.jpg',
+			},
 		} );
 
 		const mmvLink = document.querySelector( '.mw-mmv-image a' );
@@ -338,16 +393,19 @@ describe( 'non-IIIF image passthrough', () => {
 		const thumbnailEl = document.createElement( 'img' );
 		// No data-iiif-title → not an IIIF image.
 
-		const originalHref = 'https://upload.wikimedia.org/wikipedia/commons/test.jpg';
-		buildDom( `<div class="mw-mmv-image"><a href="${ originalHref }">image</a></div>` );
+		const originalHref =
+			'https://upload.wikimedia.org/wikipedia/commons/test.jpg';
+		buildDom(
+			`<div class="mw-mmv-image"><a href="${ originalHref }">image</a></div>`
+		);
 
-		env.registerModule( 'mmv', { ThumbnailInfo: function () {} } );
+		env.registerModule( 'mmv', { ThumbnailInfo: class {} } );
 
 		loadMmvPatch( window );
 		await new Promise( ( r ) => setTimeout( r, 10 ) );
 
 		env.triggerJqEvent( 'mmv-metadata', {
-			image: { thumbnail: thumbnailEl }
+			image: { thumbnail: thumbnailEl },
 		} );
 
 		const mmvLink = document.querySelector( '.mw-mmv-image a' );
@@ -358,13 +416,7 @@ describe( 'non-IIIF image passthrough', () => {
 // ─── Edge case: invalid data-iiif-page values ──────────────────
 
 describe( 'click capture: invalid page numbers fall back to page 1', () => {
-	test.each( [
-		[ '0' ],
-		[ '-3' ],
-		[ 'abc' ],
-		[ '' ],
-		[ '3.5' ],
-	] )(
+	test.each( [ [ '0' ], [ '-3' ], [ 'abc' ], [ '' ], [ '3.5' ] ] )(
 		'data-iiif-page=%j is treated as page 1 (no fragment / no |page=)',
 		async ( badPage ) => {
 			// If `data-iiif-page` parses to <= 0 or NaN, our share URL
@@ -373,7 +425,8 @@ describe( 'click capture: invalid page numbers fall back to page 1', () => {
 			// readers to a non-existent canvas.
 			buildDom(
 				'<img data-iiif-title="File:Bsb11610364.jpg" data-iiif-page="' +
-					badPage + '" />'
+					badPage +
+					'" />'
 			);
 
 			const initial =
@@ -382,25 +435,27 @@ describe( 'click capture: invalid page numbers fall back to page 1', () => {
 			function FakeShare() {
 				this.$pageInput = {
 					val( v ) {
-						if ( v === undefined ) { return captured; }
+						if ( v === undefined ) {
+							return captured;
+						}
 						captured = v;
-					}
+					},
 				};
 			}
 			FakeShare.prototype.set = function () {
 				this.$pageInput.val( initial );
 			};
 
-			env.registerModule( 'mmv', { ThumbnailInfo: function () {} } );
+			env.registerModule( 'mmv', { ThumbnailInfo: class {} } );
 			env.registerModule( 'mmv.ui.reuse', { Share: FakeShare } );
 
 			loadMmvPatch( window );
 			await new Promise( ( r ) => setTimeout( r, 10 ) );
 
 			// Capture click on the bad thumbnail.
-			document.querySelector( 'img' ).dispatchEvent(
-				new Event( 'click', { bubbles: true } )
-			);
+			document
+				.querySelector( 'img' )
+				.dispatchEvent( new Event( 'click', { bubbles: true } ) );
 			await new Promise( ( r ) => setTimeout( r, 10 ) );
 
 			new FakeShare().set( {} );
@@ -427,17 +482,27 @@ describe( 'Wikitext embed: strip spoofed .jpg from title', () => {
 
 		function FakeEmbedFileFormatter() {}
 		FakeEmbedFileFormatter.prototype.getThumbnailWikitext = function (
-			title, width, caption
+			title,
+			width,
+			caption
 		) {
-			return '[[' + title.getPrefixedText() + '|thumb|' + ( caption || '' ) + ']]';
+			return (
+				'[[' +
+				title.getPrefixedText() +
+				'|thumb|' +
+				( caption || '' ) +
+				']]'
+			);
 		};
 
-		env.registerModule( 'mmv', { ThumbnailInfo: function () {} } );
+		env.registerModule( 'mmv', { ThumbnailInfo: class {} } );
 		env.registerModule( 'mmv.ui.reuse', {
 			Share: ( function () {
-				function S() {} S.prototype.set = function () {}; return S;
-			}() ),
-			EmbedFileFormatter: FakeEmbedFileFormatter
+				function S() {}
+				S.prototype.set = function () {};
+				return S;
+			} )(),
+			EmbedFileFormatter: FakeEmbedFileFormatter,
 		} );
 
 		loadMmvPatch( window );
@@ -445,7 +510,10 @@ describe( 'Wikitext embed: strip spoofed .jpg from title', () => {
 
 		const thumbnailEl = document.querySelector( 'img[data-iiif-page="6"]' );
 		env.triggerJqEvent( 'mmv-metadata', {
-			image: { thumbnail: thumbnailEl, src: 'https://iiif.example/thumb.jpg' }
+			image: {
+				thumbnail: thumbnailEl,
+				src: 'https://iiif.example/thumb.jpg',
+			},
 		} );
 		await new Promise( ( r ) => setTimeout( r, 10 ) );
 
@@ -465,7 +533,7 @@ describe( 'Wikitext embed: strip spoofed .jpg from title', () => {
 // ─── Share URL preserves #/media/ fragment ─────
 
 describe( 'Share URL patch (preserves #/media/ fragment)', () => {
-	test( 'single-page IIIF: passes MMV\'s share URL through unchanged', async () => {
+	test( "single-page IIIF: passes MMV's share URL through unchanged", async () => {
 		// MMV produces `descriptionUrl + #/media/Title`; for single-page
 		// images we have nothing to add, so the value must be untouched.
 
@@ -485,7 +553,7 @@ describe( 'Share URL patch (preserves #/media/ fragment)', () => {
 						return captured;
 					}
 					captured = v;
-				}
+				},
 			};
 		}
 		// Original Share.set seeds the input with MMV's natural value.
@@ -493,14 +561,17 @@ describe( 'Share URL patch (preserves #/media/ fragment)', () => {
 			this.$pageInput.val( initial );
 		};
 
-		env.registerModule( 'mmv', { ThumbnailInfo: function () {} } );
+		env.registerModule( 'mmv', { ThumbnailInfo: class {} } );
 		env.registerModule( 'mmv.ui.reuse', { Share: FakeShare } );
 
 		loadMmvPatch( window );
 		await new Promise( ( r ) => setTimeout( r, 10 ) );
 
 		env.triggerJqEvent( 'mmv-metadata', {
-			image: { thumbnail: thumbnailEl, src: 'https://iiif.example/thumb.jpg' }
+			image: {
+				thumbnail: thumbnailEl,
+				src: 'https://iiif.example/thumb.jpg',
+			},
 		} );
 		await new Promise( ( r ) => setTimeout( r, 10 ) );
 
@@ -530,21 +601,24 @@ describe( 'Share URL patch (preserves #/media/ fragment)', () => {
 						return captured;
 					}
 					captured = v;
-				}
+				},
 			};
 		}
 		FakeShare.prototype.set = function () {
 			this.$pageInput.val( initial );
 		};
 
-		env.registerModule( 'mmv', { ThumbnailInfo: function () {} } );
+		env.registerModule( 'mmv', { ThumbnailInfo: class {} } );
 		env.registerModule( 'mmv.ui.reuse', { Share: FakeShare } );
 
 		loadMmvPatch( window );
 		await new Promise( ( r ) => setTimeout( r, 10 ) );
 
 		env.triggerJqEvent( 'mmv-metadata', {
-			image: { thumbnail: thumbnailEl, src: 'https://iiif.example/thumb.jpg' }
+			image: {
+				thumbnail: thumbnailEl,
+				src: 'https://iiif.example/thumb.jpg',
+			},
 		} );
 		await new Promise( ( r ) => setTimeout( r, 10 ) );
 
@@ -575,23 +649,28 @@ describe( 'Share URL patch (preserves #/media/ fragment)', () => {
 		function FakeShare() {
 			this.$pageInput = {
 				val( v ) {
-					if ( v === undefined ) { return captured; }
+					if ( v === undefined ) {
+						return captured;
+					}
 					captured = v;
-				}
+				},
 			};
 		}
 		FakeShare.prototype.set = function () {
 			this.$pageInput.val( initial );
 		};
 
-		env.registerModule( 'mmv', { ThumbnailInfo: function () {} } );
+		env.registerModule( 'mmv', { ThumbnailInfo: class {} } );
 		env.registerModule( 'mmv.ui.reuse', { Share: FakeShare } );
 
 		loadMmvPatch( window );
 		await new Promise( ( r ) => setTimeout( r, 10 ) );
 
 		env.triggerJqEvent( 'mmv-metadata', {
-			image: { thumbnail: thumbnailEl, src: 'https://iiif.example/thumb.jpg' }
+			image: {
+				thumbnail: thumbnailEl,
+				src: 'https://iiif.example/thumb.jpg',
+			},
 		} );
 		await new Promise( ( r ) => setTimeout( r, 10 ) );
 
@@ -626,21 +705,24 @@ describe( 'Share URL patch (preserves #/media/ fragment)', () => {
 						return captured;
 					}
 					captured = v;
-				}
+				},
 			};
 		}
 		FakeShare.prototype.set = function () {
 			this.$pageInput.val( initial );
 		};
 
-		env.registerModule( 'mmv', { ThumbnailInfo: function () {} } );
+		env.registerModule( 'mmv', { ThumbnailInfo: class {} } );
 		env.registerModule( 'mmv.ui.reuse', { Share: FakeShare } );
 
 		loadMmvPatch( window );
 		await new Promise( ( r ) => setTimeout( r, 10 ) );
 
 		env.triggerJqEvent( 'mmv-metadata', {
-			image: { thumbnail: thumbnailEl, src: 'https://iiif.example/thumb.jpg' }
+			image: {
+				thumbnail: thumbnailEl,
+				src: 'https://iiif.example/thumb.jpg',
+			},
 		} );
 		await new Promise( ( r ) => setTimeout( r, 10 ) );
 
@@ -658,31 +740,38 @@ describe( 'MMV overlay button patches (multi-page)', () => {
 		const thumbnailEl = document.createElement( 'img' );
 		thumbnailEl.setAttribute( 'data-iiif-title', 'File:Bsb11610364.jpg' );
 		thumbnailEl.setAttribute( 'data-iiif-page', '6' );
-		thumbnailEl.setAttribute( 'data-iiif-full-url',
-			'https://iiif.example/bsb11610364_00006/full/full/0/default.jpg' );
+		thumbnailEl.setAttribute(
+			'data-iiif-full-url',
+			'https://iiif.example/bsb11610364_00006/full/full/0/default.jpg'
+		);
 
 		buildDom( `
 			<a class="mw-mmv-description-page-button"
 			   href="https://wiki.example/wiki/File:Bsb11610364.jpg">More details</a>
 		` );
 
-		env.registerModule( 'mmv', { ThumbnailInfo: function () {} } );
+		env.registerModule( 'mmv', { ThumbnailInfo: class {} } );
 		env.registerModule( 'mmv.ui.reuse', {
 			Share: ( function () {
 				function S() {}
 				S.prototype.set = function () {};
 				return S;
-			}() )
+			} )(),
 		} );
 
 		loadMmvPatch( window );
 		await new Promise( ( r ) => setTimeout( r, 10 ) );
 
 		env.triggerJqEvent( 'mmv-metadata', {
-			image: { thumbnail: thumbnailEl, src: 'https://iiif.example/thumb.jpg' }
+			image: {
+				thumbnail: thumbnailEl,
+				src: 'https://iiif.example/thumb.jpg',
+			},
 		} );
 
-		const moreBtn = document.querySelector( '.mw-mmv-description-page-button' );
+		const moreBtn = document.querySelector(
+			'.mw-mmv-description-page-button'
+		);
 		expect( moreBtn.getAttribute( 'href' ) ).toMatch( /page=6/ );
 	} );
 
@@ -690,8 +779,10 @@ describe( 'MMV overlay button patches (multi-page)', () => {
 		const thumbnailEl = document.createElement( 'img' );
 		thumbnailEl.setAttribute( 'data-iiif-title', 'File:Bsb11610364.jpg' );
 		thumbnailEl.setAttribute( 'data-iiif-page', '6' );
-		thumbnailEl.setAttribute( 'data-iiif-full-url',
-			'https://iiif.example/bsb11610364_00006/full/full/0/default.jpg' );
+		thumbnailEl.setAttribute(
+			'data-iiif-full-url',
+			'https://iiif.example/bsb11610364_00006/full/full/0/default.jpg'
+		);
 
 		// Simulate MMV's pre-image bar: download button currently points at
 		// canvas 1 because the imageinfo API was queried before transform.
@@ -700,25 +791,30 @@ describe( 'MMV overlay button patches (multi-page)', () => {
 			   href="https://iiif.example/bsb11610364_00001/full/full/0/default.jpg">DL</a>
 		` );
 
-		env.registerModule( 'mmv', { ThumbnailInfo: function () {} } );
+		env.registerModule( 'mmv', { ThumbnailInfo: class {} } );
 		env.registerModule( 'mmv.ui.reuse', {
 			Share: ( function () {
 				function S() {}
 				S.prototype.set = function () {};
 				return S;
-			}() )
+			} )(),
 		} );
 
 		loadMmvPatch( window );
 		await new Promise( ( r ) => setTimeout( r, 10 ) );
 
 		env.triggerJqEvent( 'mmv-metadata', {
-			image: { thumbnail: thumbnailEl, src: 'https://iiif.example/thumb.jpg' }
+			image: {
+				thumbnail: thumbnailEl,
+				src: 'https://iiif.example/thumb.jpg',
+			},
 		} );
 
 		const dlBtn = document.querySelector( '.mw-mmv-download-button' );
 		expect( dlBtn.getAttribute( 'href' ) ).toContain( 'bsb11610364_00006' );
-		expect( dlBtn.getAttribute( 'href' ) ).not.toContain( 'bsb11610364_00001' );
+		expect( dlBtn.getAttribute( 'href' ) ).not.toContain(
+			'bsb11610364_00001'
+		);
 	} );
 
 	test( 'does NOT append ?page= for page-1 thumbnails', async () => {
@@ -731,23 +827,28 @@ describe( 'MMV overlay button patches (multi-page)', () => {
 			   href="https://wiki.example/wiki/File:Df_dk_0007450.jpg">More details</a>
 		` );
 
-		env.registerModule( 'mmv', { ThumbnailInfo: function () {} } );
+		env.registerModule( 'mmv', { ThumbnailInfo: class {} } );
 		env.registerModule( 'mmv.ui.reuse', {
 			Share: ( function () {
 				function S() {}
 				S.prototype.set = function () {};
 				return S;
-			}() )
+			} )(),
 		} );
 
 		loadMmvPatch( window );
 		await new Promise( ( r ) => setTimeout( r, 10 ) );
 
 		env.triggerJqEvent( 'mmv-metadata', {
-			image: { thumbnail: thumbnailEl, src: 'https://iiif.example/thumb.jpg' }
+			image: {
+				thumbnail: thumbnailEl,
+				src: 'https://iiif.example/thumb.jpg',
+			},
 		} );
 
-		const moreBtn = document.querySelector( '.mw-mmv-description-page-button' );
+		const moreBtn = document.querySelector(
+			'.mw-mmv-description-page-button'
+		);
 		expect( moreBtn.getAttribute( 'href' ) ).not.toContain( 'page=' );
 	} );
 } );
