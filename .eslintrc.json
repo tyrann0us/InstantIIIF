@@ -1,0 +1,29 @@
+{
+	"root": true,
+	"extends": [
+		"plugin:@wordpress/eslint-plugin/recommended"
+	],
+	"env": {
+		"browser": true,
+		"node": true,
+		"jest": true,
+		"es2022": true
+	},
+	"globals": {
+		"mw": "readonly"
+	},
+	"overrides": [
+		{
+			"files": [".docker/mock-iiif-server.js"],
+			"rules": {
+				"no-console": "off"
+			}
+		},
+		{
+			"files": ["tests/playwright/**/*.js"],
+			"rules": {
+				"react-hooks/rules-of-hooks": "off"
+			}
+		}
+	]
+}

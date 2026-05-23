@@ -4,10 +4,10 @@
  * Minimal IIIF mock server for E2E tests.
  *
  * Serves:
- *   GET /iiif/2/{id}/manifest.json  → fixture manifest (rewritten so service
- *                                      @ids point back to this server)
- *   GET /iiif/2/{id}/info.json      → synthetic info.json
- *   GET /iiif/2/{id}/*              → 1×1 red JPEG placeholder
+ *   GET /iiif/2/{id}/manifest.json  - fixture manifest (rewritten so service
+ *                                      `@id` values point back to this server)
+ *   GET /iiif/2/{id}/info.json      - synthetic info.json
+ *   GET /iiif/2/{id}/*              - 1x1 red JPEG placeholder
  */
 
 const http = require( 'http' );
@@ -20,11 +20,11 @@ const FIXTURES = path.join( __dirname, '../tests/phpunit/Fixtures' );
 // Tiny 1×1 red JPEG (285 bytes).
 const PLACEHOLDER_JPEG = Buffer.from(
 	'/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkS' +
-	'Ew8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJ' +
-	'CQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIy' +
-	'MjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEA' +
-	'AAAAAAAAAAECAwQFBgcICQoL/8QAFRABAQAAAAAAAAAAAAAAAAAAAAn/xAAUAQEAAAAA' +
-	'AAAAAAAAAAAAAAD/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCwAB//2Q==',
+		'Ew8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJ' +
+		'CQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIy' +
+		'MjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEA' +
+		'AAAAAAAAAAECAwQFBgcICQoL/8QAFRABAQAAAAAAAAAAAAAAAAAAAAn/xAAUAQEAAAAA' +
+		'AAAAAAAAAAAAAAD/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCwAB//2Q==',
 	'base64'
 );
 
@@ -36,7 +36,7 @@ const MANIFEST_MAP = {
 	bsb00127289: 'manifest-bsb-v2.json',
 	bsb11610364: 'manifest-multipage-v2.json',
 	df_dk_multipage: 'manifest-multipage-v2.json',
-	v3_test: 'manifest-v3.json'
+	v3_test: 'manifest-v3.json',
 };
 
 function rewriteManifest( json, host ) {
@@ -55,7 +55,7 @@ function rewriteManifest( json, host ) {
 
 function serveManifest( res, objectId, host ) {
 	const fixture = MANIFEST_MAP[ objectId ];
-	if ( !fixture ) {
+	if ( ! fixture ) {
 		res.writeHead( 404, { 'Content-Type': 'application/json' } );
 		res.end( JSON.stringify( { error: 'Unknown object: ' + objectId } ) );
 		return;
@@ -75,7 +75,7 @@ function serveManifest( res, objectId, host ) {
 	const body = JSON.stringify( rewritten, null, 2 );
 	res.writeHead( 200, {
 		'Content-Type': 'application/ld+json',
-		'Access-Control-Allow-Origin': '*'
+		'Access-Control-Allow-Origin': '*',
 	} );
 	res.end( body );
 }
@@ -87,11 +87,11 @@ function serveInfoJson( res, objectId ) {
 		protocol: 'http://iiif.io/api/image',
 		width: 4000,
 		height: 5500,
-		profile: [ 'http://iiif.io/api/image/2/level2.json' ]
+		profile: [ 'http://iiif.io/api/image/2/level2.json' ],
 	};
 	res.writeHead( 200, {
 		'Content-Type': 'application/ld+json',
-		'Access-Control-Allow-Origin': '*'
+		'Access-Control-Allow-Origin': '*',
 	} );
 	res.end( JSON.stringify( info ) );
 }
@@ -99,14 +99,13 @@ function serveInfoJson( res, objectId ) {
 function serveImage( res ) {
 	res.writeHead( 200, {
 		'Content-Type': 'image/jpeg',
-		'Access-Control-Allow-Origin': '*'
+		'Access-Control-Allow-Origin': '*',
 	} );
 	res.end( PLACEHOLDER_JPEG );
 }
 
 const server = http.createServer( ( req, res ) => {
 	const url = new URL( req.url, 'http://localhost' );
-	const parts = url.pathname.split( '/' ).filter( Boolean );
 
 	// Health check.
 	if ( url.pathname === '/health' ) {
@@ -114,6 +113,8 @@ const server = http.createServer( ( req, res ) => {
 		res.end( 'ok' );
 		return;
 	}
+
+	const parts = url.pathname.split( '/' ).filter( Boolean );
 
 	// Strip optional path prefixes from real-world IIIF endpoints —
 	// they may show up after rewriteManifest() rewrites only the host
@@ -125,9 +126,9 @@ const server = http.createServer( ( req, res ) => {
 	if ( parts[ 0 ] === 'iiif' && [ '2', '3' ].includes( parts[ 1 ] ) ) {
 		objectIdIndex = 2;
 	} else if (
-		parts[ 0 ] === 'iiif'
-		&& parts[ 1 ] === 'image'
-		&& [ 'v2', 'v3' ].includes( parts[ 2 ] )
+		parts[ 0 ] === 'iiif' &&
+		parts[ 1 ] === 'image' &&
+		[ 'v2', 'v3' ].includes( parts[ 2 ] )
 	) {
 		objectIdIndex = 3;
 	}
