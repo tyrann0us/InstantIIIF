@@ -4,10 +4,6 @@ const { expect } = require( '@playwright/test' );
 
 /**
  * MultimediaViewer (MMV) overlay tests.
- *
- * AC 3:  Title spoofing → MMV opens for IIIF images
- * AC 10: "More details" button links to local wiki URL
- * AC 11: Share URL is a local wiki URL
  */
 
 async function waitForMmvPatch( page ) {
@@ -28,12 +24,12 @@ async function openMmv( page ) {
 
 test.describe( 'MultimediaViewer overlay', () => {
 
-	test( 'AC 3: clicking an IIIF thumbnail opens MMV', async ( { page } ) => {
+	test( 'clicking an IIIF thumbnail opens MMV', async ( { page } ) => {
 		await page.goto( '/wiki/Mei%C3%9Fen_Rathaus' );
 		await openMmv( page );
 	} );
 
-	test( 'AC 10: "More details" button links to local wiki file page', async ( { page } ) => {
+	test( '"More details" button links to local wiki file page', async ( { page } ) => {
 		await page.goto( '/wiki/Mei%C3%9Fen_Rathaus' );
 		await openMmv( page );
 
@@ -45,20 +41,29 @@ test.describe( 'MultimediaViewer overlay', () => {
 		}
 	} );
 
-	test( 'AC 11: share URL uses local wiki URL', async ( { page } ) => {
+	test( 'share URL is the full local file page URL with #/media/ fragment', async ( { page } ) => {
 		await page.goto( '/wiki/Mei%C3%9Fen_Rathaus' );
 		await openMmv( page );
 
-		const reuseButton = page.locator( '.mw-mmv-reuse-button' );
-		if ( await reuseButton.count() > 0 ) {
-			await reuseButton.click();
+		// Wait for the MMV credit/title to populate so the reuse dialog
+		// is wired up before we click it.
+		await expect.poll(
+			async () => await page.locator( '.mw-mmv-credit' ).innerText(),
+			{ timeout: 10_000 }
+		).not.toBe( '' );
 
-			const shareInput = page.locator( '.mw-mmv-share input[type="text"]' );
-			if ( await shareInput.count() > 0 ) {
-				const shareUrl = await shareInput.inputValue();
-				expect( shareUrl ).toContain( '/wiki/' );
-				expect( shareUrl ).not.toContain( 'iiif-mock' );
-			}
-		}
+		await page.locator( '.mw-mmv-reuse-button' ).click();
+
+		// Find the share-URL input (starts with http:// or https://) among
+		// the cdx-text-input fields in the reuse dialog.
+		await expect.poll(
+			async () => page.evaluate(
+				() => Array.from(
+					document.querySelectorAll( 'input.cdx-text-input__input' )
+				).map( ( el ) => el.value || '' )
+					.find( ( v ) => /^https?:\/\//.test( v ) ) || ''
+			),
+			{ timeout: 10_000, intervals: [ 250 ] }
+		).toMatch( /^https?:\/\/[^/]+\/wiki\/[^#]+#\/media\/File:/ );
 	} );
 } );

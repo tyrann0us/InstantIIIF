@@ -121,8 +121,23 @@ function createMwEnv( win ) {
 			this._text = text;
 		}
 
-		getUrl() {
-			return '/wiki/' + this._text.replace( / /g, '_' );
+		getUrl( query ) {
+			const base = '/wiki/' + this._text.replace( / /g, '_' );
+			if ( !query ) {
+				return base;
+			}
+			if ( typeof query === 'string' ) {
+				return base + '?' + query;
+			}
+			const parts = [];
+			for ( const k in query ) {
+				if ( Object.prototype.hasOwnProperty.call( query, k ) ) {
+					parts.push(
+						encodeURIComponent( k ) + '=' + encodeURIComponent( query[ k ] )
+					);
+				}
+			}
+			return parts.length ? base + '?' + parts.join( '&' ) : base;
 		}
 	}
 

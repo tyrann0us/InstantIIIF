@@ -47,11 +47,14 @@ php maintenance/run.php rebuildLocalisationCache --quiet
 # Create test pages with IIIF file references.
 echo "Creating test pages..."
 
-# Single-page image (Deutsche Fotothek).
+# Single-page image (Deutsche Fotothek). IIIF object IDs in the wild
+# are extension-less ("Bsb11610364", "df_dk_0007450"); wikitext mirrors
+# that so the spoofed `.jpg` Hooks appends never leaks into the rendered
+# file-page URLs.
 php maintenance/run.php edit "Meißen Rathaus" <<'WIKITEXT'
 == Test: Single-page IIIF image ==
 
-[[File:Df_dk_0007450.jpg|thumb|300px|Meißen Rathaus — single-page IIIF]]
+[[File:Df_dk_0007450|thumb|300px|Meißen Rathaus — single-page IIIF]]
 
 This page tests a single-page IIIF image from Deutsche Fotothek.
 WIKITEXT
@@ -61,13 +64,13 @@ php maintenance/run.php edit "Kornhaus Mehrseitig" <<'WIKITEXT'
 == Test: Multi-page IIIF document ==
 
 Page 1:
-[[File:Df_dk_multipage.jpg|thumb|300px|Kornhaus page 1]]
+[[File:Df_dk_multipage|thumb|300px|Kornhaus page 1]]
 
 Page 2:
-[[File:Df_dk_multipage.jpg|thumb|300px|page=2|Kornhaus page 2]]
+[[File:Df_dk_multipage|thumb|300px|page=2|Kornhaus page 2]]
 
 Page 3:
-[[File:Df_dk_multipage.jpg|thumb|300px|page=3|Kornhaus page 3]]
+[[File:Df_dk_multipage|thumb|300px|page=3|Kornhaus page 3]]
 WIKITEXT
 
 echo "Wiki setup complete."

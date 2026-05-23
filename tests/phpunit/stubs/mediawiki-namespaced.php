@@ -31,6 +31,18 @@ namespace MediaWiki\Title {
                 return new self($text, $defaultNamespace);
             }
 
+            public static function makeTitleSafe(int $ns, string $title): ?self
+            {
+                if ($title === '') {
+                    return null;
+                }
+                $nsText = match ($ns) {
+                    6 => 'File',
+                    default => '',
+                };
+                return new self($title, $ns, $nsText);
+            }
+
             public function getDBkey(): string
             {
                 return $this->dbKey;
@@ -49,19 +61,23 @@ namespace MediaWiki\Title {
             /** @param string|string[] $query */
             public function getFullURL($query = '', $query2 = false, $proto = PROTO_RELATIVE): string
             {
-                return 'https://wiki.example.org/wiki/' . $this->nsText . ':' . $this->dbKey;
+                $base = 'https://wiki.example.org/wiki/' . $this->nsText . ':' . $this->dbKey;
+                $q = is_array($query) ? http_build_query($query) : (string) $query;
+                return $q === '' ? $base : $base . '?' . $q;
             }
 
             /** @param string|string[] $query */
             public function getLocalURL($query = '', $query2 = false): string
             {
-                return '/wiki/' . $this->nsText . ':' . $this->dbKey;
+                $base = '/wiki/' . $this->nsText . ':' . $this->dbKey;
+                $q = is_array($query) ? http_build_query($query) : (string) $query;
+                return $q === '' ? $base : $base . '?' . $q;
             }
 
             /** @param string|string[] $query */
             public function getUrl($query = ''): string
             {
-                return '/wiki/' . $this->nsText . ':' . $this->dbKey;
+                return $this->getLocalURL($query);
             }
         }
     }
@@ -114,6 +130,14 @@ namespace MediaWiki {
             {
                 return new Http\HttpRequestFactory();
             }
+
+            /** Override-able stub so tests can set the wiki's content language. */
+            public static string $mockContentLanguageCode = 'en';
+
+            public function getContentLanguage(): \Language
+            {
+                return new \Language(self::$mockContentLanguageCode);
+            }
         }
     }
 }
@@ -141,6 +165,7 @@ namespace MediaWiki\Context {
     if (!interface_exists(IContextSource::class)) {
         interface IContextSource
         {
+            public function getLanguage(): \Language;
         }
     }
 
@@ -149,6 +174,24 @@ namespace MediaWiki\Context {
         {
             private static ?self $instance = null;
             private ?Title $title = null;
+            private \WebRequest $request;
+            private \Language $language;
+
+            public function __construct()
+            {
+                $this->request = new \WebRequest();
+                $this->language = new \Language('en');
+            }
+
+            public function getLanguage(): \Language
+            {
+                return $this->language;
+            }
+
+            public function setLanguage(\Language $language): void
+            {
+                $this->language = $language;
+            }
 
             public static function getMain(): self
             {
@@ -171,6 +214,16 @@ namespace MediaWiki\Context {
             public function getTitle(): ?Title
             {
                 return $this->title;
+            }
+
+            public function setRequest(\WebRequest $request): void
+            {
+                $this->request = $request;
+            }
+
+            public function getRequest(): \WebRequest
+            {
+                return $this->request;
             }
         }
     }

@@ -347,6 +347,38 @@ if (!class_exists(MWHttpRequest::class)) {
     }
 }
 
+if (!class_exists(Language::class)) {
+    class Language
+    {
+        public function __construct(private string $code = 'en')
+        {
+        }
+
+        public function getCode(): string
+        {
+            return $this->code;
+        }
+    }
+}
+
+if (!class_exists(WebRequest::class)) {
+    class WebRequest
+    {
+        /** @var array<string, mixed> */
+        private array $params = [];
+
+        public function setParams(array $params): void
+        {
+            $this->params = $params;
+        }
+
+        public function getVal(string $name, mixed $default = null): mixed
+        {
+            return $this->params[$name] ?? $default;
+        }
+    }
+}
+
 if (!class_exists(RepoGroup::class)) {
     class RepoGroup
     {

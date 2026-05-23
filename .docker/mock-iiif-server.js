@@ -28,22 +28,27 @@ const PLACEHOLDER_JPEG = Buffer.from(
 	'base64'
 );
 
-// Map object IDs → fixture files.
-// The manifest URL pattern is /iiif/2/{objectId}/manifest.json
-// We map known objectIds to fixtures.
+// Map object IDs → fixture files. Real-world object IDs are preserved
+// alongside legacy short names so existing test wikitext keeps working.
 const MANIFEST_MAP = {
 	df_dk_0007450: 'manifest-fotothek-v2.json',
-	slub_obj_001: 'manifest-slub-v2.json',
-	bsb10000001: 'manifest-bsb-v2.json',
+	'384671365-19500000': 'manifest-slub-v2.json',
+	bsb00127289: 'manifest-bsb-v2.json',
+	bsb11610364: 'manifest-multipage-v2.json',
 	df_dk_multipage: 'manifest-multipage-v2.json',
 	v3_test: 'manifest-v3.json'
 };
 
 function rewriteManifest( json, host ) {
+	// Real provider manifests reference their own Image API endpoints
+	// (paths like /iiif/2/, /iiif/image/v2/, /proxy/fotothek/, …).
+	// Rewrite the host portion of every absolute IIIF URL inside the
+	// manifest so the rendered thumbnails resolve back to this mock
+	// server inside the Docker network.
 	let text = JSON.stringify( json );
 	text = text.replace(
-		/https?:\/\/[^"]*?\/iiif\/2\//g,
-		host + '/iiif/2/'
+		/https?:\/\/[^"\/]+(\/iiif\/(?:image\/)?(?:2|v2|3|v3)\/)/g,
+		host + '$1'
 	);
 	return JSON.parse( text );
 }
@@ -103,17 +108,36 @@ const server = http.createServer( ( req, res ) => {
 	const url = new URL( req.url, 'http://localhost' );
 	const parts = url.pathname.split( '/' ).filter( Boolean );
 
-	// Expected patterns:
-	//   /iiif/2/{objectId}/manifest.json
-	//   /iiif/2/{objectId}/info.json
-	//   /iiif/2/{objectId}/full/...  (image request)
+	// Health check.
+	if ( url.pathname === '/health' ) {
+		res.writeHead( 200 );
+		res.end( 'ok' );
+		return;
+	}
 
-	if ( parts[ 0 ] === 'iiif' && parts[ 1 ] === '2' && parts[ 2 ] ) {
-		const objectId = parts[ 2 ];
-		const rest = parts.slice( 3 ).join( '/' );
+	// Strip optional path prefixes from real-world IIIF endpoints —
+	// they may show up after rewriteManifest() rewrites only the host
+	// portion of canvas URLs. Examples:
+	//   /iiif/2/{id}/...                (manifest fetcher pattern)
+	//   /iiif/image/v2/{id}/full/...    (BSB Image API canvas service)
+	//   /iiif/3/{id}/...                (Presentation v3)
+	let objectIdIndex = -1;
+	if ( parts[ 0 ] === 'iiif' && [ '2', '3' ].includes( parts[ 1 ] ) ) {
+		objectIdIndex = 2;
+	} else if (
+		parts[ 0 ] === 'iiif'
+		&& parts[ 1 ] === 'image'
+		&& [ 'v2', 'v3' ].includes( parts[ 2 ] )
+	) {
+		objectIdIndex = 3;
+	}
+
+	if ( objectIdIndex > 0 && parts[ objectIdIndex ] ) {
+		const objectId = parts[ objectIdIndex ];
+		const rest = parts.slice( objectIdIndex + 1 ).join( '/' );
 		const host = 'http://' + req.headers.host;
 
-		if ( rest === 'manifest.json' ) {
+		if ( rest === 'manifest.json' || rest === 'manifest' ) {
 			serveManifest( res, objectId, host );
 		} else if ( rest === 'info.json' ) {
 			serveInfoJson( res, objectId );
@@ -121,13 +145,6 @@ const server = http.createServer( ( req, res ) => {
 			// Any other path under the object ID → image placeholder.
 			serveImage( res );
 		}
-		return;
-	}
-
-	// Health check.
-	if ( url.pathname === '/health' ) {
-		res.writeHead( 200 );
-		res.end( 'ok' );
 		return;
 	}
 

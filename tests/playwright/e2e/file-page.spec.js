@@ -4,17 +4,12 @@ const { expect } = require( '@playwright/test' );
 
 /**
  * File detail page tests for single-page IIIF files.
- *
- * AC 2:  descriptionUrl → local wiki URL (file page exists)
- * AC 4:  Shared-upload notice links to provider URL
- * AC 12: File history section is hidden
- * AC 14: Extended metadata (attribution, license) is shown
  */
 
 test.describe( 'File detail page (single-page IIIF)', () => {
 
-	test( 'AC 2: file page loads and shows the IIIF image', async ( { page } ) => {
-		await page.goto( '/wiki/File:Df_dk_0007450.jpg' );
+	test( 'file page loads and shows the IIIF image', async ( { page } ) => {
+		await page.goto( '/wiki/File:Df_dk_0007450' );
 
 		// The file page should exist (not a "no file" message).
 		await expect( page.locator( '#file' ) ).toBeVisible();
@@ -27,8 +22,8 @@ test.describe( 'File detail page (single-page IIIF)', () => {
 		await expect( mainImg ).toHaveAttribute( 'data-iiif-title', /File:.*\.jpg/ );
 	} );
 
-	test( 'AC 4: shared-upload notice links to provider, not back to wiki', async ( { page } ) => {
-		await page.goto( '/wiki/File:Df_dk_0007450.jpg' );
+	test( 'shared-upload notice links to provider, not back to wiki', async ( { page } ) => {
+		await page.goto( '/wiki/File:Df_dk_0007450' );
 
 		const notice = page.locator( '.sharedUploadNotice' );
 		if ( await notice.count() > 0 ) {
@@ -39,8 +34,8 @@ test.describe( 'File detail page (single-page IIIF)', () => {
 		}
 	} );
 
-	test( 'AC 12: file history section is hidden for IIIF files', async ( { page } ) => {
-		await page.goto( '/wiki/File:Df_dk_0007450.jpg' );
+	test( 'file history section is hidden for IIIF files', async ( { page } ) => {
+		await page.goto( '/wiki/File:Df_dk_0007450' );
 
 		// The file history heading should be hidden (via inline CSS from the hook).
 		const historyHeading = page.locator( '#filehistory' );
@@ -55,8 +50,8 @@ test.describe( 'File detail page (single-page IIIF)', () => {
 		}
 	} );
 
-	test( 'AC 14: extended metadata shows attribution from manifest', async ( { page } ) => {
-		await page.goto( '/wiki/File:Df_dk_0007450.jpg' );
+	test( 'extended metadata shows attribution from manifest', async ( { page } ) => {
+		await page.goto( '/wiki/File:Df_dk_0007450' );
 
 		// The metadata table should contain the manifest's attribution.
 		const metadataTable = page.locator( '#mw-imagepage-section-metadata' );

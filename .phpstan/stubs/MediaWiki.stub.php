@@ -162,6 +162,20 @@ class MWHttpRequest {
     public function getContent(): string {}
 }
 
+class WebRequest {
+    /**
+     * @param string $name
+     * @param string|null $default
+     * @return string|null
+     */
+    public function getVal($name, $default = null) {}
+    public function getInt(string $name, int $default = 0): int {}
+}
+
+class Language {
+    public function getCode(): string {}
+}
+
 class StatusValue {
     public function isOK(): bool {}
 }

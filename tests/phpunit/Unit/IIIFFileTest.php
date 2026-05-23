@@ -16,8 +16,6 @@ use ThumbnailImage;
 /**
  * Tests for IIIFFile: manifest resolution, URL building, multi-page,
  * getDescriptionUrl, getProviderUrl, transform.
- *
- * Covers AC 2, 4, 6, 7, 10, 15, 16.
  */
 #[CoversClass(IIIFFile::class)]
 class IIIFFileTest extends TestCase
@@ -34,14 +32,14 @@ class IIIFFileTest extends TestCase
      * @param string                    $provider     Provider ID
      * @param string                    $objectId     Object identifier
      * @param string                    $dbKey        Title DB key
-     * @param string                    $nsText       Namespace text (e.g. "Datei", "File")
+     * @param string                    $nsText       Namespace text (e.g. "File")
      */
     private function makeFile(
         ?array $manifestRaw,
         string $provider = 'deutsche-fotothek',
         string $objectId = 'df_dk_0007450',
         string $dbKey = 'Df_dk_0007450.jpg',
-        string $nsText = 'Datei',
+        string $nsText = 'File',
     ): IIIFFile {
 
         $title = new Title($dbKey, NS_FILE, $nsText);
@@ -110,7 +108,7 @@ class IIIFFileTest extends TestCase
         return $data;
     }
 
-    // ─── AC 2: getDescriptionUrl → local wiki URL ─────────────────
+    // ─── getDescriptionUrl → local wiki URL ─────────────────
 
     public function testGetDescriptionUrlReturnsLocalWikiUrl(): void
     {
@@ -121,15 +119,68 @@ class IIIFFileTest extends TestCase
 
         // Must be a full URL (with protocol), not a relative path.
         self::assertStringStartsWith('https://', $url);
-        // Must contain the file page path, not the IIIF provider.
-        self::assertStringContainsString('Datei:Df_dk_0007450.jpg', $url);
+        // Must contain the local file page path (with the spoofed `.jpg`
+        // stripped — see testGetDescriptionUrlStripsSpoofedJpgExtension).
+        self::assertStringContainsString('File:Df_dk_0007450', $url);
         self::assertStringNotContainsString('fotothek.slub-dresden.de', $url);
     }
 
-    public function testGetDescriptionShortUrlMatchesDescriptionUrl(): void
+    /**
+     * getDescriptionShortUrl() returns the provider landing URL so
+     * MMV's download-dialog "Namensnennung" credit and the HTML
+     * embed's trailing "Link" point downstream re-users at the
+     * original institution that holds the work, not back at the local
+     * wiki page.
+     */
+    /**
+     * Real-world IIIF object IDs are extension-less (e.g.
+     * "Bsb11610364"). Hooks spoofs ".jpg" onto data-iiif-title so MMV
+     * accepts the file, and MMV later round-trips that spoofed title
+     * through the imageinfo API. The IIIFFile that comes back must
+     * still expose the *un-spoofed* descriptionUrl, otherwise the
+     * file-page's File usage listing (which matches by exact
+     * title) loses every wikitext usage that referenced the bare ID.
+     */
+    public function testGetDescriptionUrlStripsSpoofedJpgExtension(): void
+    {
+        $manifest = $this->loadFixture('manifest-multipage-v2.json');
+        $file = $this->makeFile(
+            $manifest,
+            'digitale-sammlungen',
+            'bsb11610364',
+            'Bsb11610364.jpg', // spoofed title coming back via the API
+        );
+
+        $url = $file->getDescriptionUrl();
+
+        self::assertStringContainsString('File:Bsb11610364', $url);
+        self::assertStringNotContainsString('.jpg', $url);
+    }
+
+    public function testGetDescriptionShortUrlReturnsProviderUrl(): void
     {
         $manifest = $this->loadFixture('manifest-fotothek-v2.json');
         $file = $this->makeFile($manifest);
+
+        self::assertSame(
+            'http://www.deutschefotothek.de/documents/obj/90062808',
+            $file->getDescriptionShortUrl()
+        );
+    }
+
+    public function testGetDescriptionShortUrlFallsBackToLocalWhenProviderEmpty(): void
+    {
+        // No provider URL recoverable for this synthetic manifest, so we
+        // must fall back to the local file page URL to avoid sending
+        // `null`/`undefined` to MMV (which would crash HtmlUtils).
+        $manifest = [
+            '@context' => 'http://iiif.io/api/presentation/2/context.json',
+            'label' => 'No links',
+            'sequences' => [['canvases' => [
+                ['width' => 1, 'height' => 1, 'images' => [['resource' => ['service' => ['@id' => 'https://example/svc']]]]],
+            ]]],
+        ];
+        $file = $this->makeFile($manifest, 'unknown-provider', 'test', 'Test.jpg');
 
         self::assertSame($file->getDescriptionUrl(), $file->getDescriptionShortUrl());
     }
@@ -161,7 +212,7 @@ class IIIFFileTest extends TestCase
         self::assertSame('', $file->getDescriptionUrl());
     }
 
-    // ─── AC 4: getProviderUrl → provider landing page ─────────────
+    // ─── getProviderUrl → provider landing page ─────────────
 
     public function testGetProviderUrlFromFotothekMetadata(): void
     {
@@ -170,28 +221,33 @@ class IIIFFileTest extends TestCase
 
         $url = $file->getProviderUrl();
 
-        self::assertSame('https://www.deutschefotothek.de/documents/obj/12345678', $url);
+        // Fotothek's "Link zum Werk" metadata entry on the live manifest.
+        self::assertSame('http://www.deutschefotothek.de/documents/obj/90062808', $url);
     }
 
-    public function testGetProviderUrlFromV2Related(): void
+    public function testGetProviderUrlFromSlubMetadataPurl(): void
     {
+        // SLUB manifests carry the landing URL inside an HTML <a>
+        // under the metadata label "PURL"; they have no top-level
+        // `related`/`homepage`.
         $manifest = $this->loadFixture('manifest-slub-v2.json');
-        // SLUB provider doesn't have LANDING_META_KEYS, so it falls back to `related`
-        $file = $this->makeFile($manifest, 'slub', 'slub_obj_001', 'Slub_obj_001.jpg');
+        $file = $this->makeFile($manifest, 'slub-dresden', '384671365-19500000', '384671365-19500000.jpg');
 
         $url = $file->getProviderUrl();
 
-        self::assertSame('https://digital.slub-dresden.de/werkansicht/dlf/12345', $url);
+        self::assertSame('http://digital.slub-dresden.de/id384671365-19500000', $url);
     }
 
-    public function testGetProviderUrlFromV2RelatedString(): void
+    public function testGetProviderUrlFromBsbV2RelatedArray(): void
     {
+        // BSB manifests expose `related` as a list of objects; we
+        // pick the first entry (the "Details" landing page).
         $manifest = $this->loadFixture('manifest-bsb-v2.json');
-        $file = $this->makeFile($manifest, 'bsb', 'bsb10000001', 'Bsb10000001.jpg');
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb00127289', 'Bsb00127289.jpg');
 
         $url = $file->getProviderUrl();
 
-        self::assertSame('https://www.digitale-sammlungen.de/de/view/bsb10000001', $url);
+        self::assertSame('https://mdz-nbn-resolving.de/details:bsb00127289', $url);
     }
 
     public function testGetProviderUrlFromV3Homepage(): void
@@ -211,7 +267,7 @@ class IIIFFileTest extends TestCase
         self::assertSame('', $file->getProviderUrl());
     }
 
-    // ─── AC 6, 7: Multi-page support ──────────────────────────────
+    // ─── Multi-page support ──────────────────────────────
 
     public function testSinglePageDocumentIsNotMultipage(): void
     {
@@ -224,35 +280,36 @@ class IIIFFileTest extends TestCase
 
     public function testMultipageDocumentReportsCorrectPageCount(): void
     {
+        // bsb11610364 manifest has 622 canvases.
         $manifest = $this->loadFixture('manifest-multipage-v2.json');
-        $file = $this->makeFile($manifest);
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364.jpg');
 
         self::assertTrue($file->isMultipage());
-        self::assertSame(3, $file->pageCount());
+        self::assertSame(622, $file->pageCount());
     }
 
     public function testGetWidthReturnsCanvasDimensionsForPage(): void
     {
         $manifest = $this->loadFixture('manifest-multipage-v2.json');
-        $file = $this->makeFile($manifest);
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364.jpg');
 
-        // Page 1: 4000×5500, Page 2: 3800×5200, Page 3: 4100×5600
-        self::assertSame(4000, $file->getWidth(1));
-        self::assertSame(3800, $file->getWidth(2));
-        self::assertSame(4100, $file->getWidth(3));
+        // First three canvases from the bsb11610364 manifest.
+        self::assertSame(1768, $file->getWidth(1));
+        self::assertSame(1464, $file->getWidth(2));
+        self::assertSame(1784, $file->getWidth(3));
     }
 
     public function testGetHeightReturnsCanvasDimensionsForPage(): void
     {
         $manifest = $this->loadFixture('manifest-multipage-v2.json');
-        $file = $this->makeFile($manifest);
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364.jpg');
 
-        self::assertSame(5500, $file->getHeight(1));
-        self::assertSame(5200, $file->getHeight(2));
-        self::assertSame(5600, $file->getHeight(3));
+        self::assertSame(2536, $file->getHeight(1));
+        self::assertSame(2416, $file->getHeight(2));
+        self::assertSame(2440, $file->getHeight(3));
     }
 
-    // ─── AC 10: getUrl / getFullUrl → IIIF Image API URL ─────────
+    // ─── getUrl / getFullUrl → IIIF Image API URL ─────────
 
     public function testGetUrlReturnsIiifImageApiUrl(): void
     {
@@ -276,33 +333,111 @@ class IIIFFileTest extends TestCase
     public function testGetUrlForPageReturnsCorrectServiceUrl(): void
     {
         $manifest = $this->loadFixture('manifest-multipage-v2.json');
-        $file = $this->makeFile($manifest);
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364.jpg');
 
         $url1 = $file->getUrlForPage(1);
         $url2 = $file->getUrlForPage(2);
-        $url3 = $file->getUrlForPage(3);
+        $url6 = $file->getUrlForPage(6);
 
-        self::assertStringContainsString('df_dk_multipage_001', $url1);
-        self::assertStringContainsString('df_dk_multipage_002', $url2);
-        self::assertStringContainsString('df_dk_multipage_003', $url3);
+        self::assertStringContainsString('bsb11610364_00001', $url1);
+        self::assertStringContainsString('bsb11610364_00002', $url2);
+        self::assertStringContainsString('bsb11610364_00006', $url6);
 
         // All must be full-resolution IIIF URLs.
         self::assertStringContainsString('/full/full/0/default.jpg', $url1);
         self::assertStringContainsString('/full/full/0/default.jpg', $url2);
-        self::assertStringContainsString('/full/full/0/default.jpg', $url3);
+        self::assertStringContainsString('/full/full/0/default.jpg', $url6);
     }
 
-    public function testGetUrlAlwaysReturnsPage1(): void
+    public function testGetUrlDefaultsToPage1WithoutTransform(): void
     {
         $manifest = $this->loadFixture('manifest-multipage-v2.json');
-        $file = $this->makeFile($manifest);
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364.jpg');
 
-        // getUrl() always returns page 1, regardless of previous transforms.
+        // Before any transform, getUrl() returns the page 1 canvas.
         $url = $file->getUrl();
-        self::assertStringContainsString('df_dk_multipage_001', $url);
+        self::assertStringContainsString('bsb11610364_00001', $url);
     }
 
-    // ─── AC 15: v3 manifest parsing ───────────────────────────────
+    /**
+     * getUrl() must reflect the last transformed page so the "Original
+     * file" link on a file description page at ?page=N points to
+     * canvas N instead of always canvas 1. Also drives the MMV
+     * "download" / "open in new tab" link via the imageinfo API (which
+     * calls transform with iiurlparam=pageN-Wpx before reading `url`).
+     */
+    public function testGetUrlReflectsLastTransformedPage(): void
+    {
+        $manifest = $this->loadFixture('manifest-multipage-v2.json');
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364.jpg');
+
+        $file->transform(['width' => 800, 'page' => 2]);
+        self::assertStringContainsString('bsb11610364_00002', $file->getUrl());
+
+        $file->transform(['width' => 800, 'page' => 6]);
+        self::assertStringContainsString('bsb11610364_00006', $file->getUrl());
+    }
+
+    public function testGetFullUrlReflectsLastTransformedPage(): void
+    {
+        $manifest = $this->loadFixture('manifest-multipage-v2.json');
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364.jpg');
+
+        $file->transform(['width' => 800, 'page' => 6]);
+        self::assertStringContainsString('bsb11610364_00006', $file->getFullUrl());
+    }
+
+    /**
+     * On a file description page at ?page=6, MediaWiki renders prev/next
+     * thumbnails AFTER the main image — each transform() call overwrites
+     * lastTransformPage, so by the time the "Original file" link is rendered
+     * it would point at canvas 7 (or 5). getUrl() must honour the request's
+     * `?page=` parameter instead so it stays anchored to the page the user
+     * is actually looking at.
+     */
+    public function testGetUrlHonoursRequestPageOverMultipleTransforms(): void
+    {
+        $manifest = $this->loadFixture('manifest-multipage-v2.json');
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364.jpg');
+
+        $request = new \WebRequest();
+        $request->setParams(['page' => '6']);
+        \MediaWiki\Context\RequestContext::getMain()->setRequest($request);
+
+        // Simulate MW's render order on a file-page-with-thumbs view.
+        $file->transform(['width' => 800, 'page' => 6]);
+        $file->transform(['width' => 200, 'page' => 5]);
+        $file->transform(['width' => 200, 'page' => 7]);
+
+        self::assertStringContainsString('bsb11610364_00006', $file->getUrl());
+        self::assertStringContainsString('page=6', $file->getDescriptionUrl());
+
+        // Cleanup so other tests get a fresh context.
+        \MediaWiki\Context\RequestContext::reset();
+    }
+
+    /**
+     * getDescriptionUrl() must include ?page=N for multi-page canvases > 1
+     * so the MMV "More details" button (and the imageinfo descriptionurl
+     * field) takes the user back to the same canvas.
+     */
+    public function testGetDescriptionUrlIncludesPageQueryAfterTransform(): void
+    {
+        $manifest = $this->loadFixture('manifest-multipage-v2.json');
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364.jpg');
+
+        // Page 1 is the default — no query string needed.
+        $file->transform(['width' => 600, 'page' => 1]);
+        self::assertStringNotContainsString('page=', $file->getDescriptionUrl());
+
+        $file->transform(['width' => 600, 'page' => 2]);
+        self::assertStringContainsString('page=2', $file->getDescriptionUrl());
+
+        $file->transform(['width' => 600, 'page' => 6]);
+        self::assertStringContainsString('page=6', $file->getDescriptionUrl());
+    }
+
+    // ─── v3 manifest parsing ───────────────────────────────
 
     public function testV3ManifestServiceExtraction(): void
     {
@@ -324,7 +459,7 @@ class IIIFFileTest extends TestCase
         self::assertSame(7000, $file->getHeight(1));
     }
 
-    // ─── AC 16: exists() / error manifests ────────────────────────
+    // ─── exists() / error manifests ────────────────────────
 
     public function testExistsReturnsTrueForValidManifest(): void
     {
@@ -358,26 +493,26 @@ class IIIFFileTest extends TestCase
     public function testTransformSetsLastTransformPage(): void
     {
         $manifest = $this->loadFixture('manifest-multipage-v2.json');
-        $file = $this->makeFile($manifest);
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364.jpg');
 
         self::assertSame(1, $file->lastTransformPage());
 
         $file->transform(['width' => 400, 'page' => 2]);
         self::assertSame(2, $file->lastTransformPage());
 
-        $file->transform(['width' => 400, 'page' => 3]);
-        self::assertSame(3, $file->lastTransformPage());
+        $file->transform(['width' => 400, 'page' => 6]);
+        self::assertSame(6, $file->lastTransformPage());
     }
 
     public function testTransformPage2UsesCorrectService(): void
     {
         $manifest = $this->loadFixture('manifest-multipage-v2.json');
-        $file = $this->makeFile($manifest);
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364.jpg');
 
         $thumb = $file->transform(['width' => 600, 'page' => 2]);
 
         self::assertInstanceOf(ThumbnailImage::class, $thumb);
-        self::assertStringContainsString('df_dk_multipage_002', $thumb->getUrl());
+        self::assertStringContainsString('bsb11610364_00002', $thumb->getUrl());
     }
 
     public function testTransformReturnsErrorWhenUnresolved(): void
@@ -468,24 +603,19 @@ class IIIFFileTest extends TestCase
         self::assertSame('', $file->getProviderUrl());
     }
 
-    public function testGetProviderUrlFromV2RelatedObject(): void
+    /**
+     * SLUB manifests have no top-level related`/`homepage`/`license`;
+     * the public landing URL only exists inside an HTML <a> in
+     * metadata under label "PURL".
+     */
+    public function testGetLicenseUrlFromMetadataForSlub(): void
     {
-        // related as object with @id
         $manifest = $this->loadFixture('manifest-slub-v2.json');
-        $file = $this->makeFile($manifest, 'slub', 'test', 'Test.jpg');
+        $file = $this->makeFile($manifest, 'slub-dresden', '384671365-19500000', '384671365-19500000.jpg');
 
-        $url = $file->getProviderUrl();
-        self::assertSame('https://digital.slub-dresden.de/werkansicht/dlf/12345', $url);
-    }
+        $licenseUrl = $file->getLicenseUrlFromMetadata($file->getResolvedManifest());
 
-    public function testGetProviderUrlFromV2RelatedPlainString(): void
-    {
-        // related as plain string URL
-        $manifest = $this->loadFixture('manifest-bsb-v2.json');
-        $file = $this->makeFile($manifest, 'bsb', 'test', 'Test.jpg');
-
-        $url = $file->getProviderUrl();
-        self::assertSame('https://www.digitale-sammlungen.de/de/view/bsb10000001', $url);
+        self::assertSame('http://creativecommons.org/publicdomain/mark/1.0/', $licenseUrl);
     }
 
     // ─── Page normalization ───────────────────────────────────────
@@ -493,7 +623,7 @@ class IIIFFileTest extends TestCase
     public function testPageNormalizationClampsToOne(): void
     {
         $manifest = $this->loadFixture('manifest-multipage-v2.json');
-        $file = $this->makeFile($manifest);
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364.jpg');
 
         // Page 0 and negative should be normalized to 1.
         self::assertSame($file->getWidth(1), $file->getWidth(0));
@@ -503,11 +633,92 @@ class IIIFFileTest extends TestCase
     public function testOutOfBoundsPageReturnsZeroDimensions(): void
     {
         $manifest = $this->loadFixture('manifest-multipage-v2.json');
-        $file = $this->makeFile($manifest);
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364.jpg');
 
-        // Page 99 is beyond the 3 canvases → 0.
-        self::assertSame(0, $file->getWidth(99));
-        self::assertSame(0, $file->getHeight(99));
+        // Page beyond the 622 canvases → 0.
+        self::assertSame(0, $file->getWidth(99999));
+        self::assertSame(0, $file->getHeight(99999));
+    }
+
+    // ─── Invalid / out-of-range page numbers ──────────────────────
+
+    /**
+     * Out-of-range page requested via wikitext (`[[File:Foo|page=99999]]`)
+     * or URL (`?page=99999`): transform must surface a MediaTransformError
+     * rather than silently rendering a broken canvas — MediaWiki's image
+     * pipeline catches the error and shows the "could not be resolved"
+     * fallback to the reader.
+     */
+    public function testTransformReturnsErrorForPageBeyondCanvasCount(): void
+    {
+        $manifest = $this->loadFixture('manifest-multipage-v2.json');
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364.jpg');
+
+        $result = $file->transform(['width' => 300, 'page' => 99999]);
+
+        self::assertInstanceOf(MediaTransformError::class, $result);
+    }
+
+    public function testGetUrlForPageBeyondCanvasCountReturnsEmpty(): void
+    {
+        $manifest = $this->loadFixture('manifest-multipage-v2.json');
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364.jpg');
+
+        self::assertSame('', $file->getUrlForPage(99999));
+    }
+
+    /**
+     * After a successful transform a second, out-of-range transform
+     * updates lastTransformPage but `getUrl()` should *not* return a
+     * malformed URL — it must report empty so callers (e.g. the
+     * "Original file" link) don't render a broken `<a href>`.
+     */
+    public function testGetUrlReturnsEmptyAfterOutOfRangeTransform(): void
+    {
+        $manifest = $this->loadFixture('manifest-multipage-v2.json');
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364.jpg');
+
+        $file->transform(['width' => 600, 'page' => 6]);
+        self::assertStringContainsString('bsb11610364_00006', $file->getUrl());
+
+        $file->transform(['width' => 600, 'page' => 99999]);
+        self::assertSame('', $file->getUrl());
+    }
+
+    /**
+     * @return array<string, array{mixed, int}>
+     */
+    public static function pageNormalizationProvider(): array
+    {
+        return [
+            'integer 5' => [5, 5],
+            'string "5"' => ['5', 5],
+            'zero' => [0, 1],
+            'negative' => [-3, 1],
+            'string negative' => ['-7', 1],
+            'non-numeric string' => ['Some caption text', 1],
+            'float-like string' => ['3.5', 3],
+            'empty string' => ['', 1],
+            'null' => [null, 1],
+        ];
+    }
+
+    /**
+     * `normalizePage` underpins every page-aware code path; verify the
+     * full normalisation matrix so junky inputs from wikitext / URL
+     * params all settle on page 1.
+     *
+     * @param mixed $input
+     */
+    #[\PHPUnit\Framework\Attributes\DataProvider('pageNormalizationProvider')]
+    public function testNormalizePage(mixed $input, int $expected): void
+    {
+        $manifest = $this->loadFixture('manifest-multipage-v2.json');
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364.jpg');
+
+        $ref = new \ReflectionMethod($file, 'normalizePage');
+
+        self::assertSame($expected, $ref->invoke($file, $input));
     }
 
     // ─── removeImageExtension ─────────────────────────────────────

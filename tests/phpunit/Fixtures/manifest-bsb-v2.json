@@ -1,37 +1,383 @@
 {
   "@context": "http://iiif.io/api/presentation/2/context.json",
   "@type": "sc:Manifest",
-  "@id": "https://api.digitale-sammlungen.de/iiif/presentation/v2/bsb10000001/manifest",
-  "label": "Bayerisches Staatsbibliothek - Test",
-  "attribution": "Bayerische Staatsbibliothek",
-  "related": "https://www.digitale-sammlungen.de/de/view/bsb10000001",
-  "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "@id": "https://api.digitale-sammlungen.de/iiif/presentation/v2/bsb00127289/manifest",
+  "label": "Fünf bestickte Stirntücher, Nr. 4 - BSB Cod.sin. 595(4",
+  "metadata": [
+    {
+      "label": [
+        {
+          "@language": "en",
+          "@value": "Title"
+        },
+        {
+          "@language": "de",
+          "@value": "Titel"
+        },
+        {
+          "@language": "zh",
+          "@value": "書名"
+        }
+      ],
+      "value": "Fünf bestickte Stirntücher, Nr. 4 - BSB Cod.sin. 595(4"
+    },
+    {
+      "label": [
+        {
+          "@language": "en",
+          "@value": "Creation"
+        },
+        {
+          "@language": "de",
+          "@value": "Entstehung"
+        },
+        {
+          "@language": "zh",
+          "@value": "生成"
+        }
+      ],
+      "value": "[S.l.] Nordvietnam?<br/>frühes 20. Jahrhundert"
+    },
+    {
+      "label": [
+        {
+          "@language": "en",
+          "@value": "Extent"
+        },
+        {
+          "@language": "de",
+          "@value": "Umfang"
+        },
+        {
+          "@language": "zh",
+          "@value": "範疇"
+        }
+      ],
+      "value": "Stirntuch mit deutlich voneinander abgesetzten Schriftzeichen, mehrheitlich mit Radikal mi (Seide) geschrieben, sind in 12 Spalten mit je 9 Zeichen angeordnet."
+    },
+    {
+      "label": [
+        {
+          "@language": "en",
+          "@value": "Language"
+        },
+        {
+          "@language": "de",
+          "@value": "Sprache"
+        },
+        {
+          "@language": "zh",
+          "@value": "語言"
+        }
+      ],
+      "value": [
+        {
+          "@language": "en",
+          "@value": "Chinese"
+        },
+        {
+          "@language": "de",
+          "@value": "Chinesisch"
+        },
+        {
+          "@language": "zh",
+          "@value": "中文"
+        }
+      ]
+    },
+    {
+      "label": [
+        {
+          "@language": "en",
+          "@value": "Note"
+        },
+        {
+          "@language": "de",
+          "@value": "Anmerkung"
+        },
+        {
+          "@language": "zh",
+          "@value": "說明"
+        }
+      ],
+      "value": "Kurzaufnahme einer Handschrift"
+    },
+    {
+      "label": [
+        {
+          "@language": "en",
+          "@value": "Note"
+        },
+        {
+          "@language": "de",
+          "@value": "Anmerkung"
+        },
+        {
+          "@language": "zh",
+          "@value": "說明"
+        }
+      ],
+      "value": "Ausstattung: Stirntücher mit Kettfäden an beiden Enden wurden jeweils zu mehreren zu Schnüren gedreht. Sie werden mehrfach um den Kopf gewickelt und dienen zur Befestigung des zugehörigen Silberkopfschmucks, den die Frauen der Jingmen bei festlichen Anlässen tragen. Auf das Gewebe sind in Zierschrift winzige dunkelblaue bis schwärzliche chinesische Schriftzeichen gestickt, die in regelmäßigen Spalten und Reihen innerhalb eines Rechtecks angeordnet sind, dessen Begrenzungen dunkelblau in den Stoff eingwebt sind und das am Rand von geometrischen Mustern eingefaßt wird. Auf der Rückseite der Tücher sind manchmal \"Stickhilfen\" in Form roter Linien und Punkte sichtbar. Vorlagen für diese Zierschriften, die vorwiegend dekorative Funktion haben und häufig das Ritual mi (Seide) als linken Bestandteil aufweisen, finden sich manchmal auf freien Stellen in Ritualbüchern; die Verwendung solcher Vorlagen durch die vermutlich meist nicht schriftkundigen Frauen ist ethnographisch für das frühe 20. Jahrhundert in Nordvietnam belegt."
+    },
+    {
+      "label": [
+        {
+          "@language": "en",
+          "@value": "Location"
+        },
+        {
+          "@language": "de",
+          "@value": "Standort"
+        },
+        {
+          "@language": "zh",
+          "@value": "位置"
+        }
+      ],
+      "value": "München, Bayerische Staatsbibliothek -- Cod.sin. 595(4"
+    },
+    {
+      "label": [
+        {
+          "@language": "en",
+          "@value": "Identifier"
+        },
+        {
+          "@language": "de",
+          "@value": "Identifikator"
+        },
+        {
+          "@language": "zh",
+          "@value": "標識"
+        }
+      ],
+      "value": "BSB-ID 991076883629707356"
+    },
+    {
+      "label": [
+        {
+          "@language": "en",
+          "@value": "Identifier"
+        },
+        {
+          "@language": "de",
+          "@value": "Identifikator"
+        },
+        {
+          "@language": "zh",
+          "@value": "標識"
+        }
+      ],
+      "value": "BV045007760"
+    },
+    {
+      "label": [
+        {
+          "@language": "en",
+          "@value": "Identifier"
+        },
+        {
+          "@language": "de",
+          "@value": "Identifikator"
+        },
+        {
+          "@language": "zh",
+          "@value": "標識"
+        }
+      ],
+      "value": "<span><a href='https://search.worldcat.org/title/1040622790'>WorldCat: 1040622790</a></span>"
+    },
+    {
+      "label": [
+        {
+          "@language": "en",
+          "@value": "Identifier"
+        },
+        {
+          "@language": "de",
+          "@value": "Identifikator"
+        },
+        {
+          "@language": "zh",
+          "@value": "標識"
+        }
+      ],
+      "value": "BSB-Hss Cod.sin. 595(4"
+    },
+    {
+      "label": [
+        {
+          "@language": "en",
+          "@value": "URN"
+        },
+        {
+          "@language": "de",
+          "@value": "URN"
+        },
+        {
+          "@language": "zh",
+          "@value": "數位物件標識"
+        }
+      ],
+      "value": "<a href='https://mdz-nbn-resolving.de/urn:nbn:de:bvb:12-bsb00127289-9'>urn:nbn:de:bvb:12-bsb00127289-9</a>"
+    },
+    {
+      "label": [
+        {
+          "@language": "en",
+          "@value": "Media type"
+        },
+        {
+          "@language": "de",
+          "@value": "Medienart"
+        },
+        {
+          "@language": "zh",
+          "@value": "資料類型"
+        }
+      ],
+      "value": [
+        {
+          "@language": "en",
+          "@value": "Thing"
+        },
+        {
+          "@language": "de",
+          "@value": "Gegenstand"
+        },
+        {
+          "@language": "zh",
+          "@value": "文物"
+        }
+      ]
+    }
+  ],
+  "navDate": "1901-01-01T00:00:00Z",
+  "license": [
+    "https://creativecommons.org/licenses/by-nc-sa/4.0/"
+  ],
+  "attribution": [
+    {
+      "@language": "en",
+      "@value": "Bayerische Staatsbibliothek"
+    },
+    {
+      "@language": "de",
+      "@value": "Bayerische Staatsbibliothek"
+    },
+    {
+      "@language": "zh",
+      "@value": "Bayerische Staatsbibliothek"
+    }
+  ],
+  "seeAlso": [
+    {
+      "@id": "https://opacplus.bsb-muenchen.de/title/BV045007760?format=marc",
+      "label": "MARCXML",
+      "format": "application/marcxml+xml",
+      "profile": "http://www.loc.gov/standards/marcxml/"
+    },
+    {
+      "@id": "https://opacplus.bsb-muenchen.de/title/BV045007760?format=rdf",
+      "label": "RDF",
+      "format": "application/rdf+xml",
+      "profile": "https://lod.b3kat.de/doc"
+    }
+  ],
   "sequences": [
     {
+      "@id": "https://api.digitale-sammlungen.de/iiif/presentation/v2/bsb00127289/sequence/normal",
       "@type": "sc:Sequence",
       "canvases": [
         {
+          "@id": "https://api.digitale-sammlungen.de/iiif/presentation/v2/bsb00127289/canvas/1",
           "@type": "sc:Canvas",
-          "@id": "https://api.digitale-sammlungen.de/iiif/presentation/v2/bsb10000001/canvas/1",
-          "label": "1",
-          "width": 2400,
-          "height": 3600,
+          "label": "(0001)",
           "images": [
             {
               "@type": "oa:Annotation",
+              "motivation": "sc:painting",
               "resource": {
+                "@id": "https://api.digitale-sammlungen.de/iiif/image/v2/bsb00127289_00001/full/full/0/default.jpg",
                 "@type": "dctypes:Image",
-                "@id": "https://api.digitale-sammlungen.de/iiif/image/v2/bsb10000001_00001/full/full/0/default.jpg",
                 "service": {
-                  "@id": "https://api.digitale-sammlungen.de/iiif/image/v2/bsb10000001_00001",
                   "@context": "http://iiif.io/api/image/2/context.json",
-                  "profile": "http://iiif.io/api/image/2/level2.json"
-                }
-              }
+                  "@id": "https://api.digitale-sammlungen.de/iiif/image/v2/bsb00127289_00001",
+                  "profile": "http://iiif.io/api/image/2/level2.json",
+                  "protocol": "http://iiif.io/api/image"
+                },
+                "format": "image/jpeg",
+                "width": 10455,
+                "height": 2610
+              },
+              "on": "https://api.digitale-sammlungen.de/iiif/presentation/v2/bsb00127289/canvas/1"
             }
-          ]
+          ],
+          "width": 10455,
+          "height": 2610
+        },
+        {
+          "@id": "https://api.digitale-sammlungen.de/iiif/presentation/v2/bsb00127289/canvas/2",
+          "@type": "sc:Canvas",
+          "label": "(0002)",
+          "service": {
+            "@context": "http://iiif.io/api/annex/services/physdim/1/context.json",
+            "physicalScale": 0.008466666666666666,
+            "physicalUnits": "cm",
+            "profile": "http://iiif.io/api/annex/services/physdim"
+          },
+          "images": [
+            {
+              "@type": "oa:Annotation",
+              "motivation": "sc:painting",
+              "resource": {
+                "@id": "https://api.digitale-sammlungen.de/iiif/image/v2/bsb00127289_00002/full/full/0/default.jpg",
+                "@type": "dctypes:Image",
+                "service": {
+                  "@context": "http://iiif.io/api/image/2/context.json",
+                  "@id": "https://api.digitale-sammlungen.de/iiif/image/v2/bsb00127289_00002",
+                  "profile": "http://iiif.io/api/image/2/level2.json",
+                  "protocol": "http://iiif.io/api/image"
+                },
+                "format": "image/jpeg",
+                "width": 10455,
+                "height": 3969
+              },
+              "on": "https://api.digitale-sammlungen.de/iiif/presentation/v2/bsb00127289/canvas/2"
+            }
+          ],
+          "width": 10455,
+          "height": 3969
         }
       ]
+    }
+  ],
+  "viewingDirection": "left-to-right",
+  "thumbnail": {
+    "@id": "https://api.digitale-sammlungen.de/iiif/image/v2/bsb00127289_00001/full/280,/0/default.jpg",
+    "service": {
+      "@context": "http://iiif.io/api/image/2/context.json",
+      "@id": "https://api.digitale-sammlungen.de/iiif/image/v2/bsb00127289_00001",
+      "profile": "http://iiif.io/api/image/2/level2.json",
+      "protocol": "http://iiif.io/api/image"
+    },
+    "format": "image/jpeg"
+  },
+  "logo": {
+    "@id": "https://api.digitale-sammlungen.de/iiif/images/bsb_logo.png",
+    "format": "image/png"
+  },
+  "viewingHint": "paged",
+  "related": [
+    {
+      "@id": "https://mdz-nbn-resolving.de/details:bsb00127289",
+      "label": "Details",
+      "format": "text/html"
+    },
+    {
+      "@id": "https://opacplus.bsb-muenchen.de/title/BV045007760",
+      "label": "OPAC",
+      "format": "text/html"
     }
   ]
 }
