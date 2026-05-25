@@ -94,6 +94,12 @@ namespace MediaWiki {
             /** @var \RepoGroup|null */
             public static $mockRepoGroup = null;
 
+            /** @var Utils\UrlUtils|null */
+            public static ?Utils\UrlUtils $mockUrlUtils = null;
+
+            /** @var \GlobalVarConfig|null */
+            public static ?\GlobalVarConfig $mockMainConfig = null;
+
             public static function getInstance(): self
             {
                 if (self::$instance === null) {
@@ -106,6 +112,8 @@ namespace MediaWiki {
             {
                 self::$instance = null;
                 self::$mockRepoGroup = null;
+                self::$mockUrlUtils = null;
+                self::$mockMainConfig = null;
             }
 
             public function getRepoGroup(): \RepoGroup
@@ -118,6 +126,9 @@ namespace MediaWiki {
 
             public function getMainConfig(): \GlobalVarConfig
             {
+                if (self::$mockMainConfig !== null) {
+                    return self::$mockMainConfig;
+                }
                 return new \GlobalVarConfig();
             }
 
@@ -131,12 +142,45 @@ namespace MediaWiki {
                 return new Http\HttpRequestFactory();
             }
 
+            public function getUrlUtils(): Utils\UrlUtils
+            {
+                if (self::$mockUrlUtils !== null) {
+                    return self::$mockUrlUtils;
+                }
+                return new Utils\UrlUtils();
+            }
+
             /** Override-able stub so tests can set the wiki's content language. */
             public static string $mockContentLanguageCode = 'en';
 
             public function getContentLanguage(): \Language
             {
                 return new \Language(self::$mockContentLanguageCode);
+            }
+        }
+    }
+
+    if (!class_exists(MainConfigNames::class)) {
+        class MainConfigNames
+        {
+            public const ScriptPath = 'ScriptPath';
+            public const Script = 'Script';
+        }
+    }
+}
+
+// ─── MediaWiki\Utils ──────────────────────────────────────────────
+
+namespace MediaWiki\Utils {
+    if (!class_exists(UrlUtils::class)) {
+        class UrlUtils
+        {
+            public function expand(string $url, ?int $defaultProto = null): ?string
+            {
+                if (preg_match('~^https?://~', $url)) {
+                    return $url;
+                }
+                return 'https://wiki.example.org' . $url;
             }
         }
     }

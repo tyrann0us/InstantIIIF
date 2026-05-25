@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace MediaWiki\Extension\InstantIIIF;
 
 use FileRepo;
+use MediaWiki\MainConfigNames;
+use MediaWiki\MediaWikiServices;
 use MediaWiki\Title\Title;
 
 class Repo extends FileRepo
@@ -51,5 +53,60 @@ class Repo extends FileRepo
     public function iiifSources(): array
     {
         return $this->iiifSources;
+    }
+
+    /**
+     * Configured IIIF source ID patterns (PHP-style with delimiters).
+     *
+     * @return list<string>
+     */
+    public function idPatterns(): array
+    {
+        $patterns = [];
+        foreach ($this->iiifSources as $src) {
+            if (!is_array($src)) {
+                continue;
+            }
+            $pattern = $src['idPattern'] ?? null;
+            if (is_string($pattern) && $pattern !== '') {
+                $patterns[] = $pattern;
+            }
+        }
+        return $patterns;
+    }
+
+    /**
+     * Override to add an explicit `apiurl` (so the JS-side MediaSearchProvider
+     * hits a URL we can recognise) plus the `instantIIIFIdPatterns` field used
+     * by the client-side search patch to decide whether to attempt an IIIF
+     * lookup for a typed query.
+     *
+     * Without our `apiurl`, MediaResourceProvider falls back to
+     * `scriptDirUrl + '/api.php'`, which still works as an API endpoint but
+     * differs in formatting between repos and is harder to match on.
+     *
+     * @return array<string, mixed>
+     */
+    // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound -- MediaWiki FileRepo override
+    public function getInfo(): array
+    {
+        $info = parent::getInfo();
+        $info['apiurl'] = self::resolveLocalApiUrl();
+        $info['instantIIIFIdPatterns'] = $this->idPatterns();
+        return $info;
+    }
+
+    /**
+     * Absolute URL to this wiki's `api.php`, matching what MediaWiki's JS
+     * MediaResourceProvider would build for a local request.
+     */
+    public static function resolveLocalApiUrl(): string
+    {
+        $services = MediaWikiServices::getInstance();
+        $scriptPath = (string) $services->getMainConfig()->get(MainConfigNames::ScriptPath);
+        return (string) $services->getUrlUtils()->expand(
+            $scriptPath . '/api.php',
+            PROTO_CURRENT
+        );
     }
 }

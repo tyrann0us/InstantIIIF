@@ -32,6 +32,7 @@ module.exports = [
 				mw: 'readonly',
 				$: 'readonly',
 				location: 'readonly',
+				MutationObserver: 'readonly',
 			},
 		},
 	},

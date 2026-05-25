@@ -19,6 +19,7 @@ namespace MediaWiki;
 
 use GlobalVarConfig;
 use MediaWiki\Http\HttpRequestFactory;
+use MediaWiki\Utils\UrlUtils;
 use WANObjectCache;
 
 class MediaWikiServices {
@@ -28,6 +29,22 @@ class MediaWikiServices {
     public function getHttpRequestFactory(): HttpRequestFactory {}
     public function getRepoGroup(): \RepoGroup {}
     public function getContentLanguage(): \Language {}
+    public function getUrlUtils(): UrlUtils {}
+}
+
+class MainConfigNames {
+    public const ScriptPath = 'ScriptPath';
+    public const Script = 'Script';
+}
+
+namespace MediaWiki\Utils;
+
+class UrlUtils {
+    /**
+     * @param string $url
+     * @param int|null $defaultProto
+     */
+    public function expand(string $url, ?int $defaultProto = null): ?string {}
 }
 
 namespace MediaWiki\Http;

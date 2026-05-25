@@ -57,6 +57,41 @@ function createMwEnv( win ) {
 		return wrap;
 	}
 
+	// Minimal jQuery Deferred stand-in. Production code uses jQuery's
+	// Deferred to make promises that also expose `.abort()`. Tests don't
+	// care about chaining semantics — just that the patch can wrap an
+	// eventually-resolved value into a thenable carrying `.abort`.
+	jQueryFactory.Deferred = function () {
+		let resolveFn;
+		let rejectFn;
+		const native = new Promise( ( resolve, reject ) => {
+			resolveFn = resolve;
+			rejectFn = reject;
+		} );
+		const dfd = {
+			resolve( v ) {
+				resolveFn( v );
+				return dfd;
+			},
+			reject( e ) {
+				rejectFn( e );
+				return dfd;
+			},
+			promise( extras ) {
+				return Object.assign(
+					Object.create( native ),
+					{
+						then: native.then.bind( native ),
+						catch: native.catch.bind( native ),
+						finally: native.finally.bind( native ),
+					},
+					extras || {}
+				);
+			},
+		};
+		return dfd;
+	};
+
 	/**
 	 * Trigger a jQuery-style event on document (used by mmv-metadata).
 	 * @param {string} eventName
