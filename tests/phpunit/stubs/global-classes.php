@@ -7,6 +7,12 @@
 
 declare(strict_types=1);
 
+if (!class_exists(FileBackend::class)) {
+    class FileBackend
+    {
+    }
+}
+
 if (!class_exists(FileRepo::class)) {
     class FileRepo
     {
@@ -29,6 +35,11 @@ if (!class_exists(FileRepo::class)) {
             return [
                 'name' => $this->getName(),
             ];
+        }
+
+        public function getBackend(): FileBackend
+        {
+            return new FileBackend();
         }
     }
 }
@@ -260,6 +271,10 @@ if (!class_exists(OutputPage::class)) {
         public array $inlineStyles = [];
         /** @var array<string, mixed> */
         public array $jsConfigVars = [];
+        /** @var string */
+        public string $html = '';
+        /** @var list<array{key: string, params: array<int, mixed>}> */
+        public array $wikiMessages = [];
         private ?\MediaWiki\Title\Title $title = null;
 
         public function setTitle(\MediaWiki\Title\Title $title): void
@@ -285,6 +300,16 @@ if (!class_exists(OutputPage::class)) {
         public function addJsConfigVars(string $name, mixed $value): void
         {
             $this->jsConfigVars[$name] = $value;
+        }
+
+        public function addHTML(string $html): void
+        {
+            $this->html .= $html;
+        }
+
+        public function addWikiMsg(string $key, mixed ...$params): void
+        {
+            $this->wikiMessages[] = ['key' => $key, 'params' => $params];
         }
     }
 }
@@ -410,5 +435,151 @@ if (!class_exists(RepoGroup::class)) {
         {
             return false;
         }
+
+        public function getLocalRepo(): FileRepo
+        {
+            return new FileRepo(['name' => 'local']);
+        }
     }
 }
+
+
+if (!class_exists(SpecialPage::class)) {
+    class SpecialPage
+    {
+        public string $mName;
+        public string $mRestriction;
+        public ?\MediaWiki\Context\IContextSource $injectedContext = null;
+        public ?WebRequest $injectedRequest = null;
+        public ?OutputPage $injectedOutput = null;
+
+        public function __construct(string $name, string $restriction = '')
+        {
+            $this->mName = $name;
+            $this->mRestriction = $restriction;
+        }
+
+        public function setHeaders(): void
+        {
+        }
+
+        public function checkPermissions(): void
+        {
+        }
+
+        public function getOutput(): OutputPage
+        {
+            if ($this->injectedOutput === null) {
+                $this->injectedOutput = new OutputPage();
+            }
+            return $this->injectedOutput;
+        }
+
+        public function getRequest(): WebRequest
+        {
+            if ($this->injectedRequest === null) {
+                $this->injectedRequest = new WebRequest();
+            }
+            return $this->injectedRequest;
+        }
+
+        public function getContext(): \MediaWiki\Context\IContextSource
+        {
+            if ($this->injectedContext === null) {
+                $this->injectedContext = \MediaWiki\Context\RequestContext::getMain();
+            }
+            return $this->injectedContext;
+        }
+
+        public function msg(string $key, mixed ...$params): Message
+        {
+            return new Message($key, $params);
+        }
+    }
+}
+
+if (!class_exists(Message::class)) {
+    class Message
+    {
+        /** @var array<int, mixed> */
+        private array $params;
+
+        public function __construct(public string $key, array $params = [])
+        {
+            $this->params = $params;
+        }
+
+        public function text(): string
+        {
+            return $this->renderWithParams();
+        }
+
+        public function plain(): string
+        {
+            return $this->renderWithParams();
+        }
+
+        public function parse(): string
+        {
+            return $this->renderWithParams();
+        }
+
+        public function inContentLanguage(): self
+        {
+            return $this;
+        }
+
+        private function renderWithParams(): string
+        {
+            if ($this->params === []) {
+                return $this->key;
+            }
+            $rendered = [];
+            foreach ($this->params as $param) {
+                $rendered[] = (string) $param;
+            }
+            return $this->key . '(' . implode(',', $rendered) . ')';
+        }
+    }
+}
+
+if (!class_exists(HTMLForm::class)) {
+    class HTMLForm
+    {
+        public string $method = 'get';
+        public string $submitTextMsg = '';
+
+        public static function factory(string $displayFormat, array $descriptor, $context = null): self
+        {
+            return new self();
+        }
+
+        public function setMethod(string $method): self
+        {
+            $this->method = $method;
+            return $this;
+        }
+
+        public function setSubmitTextMsg(string $msgKey): self
+        {
+            $this->submitTextMsg = $msgKey;
+            return $this;
+        }
+
+        public function setWrapperLegendMsg(string $msgKey): self
+        {
+            return $this;
+        }
+
+        public function setSubmitCallback(callable $cb): self
+        {
+            return $this;
+        }
+
+        public function show(): bool
+        {
+            return true;
+        }
+    }
+}
+

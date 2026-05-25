@@ -29,7 +29,11 @@ class FileRepo {
 
     /** @return array<string, mixed> */
     public function getInfo(): array {}
+
+    public function getBackend(): \FileBackend {}
 }
+
+class FileBackend {}
 
 class MediaTransformOutput {
 }
@@ -124,6 +128,9 @@ class OutputPage {
     public function getTitle(): ?Title {}
     /** @param string $name @param mixed $value */
     public function addJsConfigVars(string $name, mixed $value): void {}
+    public function addHTML(string $html): void {}
+    /** @param string $key @param mixed ...$params */
+    public function addWikiMsg(string $key, ...$params): void {}
 }
 
 class Skin {
@@ -197,6 +204,8 @@ class RepoGroup {
      * @param array<int, mixed> $params
      */
     public function forEachForeignRepo(callable $callback, array $params = []): bool {}
+
+    public function getLocalRepo(): FileRepo {}
 }
 
 /**
@@ -211,4 +220,29 @@ class Message {
     public function plain(): string {}
     public function parse(): string {}
     public function inContentLanguage(): self {}
+}
+
+class SpecialPage {
+    public function __construct(string $name, string $restriction = '') {}
+    public function setHeaders(): void {}
+    public function checkPermissions(): void {}
+    public function getOutput(): OutputPage {}
+    public function getRequest(): WebRequest {}
+    public function getContext(): \MediaWiki\Context\IContextSource {}
+    /** @param string $key @param mixed ...$params */
+    public function msg(string $key, ...$params): Message {}
+}
+
+class HTMLForm {
+    /**
+     * @param string $displayFormat
+     * @param array<string, array<string, mixed>> $descriptor
+     * @param \MediaWiki\Context\IContextSource|null $context
+     */
+    public static function factory(string $displayFormat, array $descriptor, $context = null): self {}
+    public function setMethod(string $method): self {}
+    public function setSubmitTextMsg(string $msgKey): self {}
+    public function setWrapperLegendMsg(string $msgKey): self {}
+    public function setSubmitCallback(callable $cb): self {}
+    public function show(): bool {}
 }
