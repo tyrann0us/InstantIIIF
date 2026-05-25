@@ -32,7 +32,6 @@ class SpecialInstantIIIFInspect extends SpecialPage
     private const KNOWN_PROVIDER_IDS = [
         'deutsche-fotothek',
         'slub-dresden',
-        'slub',
         'digitale-sammlungen',
     ];
 
