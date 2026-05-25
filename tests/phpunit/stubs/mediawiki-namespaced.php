@@ -100,6 +100,9 @@ namespace MediaWiki {
             /** @var \GlobalVarConfig|null */
             public static ?\GlobalVarConfig $mockMainConfig = null;
 
+            /** @var Http\HttpRequestFactory|null */
+            public static ?Http\HttpRequestFactory $mockHttpRequestFactory = null;
+
             public static function getInstance(): self
             {
                 if (self::$instance === null) {
@@ -114,6 +117,7 @@ namespace MediaWiki {
                 self::$mockRepoGroup = null;
                 self::$mockUrlUtils = null;
                 self::$mockMainConfig = null;
+                self::$mockHttpRequestFactory = null;
             }
 
             public function getRepoGroup(): \RepoGroup
@@ -139,6 +143,9 @@ namespace MediaWiki {
 
             public function getHttpRequestFactory(): Http\HttpRequestFactory
             {
+                if (self::$mockHttpRequestFactory !== null) {
+                    return self::$mockHttpRequestFactory;
+                }
                 return new Http\HttpRequestFactory();
             }
 
@@ -165,6 +172,53 @@ namespace MediaWiki {
         {
             public const ScriptPath = 'ScriptPath';
             public const Script = 'Script';
+        }
+    }
+}
+
+// ─── MediaWiki\Html ───────────────────────────────────────────────
+
+namespace MediaWiki\Html {
+    if (!class_exists(Html::class)) {
+        class Html
+        {
+            /** @param array<string, mixed> $attribs */
+            public static function element(string $element, array $attribs = [], string $contents = ''): string
+            {
+                return '<' . $element . self::attrs($attribs) . '>' . htmlspecialchars($contents, ENT_QUOTES) . '</' . $element . '>';
+            }
+
+            /** @param array<string, mixed> $attribs */
+            public static function rawElement(string $element, array $attribs = [], string $contents = ''): string
+            {
+                return '<' . $element . self::attrs($attribs) . '>' . $contents . '</' . $element . '>';
+            }
+
+            /** @param array<string, mixed> $attribs */
+            public static function openElement(string $element, array $attribs = []): string
+            {
+                return '<' . $element . self::attrs($attribs) . '>';
+            }
+
+            public static function closeElement(string $element): string
+            {
+                return '</' . $element . '>';
+            }
+
+            public static function errorBox(string $html, string $heading = '', string $className = ''): string
+            {
+                return '<div class="errorbox ' . $className . '">' . ($heading !== '' ? '<h2>' . htmlspecialchars($heading, ENT_QUOTES) . '</h2>' : '') . $html . '</div>';
+            }
+
+            /** @param array<string, mixed> $attribs */
+            private static function attrs(array $attribs): string
+            {
+                $out = '';
+                foreach ($attribs as $k => $v) {
+                    $out .= ' ' . $k . '="' . htmlspecialchars((string) $v, ENT_QUOTES) . '"';
+                }
+                return $out;
+            }
         }
     }
 }

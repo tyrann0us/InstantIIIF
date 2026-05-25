@@ -47,6 +47,19 @@ class UrlUtils {
     public function expand(string $url, ?int $defaultProto = null): ?string {}
 }
 
+namespace MediaWiki\Html;
+
+class Html {
+    /** @param array<string, mixed> $attribs */
+    public static function element(string $element, array $attribs = [], string $contents = ''): string {}
+    /** @param array<string, mixed> $attribs */
+    public static function rawElement(string $element, array $attribs = [], string $contents = ''): string {}
+    /** @param array<string, mixed> $attribs */
+    public static function openElement(string $element, array $attribs = []): string {}
+    public static function closeElement(string $element): string {}
+    public static function errorBox(string $html, string $heading = '', string $className = ''): string {}
+}
+
 namespace MediaWiki\Http;
 
 use MWHttpRequest;

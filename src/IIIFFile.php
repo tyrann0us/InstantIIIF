@@ -53,7 +53,6 @@ class IIIFFile extends File
      */
     private const LICENSE_META_KEYS = [
         'slub-dresden' => ['Rechteinformationen', 'Rights'],
-        'slub' => ['Rechteinformationen', 'Rights'],
     ];
 
     /**
@@ -792,8 +791,8 @@ class IIIFFile extends File
         return $this->repo->iiifSources();
     }
 
-    // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound -- internal accessor
-    protected function getServiceIdForPage(int $page): ?string
+    // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound -- public for SpecialInstantIIIFInspect
+    public function getServiceIdForPage(int $page): ?string
     {
         $resolved = $this->ensureResolved();
         if (!$resolved) {
@@ -805,8 +804,8 @@ class IIIFFile extends File
     /**
      * @return array{0: int, 1: int}
      */
-    // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound -- internal accessor
-    protected function getCanvasDimensions(int $page): array
+    // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound -- public for SpecialInstantIIIFInspect
+    public function getCanvasDimensions(int $page): array
     {
         $resolved = $this->ensureResolved();
         if (!$resolved) {
