@@ -28,6 +28,12 @@ class Hooks
     {
         $out->addModules(['ext.instantIIIF.mmvPatch']);
 
+        $iiifRepos = self::collectIIIFRepoDescriptors();
+        if ($iiifRepos !== []) {
+            $out->addJsConfigVars('wgInstantIIIFRepos', $iiifRepos);
+            $out->addModules(['ext.instantIIIF.mediaSearch']);
+        }
+
         $title = $out->getTitle();
         if ($title === null || $title->getNamespace() !== NS_FILE) {
             return;
@@ -43,6 +49,31 @@ class Hooks
         if ($providerUrl !== '') {
             $out->addJsConfigVars('wgIIIFProviderUrl', $providerUrl);
         }
+    }
+
+    /**
+     * Collect descriptors for every configured InstantIIIF repo so the
+     * client-side media-search patch can recognise them and route their
+     * search requests through a direct title lookup.
+     *
+     * @return list<array{apiurl: string, idPatterns: list<string>}>
+     */
+    private static function collectIIIFRepoDescriptors(): array
+    {
+        $descriptors = [];
+        \MediaWiki\MediaWikiServices::getInstance()
+            ->getRepoGroup()
+            // phpcs:ignore Syde.Functions.ArgumentTypeDeclaration.NoArgumentType -- forEachForeignRepo callback receives FileRepo
+            ->forEachForeignRepo(static function ($repo) use (&$descriptors): bool {
+                if ($repo instanceof Repo) {
+                    $descriptors[] = [
+                        'apiurl' => Repo::resolveLocalApiUrl(),
+                        'idPatterns' => $repo->idPatterns(),
+                    ];
+                }
+                return false;
+            });
+        return $descriptors;
     }
 
     /**

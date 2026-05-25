@@ -22,6 +22,14 @@ if (!class_exists(FileRepo::class)) {
         {
             return $this->info['name'] ?? '';
         }
+
+        /** @return array<string, mixed> */
+        public function getInfo(): array
+        {
+            return [
+                'name' => $this->getName(),
+            ];
+        }
     }
 }
 
@@ -304,14 +312,25 @@ if (!class_exists(StatusValue::class)) {
 if (!class_exists(GlobalVarConfig::class)) {
     class GlobalVarConfig
     {
+        /** @var array<string, mixed> */
+        public array $overrides = [];
+
         public function get(string $name): mixed
         {
+            if (array_key_exists($name, $this->overrides)) {
+                return $this->overrides[$name];
+            }
             return match ($name) {
                 'InstantIIIFDefaultTimeout' => 5,
+                'ScriptPath' => '/w',
                 default => null,
             };
         }
     }
+}
+
+if (!defined('PROTO_CURRENT')) {
+    define('PROTO_CURRENT', 4);
 }
 
 if (!class_exists(WANObjectCache::class)) {
@@ -383,6 +402,11 @@ if (!class_exists(RepoGroup::class)) {
     class RepoGroup
     {
         public function findFile($title, array $options = [])
+        {
+            return false;
+        }
+
+        public function forEachForeignRepo(callable $callback, array $params = []): bool
         {
             return false;
         }

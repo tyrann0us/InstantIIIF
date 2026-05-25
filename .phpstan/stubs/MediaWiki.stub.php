@@ -13,6 +13,7 @@ define('MEDIATYPE_BITMAP', 'BITMAP');
 define('NS_FILE', 6);
 define('PROTO_RELATIVE', 2);
 define('PROTO_HTTPS', 1);
+define('PROTO_CURRENT', 4);
 
 /**
  * @phpstan-type RepoInfo array{name?: string, class?: string, iiifSources?: array}
@@ -25,6 +26,9 @@ class FileRepo {
     public function __construct(array $info = []) {}
 
     public function getName(): string {}
+
+    /** @return array<string, mixed> */
+    public function getInfo(): array {}
 }
 
 class MediaTransformOutput {
@@ -187,6 +191,12 @@ class RepoGroup {
      * @return File|false
      */
     public function findFile($title, array $options = []) {}
+
+    /**
+     * @param callable(FileRepo): bool $callback
+     * @param array<int, mixed> $params
+     */
+    public function forEachForeignRepo(callable $callback, array $params = []): bool {}
 }
 
 /**

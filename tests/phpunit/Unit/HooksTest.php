@@ -7,6 +7,7 @@ namespace MediaWiki\Extension\InstantIIIF\Tests\Unit;
 use MediaWiki\Context\RequestContext;
 use MediaWiki\Extension\InstantIIIF\Hooks;
 use MediaWiki\Extension\InstantIIIF\IIIFFile;
+use MediaWiki\Extension\InstantIIIF\Repo;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Page\ImageHistoryList;
 use MediaWiki\Page\ImagePage;
@@ -104,6 +105,80 @@ class HooksTest extends TestCase
         Hooks::onBeforePageDisplay($out, $skin);
 
         self::assertContains('ext.instantIIIF.mmvPatch', $out->modules);
+    }
+
+    public function testOnBeforePageDisplayAddsMediaSearchModuleWhenIIIFRepoIsConfigured(): void
+    {
+        $out = new OutputPage();
+        $skin = new Skin();
+
+        $iiifRepo = new Repo([
+            'name' => 'iiif',
+            'class' => Repo::class,
+            'directory' => '/tmp/iiif',
+            'iiifSources' => [
+                ['id' => 'fotothek', 'idPattern' => '/^(df_.+)$/'],
+                ['id' => 'slub', 'idPattern' => '/^([0-9].+)$/'],
+            ],
+        ]);
+
+        $repoGroup = $this->createMock(\RepoGroup::class);
+        $repoGroup->method('forEachForeignRepo')
+            ->willReturnCallback(static function (callable $cb) use ($iiifRepo): bool {
+                $cb($iiifRepo);
+                return false;
+            });
+        MediaWikiServices::$mockRepoGroup = $repoGroup;
+
+        Hooks::onBeforePageDisplay($out, $skin);
+
+        self::assertContains('ext.instantIIIF.mediaSearch', $out->modules);
+        self::assertArrayHasKey('wgInstantIIIFRepos', $out->jsConfigVars);
+        self::assertSame(
+            [[
+                'apiurl' => 'https://wiki.example.org/w/api.php',
+                'idPatterns' => ['/^(df_.+)$/', '/^([0-9].+)$/'],
+            ]],
+            $out->jsConfigVars['wgInstantIIIFRepos']
+        );
+    }
+
+    public function testOnBeforePageDisplaySkipsMediaSearchModuleWithoutIIIFRepo(): void
+    {
+        $out = new OutputPage();
+        $skin = new Skin();
+
+        $repoGroup = $this->createMock(\RepoGroup::class);
+        // forEachForeignRepo runs the callback with non-IIIF repos —
+        // simulated by simply not invoking it.
+        $repoGroup->method('forEachForeignRepo')->willReturn(false);
+        MediaWikiServices::$mockRepoGroup = $repoGroup;
+
+        Hooks::onBeforePageDisplay($out, $skin);
+
+        self::assertNotContains('ext.instantIIIF.mediaSearch', $out->modules);
+        self::assertArrayNotHasKey('wgInstantIIIFRepos', $out->jsConfigVars);
+    }
+
+    public function testOnBeforePageDisplaySkipsNonIIIFForeignRepos(): void
+    {
+        $out = new OutputPage();
+        $skin = new Skin();
+
+        $foreignNonIIIF = new \FileRepo(['name' => 'wikimediacommons']);
+
+        $repoGroup = $this->createMock(\RepoGroup::class);
+        $repoGroup->method('forEachForeignRepo')
+            ->willReturnCallback(static function (callable $cb) use ($foreignNonIIIF): bool {
+                $cb($foreignNonIIIF);
+                return false;
+            });
+        MediaWikiServices::$mockRepoGroup = $repoGroup;
+
+        Hooks::onBeforePageDisplay($out, $skin);
+
+        self::assertNotContains('ext.instantIIIF.mediaSearch', $out->modules);
+        self::assertArrayNotHasKey('wgInstantIIIFRepos', $out->jsConfigVars);
     }
 
     public function testOnBeforePageDisplayPassesProviderUrlOnFilePage(): void
