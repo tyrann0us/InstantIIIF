@@ -67,7 +67,7 @@ class HooksTest extends TestCase
         $manifest = $this->loadFixture($fixture);
         $title = new Title($dbKey, NS_FILE, $nsText);
 
-        $file = $this->createMock(IIIFFile::class);
+        $file = $this->createStub(IIIFFile::class);
         $file->method('getTitle')->willReturn($title);
         $file->method('isMultipage')->willReturn($isMultipage);
         $file->method('pageCount')->willReturn($pageCount);
@@ -91,7 +91,7 @@ class HooksTest extends TestCase
      */
     private function makeRegularFileMock(): \File
     {
-        return $this->createMock(\File::class);
+        return $this->createStub(\File::class);
     }
 
     // ─── onBeforePageDisplay loads module ───────────────────
@@ -122,7 +122,7 @@ class HooksTest extends TestCase
             ],
         ]);
 
-        $repoGroup = $this->createMock(\RepoGroup::class);
+        $repoGroup = $this->createStub(\RepoGroup::class);
         $repoGroup->method('forEachForeignRepo')
             ->willReturnCallback(static function (callable $cb) use ($iiifRepo): bool {
                 $cb($iiifRepo);
@@ -148,7 +148,7 @@ class HooksTest extends TestCase
         $out = new OutputPage();
         $skin = new Skin();
 
-        $repoGroup = $this->createMock(\RepoGroup::class);
+        $repoGroup = $this->createStub(\RepoGroup::class);
         // forEachForeignRepo runs the callback with non-IIIF repos —
         // simulated by simply not invoking it.
         $repoGroup->method('forEachForeignRepo')->willReturn(false);
@@ -167,7 +167,7 @@ class HooksTest extends TestCase
 
         $foreignNonIIIF = new \FileRepo(['name' => 'wikimediacommons']);
 
-        $repoGroup = $this->createMock(\RepoGroup::class);
+        $repoGroup = $this->createStub(\RepoGroup::class);
         $repoGroup->method('forEachForeignRepo')
             ->willReturnCallback(static function (callable $cb) use ($foreignNonIIIF): bool {
                 $cb($foreignNonIIIF);
@@ -189,11 +189,11 @@ class HooksTest extends TestCase
         $skin = new Skin();
 
         // Set up RepoGroup mock to return an IIIFFile.
-        $file = $this->createMock(IIIFFile::class);
+        $file = $this->createStub(IIIFFile::class);
         $file->method('getProviderUrl')
             ->willReturn('https://www.deutschefotothek.de/documents/obj/12345678');
 
-        $repoGroup = $this->createMock(\RepoGroup::class);
+        $repoGroup = $this->createStub(\RepoGroup::class);
         $repoGroup->method('findFile')->willReturn($file);
         MediaWikiServices::$mockRepoGroup = $repoGroup;
 
@@ -213,7 +213,7 @@ class HooksTest extends TestCase
         $out->setTitle($title);
         $skin = new Skin();
 
-        $repoGroup = $this->createMock(\RepoGroup::class);
+        $repoGroup = $this->createStub(\RepoGroup::class);
         $repoGroup->method('findFile')->willReturn($this->makeRegularFileMock());
         MediaWikiServices::$mockRepoGroup = $repoGroup;
 
@@ -241,7 +241,7 @@ class HooksTest extends TestCase
     {
         $file = $this->makeIiifFileMock('manifest-fotothek-v2.json');
 
-        $thumb = $this->createMock(ThumbnailImage::class);
+        $thumb = $this->createStub(ThumbnailImage::class);
         $thumb->method('getFile')->willReturn($file);
         $thumb->method('getWidth')->willReturn(800);
         $thumb->method('getHeight')->willReturn(1100);
@@ -273,7 +273,7 @@ class HooksTest extends TestCase
             nsText: 'File',
         );
 
-        $thumb = $this->createMock(ThumbnailImage::class);
+        $thumb = $this->createStub(ThumbnailImage::class);
         $thumb->method('getFile')->willReturn($file);
         $thumb->method('getWidth')->willReturn(300);
         $thumb->method('getHeight')->willReturn(400);
@@ -290,7 +290,7 @@ class HooksTest extends TestCase
     {
         $file = $this->makeRegularFileMock();
 
-        $thumb = $this->createMock(ThumbnailImage::class);
+        $thumb = $this->createStub(ThumbnailImage::class);
         $thumb->method('getFile')->willReturn($file);
 
         $imgAttrs = [];
@@ -313,7 +313,7 @@ class HooksTest extends TestCase
             lastTransformPage: 2,
         );
 
-        $thumb = $this->createMock(ThumbnailImage::class);
+        $thumb = $this->createStub(ThumbnailImage::class);
         $thumb->method('getFile')->willReturn($file);
         $thumb->method('getWidth')->willReturn(600);
         $thumb->method('getHeight')->willReturn(800);
@@ -336,7 +336,7 @@ class HooksTest extends TestCase
             lastTransformPage: 2,
         );
 
-        $thumb = $this->createMock(ThumbnailImage::class);
+        $thumb = $this->createStub(ThumbnailImage::class);
         $thumb->method('getFile')->willReturn($file);
         $thumb->method('getWidth')->willReturn(600);
         $thumb->method('getHeight')->willReturn(800);
@@ -362,7 +362,7 @@ class HooksTest extends TestCase
             lastTransformPage: 1,
         );
 
-        $thumb = $this->createMock(ThumbnailImage::class);
+        $thumb = $this->createStub(ThumbnailImage::class);
         $thumb->method('getFile')->willReturn($file);
         $thumb->method('getWidth')->willReturn(600);
         $thumb->method('getHeight')->willReturn(800);
@@ -393,7 +393,7 @@ class HooksTest extends TestCase
         $pageTitle = new Title('Df_dk_0007450.jpg', NS_FILE, 'File');
         RequestContext::getMain()->setTitle($pageTitle);
 
-        $thumb = $this->createMock(ThumbnailImage::class);
+        $thumb = $this->createStub(ThumbnailImage::class);
         $thumb->method('getFile')->willReturn($file);
         $thumb->method('getWidth')->willReturn(600);
         $thumb->method('getHeight')->willReturn(800);
@@ -423,7 +423,7 @@ class HooksTest extends TestCase
         $pageTitle = new Title('Other_File.jpg', NS_FILE, 'File');
         RequestContext::getMain()->setTitle($pageTitle);
 
-        $thumb = $this->createMock(ThumbnailImage::class);
+        $thumb = $this->createStub(ThumbnailImage::class);
         $thumb->method('getFile')->willReturn($file);
         $thumb->method('getWidth')->willReturn(600);
         $thumb->method('getHeight')->willReturn(800);
@@ -450,7 +450,7 @@ class HooksTest extends TestCase
             lastTransformPage: 2,
         );
 
-        $thumb = $this->createMock(ThumbnailImage::class);
+        $thumb = $this->createStub(ThumbnailImage::class);
         $thumb->method('getFile')->willReturn($file);
         $thumb->method('getWidth')->willReturn(600);
         $thumb->method('getHeight')->willReturn(800);
@@ -479,7 +479,7 @@ class HooksTest extends TestCase
             lastTransformPage: 1,
         );
 
-        $thumb = $this->createMock(ThumbnailImage::class);
+        $thumb = $this->createStub(ThumbnailImage::class);
         $thumb->method('getFile')->willReturn($file);
         $thumb->method('getWidth')->willReturn(600);
         $thumb->method('getHeight')->willReturn(800);
@@ -498,7 +498,7 @@ class HooksTest extends TestCase
 
     public function testFileHistoryLineHidesForIiifFile(): void
     {
-        $file = $this->createMock(IIIFFile::class);
+        $file = $this->createStub(IIIFFile::class);
         $out = new OutputPage();
         $historyList = new ImageHistoryList($out);
 
@@ -535,7 +535,7 @@ class HooksTest extends TestCase
 
     public function testShowTOCRemovesFileHistoryForIiif(): void
     {
-        $file = $this->createMock(IIIFFile::class);
+        $file = $this->createStub(IIIFFile::class);
         $page = new ImagePage($file);
 
         $toc = [
@@ -572,12 +572,12 @@ class HooksTest extends TestCase
 
     public function testGetExtendedMetadataSetsDateTimeSentinel(): void
     {
-        $file = $this->createMock(IIIFFile::class);
+        $file = $this->createStub(IIIFFile::class);
         $file->method('getResolvedManifest')->willReturn(null);
         $file->method('getProviderUrl')->willReturn('');
 
         $meta = [];
-        $context = $this->createMock(\MediaWiki\Context\IContextSource::class);
+        $context = $this->createStub(\MediaWiki\Context\IContextSource::class);
         $maxCacheTime = null;
 
         Hooks::onGetExtendedMetadata($meta, $file, $context, false, $maxCacheTime);
@@ -591,7 +591,7 @@ class HooksTest extends TestCase
     {
         $manifest = $this->loadFixture('manifest-fotothek-v2.json');
 
-        $file = $this->createMock(IIIFFile::class);
+        $file = $this->createStub(IIIFFile::class);
         $file->method('getResolvedManifest')->willReturn([
             'provider' => 'deutsche-fotothek',
             'objectId' => 'df_dk_0007450',
@@ -602,7 +602,7 @@ class HooksTest extends TestCase
             ->willReturn('http://www.deutschefotothek.de/documents/obj/90062808');
 
         $meta = [];
-        $context = $this->createMock(\MediaWiki\Context\IContextSource::class);
+        $context = $this->createStub(\MediaWiki\Context\IContextSource::class);
         $maxCacheTime = null;
 
         Hooks::onGetExtendedMetadata($meta, $file, $context, false, $maxCacheTime);
@@ -629,7 +629,7 @@ class HooksTest extends TestCase
     {
         $manifest = $this->loadFixture('manifest-bsb-v2.json');
 
-        $file = $this->createMock(IIIFFile::class);
+        $file = $this->createStub(IIIFFile::class);
         $file->method('getResolvedManifest')->willReturn([
             'provider' => 'digitale-sammlungen',
             'objectId' => 'bsb00127289',
@@ -639,7 +639,7 @@ class HooksTest extends TestCase
         $file->method('getProviderUrl')->willReturn('https://mdz-nbn-resolving.de/details:bsb00127289');
 
         $meta = [];
-        $context = $this->createMock(\MediaWiki\Context\IContextSource::class);
+        $context = $this->createStub(\MediaWiki\Context\IContextSource::class);
         $maxCacheTime = null;
 
         Hooks::onGetExtendedMetadata($meta, $file, $context, false, $maxCacheTime);
@@ -663,11 +663,11 @@ class HooksTest extends TestCase
         $manifest = $this->loadFixture('manifest-slub-v2.json');
 
         $iiifFile = new \MediaWiki\Extension\InstantIIIF\IIIFFile(
-            $this->createMock(\MediaWiki\Extension\InstantIIIF\Repo::class),
+            $this->createStub(\MediaWiki\Extension\InstantIIIF\Repo::class),
             new \MediaWiki\Title\Title('384671365-19500000.jpg', NS_FILE, 'File')
         );
         // Inject getLicenseUrlFromMetadata via a real call.
-        $file = $this->createMock(IIIFFile::class);
+        $file = $this->createStub(IIIFFile::class);
         $resolved = [
             'provider' => 'slub-dresden',
             'objectId' => '384671365-19500000',
@@ -681,7 +681,7 @@ class HooksTest extends TestCase
         );
 
         $meta = [];
-        $context = $this->createMock(\MediaWiki\Context\IContextSource::class);
+        $context = $this->createStub(\MediaWiki\Context\IContextSource::class);
         $maxCacheTime = null;
 
         Hooks::onGetExtendedMetadata($meta, $file, $context, false, $maxCacheTime);
@@ -697,7 +697,7 @@ class HooksTest extends TestCase
     {
         $manifest = $this->loadFixture('manifest-v3.json');
 
-        $file = $this->createMock(IIIFFile::class);
+        $file = $this->createStub(IIIFFile::class);
         $file->method('getResolvedManifest')->willReturn([
             'provider' => 'v3-test',
             'objectId' => 'v3_001',
@@ -707,7 +707,7 @@ class HooksTest extends TestCase
         $file->method('getProviderUrl')->willReturn('https://example.org/object/12345');
 
         $meta = [];
-        $context = $this->createMock(\MediaWiki\Context\IContextSource::class);
+        $context = $this->createStub(\MediaWiki\Context\IContextSource::class);
         $maxCacheTime = null;
 
         Hooks::onGetExtendedMetadata($meta, $file, $context, false, $maxCacheTime);
@@ -762,7 +762,7 @@ class HooksTest extends TestCase
 
         $manifest = $this->loadFixture('manifest-v3.json');
 
-        $file = $this->createMock(IIIFFile::class);
+        $file = $this->createStub(IIIFFile::class);
         $file->method('getResolvedManifest')->willReturn([
             'provider' => 'v3-test',
             'objectId' => 'v3_001',
@@ -771,7 +771,7 @@ class HooksTest extends TestCase
         ]);
         $file->method('getProviderUrl')->willReturn('https://example.org/object/12345');
 
-        $context = $this->createMock(\MediaWiki\Context\IContextSource::class);
+        $context = $this->createStub(\MediaWiki\Context\IContextSource::class);
         if ($userLang !== null) {
             $context->method('getLanguage')->willReturn(new \Language($userLang));
         }
@@ -793,7 +793,7 @@ class HooksTest extends TestCase
         $file = $this->makeRegularFileMock();
 
         $meta = [];
-        $context = $this->createMock(\MediaWiki\Context\IContextSource::class);
+        $context = $this->createStub(\MediaWiki\Context\IContextSource::class);
         $maxCacheTime = null;
 
         Hooks::onGetExtendedMetadata($meta, $file, $context, false, $maxCacheTime);

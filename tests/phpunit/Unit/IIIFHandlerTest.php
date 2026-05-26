@@ -142,13 +142,13 @@ class IIIFHandlerTest extends TestCase
 
     public function testMustRenderReturnsTrue(): void
     {
-        $file = $this->createMock(\File::class);
+        $file = $this->createStub(\File::class);
         self::assertTrue($this->handler->mustRender($file));
     }
 
     public function testIsExpensiveToThumbnailReturnsFalse(): void
     {
-        $file = $this->createMock(\File::class);
+        $file = $this->createStub(\File::class);
         self::assertFalse($this->handler->isExpensiveToThumbnail($file));
     }
 

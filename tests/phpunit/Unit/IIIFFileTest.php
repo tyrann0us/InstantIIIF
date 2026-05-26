@@ -43,7 +43,7 @@ class IIIFFileTest extends TestCase
     ): IIIFFile {
 
         $title = new Title($dbKey, NS_FILE, $nsText);
-        $repo = $this->createMock(Repo::class);
+        $repo = $this->createStub(Repo::class);
         $repo->method('iiifSources')->willReturn([
             [
                 'id' => $provider,
@@ -188,7 +188,7 @@ class IIIFFileTest extends TestCase
     public function testGetDescriptionUrlReturnsEmptyWithoutTitle(): void
     {
         // Construct file with null title scenario
-        $repo = $this->createMock(Repo::class);
+        $repo = $this->createStub(Repo::class);
         $repo->method('iiifSources')->willReturn([]);
 
         $file = new class ($repo) extends IIIFFile {

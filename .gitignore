@@ -2,6 +2,9 @@
 /phpcs.xml
 /phpunit.xml
 /test-results/
+/coverage.xml
+/coverage.clover
+/coverage/
 
 # Environment & Configuration
 /.env*
