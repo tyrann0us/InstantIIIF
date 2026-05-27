@@ -1,15 +1,12 @@
 /**
- * Minimal MediaWiki JS environment mock for testing mmv-patch.js.
+ * Minimal MediaWiki JS environment mock for testing the resource modules.
  *
- * Sets up window.mw (config, hook, loader, Title) and jQuery ($) so
- * the script can be evaluated in a JSDOM environment without the full
- * ResourceLoader runtime.
+ * Sets up window.mw (config, hook, loader, Title) and jQuery ($) so the
+ * scripts can run in a JSDOM environment without the full ResourceLoader
+ * runtime.
  */
 
 'use strict';
-
-const fs = require( 'fs' );
-const path = require( 'path' );
 
 /**
  * Build a fresh mw mock and attach it (plus jQuery) to the given window.
@@ -225,25 +222,43 @@ function createMwEnv( win ) {
 }
 
 /**
- * Load and execute mmv-patch.js in the current JSDOM window context.
- * Must be called after createMwEnv().
+ * Execute a ResourceLoader module (a browser IIFE) inside the current
+ * jsdom context.
+ *
+ * Loads the file through `require()` so Jest/Istanbul instruments it
+ * and reports coverage on the real source under `resources/`.
+ * The module's IIFE reads `mw`/`$` (and the jsdom-provided `window`/
+ * `document`/`location`/`MutationObserver`) off the global scope,
+ * so we publish the mock's `mw`/`$` as globals first. `jest.isolateModules()
+ * forces the IIFE to re-execute on every call instead of being served
+ * from the require cache, so each test gets a fresh patch against
+ * its own mock.
+ *
+ * @param {Window} win
+ * @param {string} relativePath Path to the resource file, relative to this dir.
+ */
+function loadResource( win, relativePath ) {
+	global.mw = win.mw;
+	global.$ = win.$;
+	jest.isolateModules( () => {
+		require( relativePath );
+	} );
+}
+
+/**
+ * Load and execute resources/mmv-patch.js. Call after createMwEnv().
  * @param {Window} win
  */
 function loadMmvPatch( win ) {
-	const code = fs.readFileSync(
-		path.resolve( __dirname, '../../resources/mmv-patch.js' ),
-		'utf-8'
-	);
-	// Execute the script in the window's global context.
-	const fn = new Function(
-		'window',
-		'document',
-		'mw',
-		'$',
-		'location',
-		code
-	);
-	fn( win, win.document, win.mw, win.$, win.location );
+	loadResource( win, '../../resources/mmv-patch.js' );
 }
 
-module.exports = { createMwEnv, loadMmvPatch };
+/**
+ * Load and execute resources/media-search.js. Call after createMwEnv().
+ * @param {Window} win
+ */
+function loadMediaSearch( win ) {
+	loadResource( win, '../../resources/media-search.js' );
+}
+
+module.exports = { createMwEnv, loadMmvPatch, loadMediaSearch };

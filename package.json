@@ -24,7 +24,10 @@
         "testMatch": [
             "<rootDir>/tests/jest/**/*.test.js"
         ],
-        "resetModules": true
+        "resetModules": true,
+        "collectCoverageFrom": [
+            "resources/**/*.js"
+        ]
     },
     "license": "MIT",
     "scripts": {

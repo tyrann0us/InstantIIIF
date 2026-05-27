@@ -5,25 +5,7 @@
 
 'use strict';
 
-const fs = require( 'fs' );
-const path = require( 'path' );
-const { createMwEnv } = require( './mw-mock' );
-
-function loadMediaSearch( win ) {
-	const code = fs.readFileSync(
-		path.resolve( __dirname, '../../resources/media-search.js' ),
-		'utf-8'
-	);
-	const fn = new Function(
-		'window',
-		'document',
-		'mw',
-		'$',
-		'location',
-		code
-	);
-	fn( win, win.document, win.mw, win.$, win.location );
-}
+const { createMwEnv, loadMediaSearch } = require( './mw-mock' );
 
 // Minimal promise+abort surface to mimic the jQuery-style xhr the upstream
 // MediaSearchProvider returns. Pulled into a helper because every test
