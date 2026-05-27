@@ -24,7 +24,10 @@
         "testMatch": [
             "<rootDir>/tests/jest/**/*.test.js"
         ],
-        "resetModules": true
+        "resetModules": true,
+        "collectCoverageFrom": [
+            "resources/**/*.js"
+        ]
     },
     "license": "MIT",
     "scripts": {
@@ -33,6 +36,7 @@
         "lint:js": "wp-scripts lint-js '**/*.js'",
         "lint:md": "wp-scripts lint-md-docs '**/*.md'",
         "test": "jest",
+        "test:coverage": "jest --coverage",
         "test:e2e": "npx playwright test --config=tests/playwright/playwright.config.js",
         "test:e2e:headed": "npx playwright test --config=tests/playwright/playwright.config.js --headed",
         "test:watch": "jest --watch"

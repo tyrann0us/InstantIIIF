@@ -16,7 +16,7 @@ MediaWiki extension that registers a virtual `FileRepo` so that ordinary file li
 ## Legal Notice
 
 > [!WARNING]
-> **Only embed images from IIIF providers whose terms permit external display and hotlinking.**
+> **Only embed images from IIIF providers whose terms permit external display and hotlinking, including the supported ones listed below.**
 >
 > InstantIIIF fetches images directly from the configured IIIF servers. The wiki acts as the publisher of every embedded image, so you are responsible for ensuring you have the right to display it.
 >

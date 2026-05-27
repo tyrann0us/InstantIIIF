@@ -23,7 +23,14 @@ module.exports = [
 
 	...wpPlugin.configs[ 'test-unit' ].map( ( c ) => ( {
 		...c,
-		files: [ '**/@(test|__tests__)/**/*.js', '**/?(*.)test.js' ],
+		// Apply the Jest environment (globals like `jest`, `expect`, …)
+		// to every file under tests/jest — not just `*.test.js` — so
+		// shared helpers like mw-mock.js are covered too.
+		files: [
+			'**/@(test|__tests__)/**/*.js',
+			'**/?(*.)test.js',
+			'tests/jest/**/*.js',
+		],
 	} ) ),
 
 	{
