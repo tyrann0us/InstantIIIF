@@ -8,3 +8,5 @@ on:
 jobs:
   unit-tests-js:
     uses: inpsyde/reusable-workflows/.github/workflows/tests-unit-js.yml@feature/188-codecov-support-unit-tests-php
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
