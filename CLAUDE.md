@@ -5,6 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ### PHP
+
 ```bash
 composer phpcs           # code style check
 composer phpcs:fix       # auto-fix style issues
@@ -15,11 +16,13 @@ composer tests:integration  # integration tests (requires Docker — see below)
 ```
 
 Run a single test class:
+
 ```bash
 vendor/bin/phpunit --filter ClassName tests/phpunit/Unit/
 ```
 
 ### JavaScript
+
 ```bash
 npm test                 # Jest unit tests
 npm run test:watch       # Jest in watch mode
@@ -30,11 +33,13 @@ npm run lint:md          # Markdown lint
 ```
 
 `lint:js` requires Node ≥ 16.9. The nvm default may be 14 — activate a suitable version first:
+
 ```bash
 . ~/.nvm/nvm.sh && nvm use 20
 ```
 
 ### Docker (local wiki + mock IIIF server)
+
 ```bash
 npm run docker:up   # start MediaWiki 1.44 at localhost:8080, mock IIIF at localhost:8111
 npm run docker:down # tear down with volumes
@@ -50,7 +55,7 @@ The extension registers a virtual `FileRepo` so `[[File:…]]` wikitext hotlinks
 
 ### Layout
 
-```
+```text
 src/
 ├── Domain/                        # Pure business logic — no MediaWiki dependencies
 │   ├── Manifest.php               # Parses IIIF v2/v3 manifests; central value object
@@ -78,7 +83,7 @@ src/
 
 ### Data flow
 
-```
+```text
 [[File:df_dk_0007450.jpg|thumb|page=2]]
        ↓
 IIIFHandler::parseParamString()        (wikitext params → page number)
