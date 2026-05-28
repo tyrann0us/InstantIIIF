@@ -205,7 +205,7 @@ describe( 'media-search.js — IIIF provider routing', () => {
 		expect( results ).toEqual( [] );
 	} );
 
-	test( 'strips trailing image extension before lookup so "id.jpg" still resolves', async () => {
+	test( 'strips a trailing .jpg from the typed query before lookup', async () => {
 		const { apiCalls } = setupMediaSearchProvider( env.mw, {
 			apiResponse: {},
 		} );
@@ -213,16 +213,18 @@ describe( 'media-search.js — IIIF provider routing', () => {
 		loadMediaSearch( window );
 		await new Promise( ( r ) => setTimeout( r, 0 ) );
 
+		// The user typed `df_dk_0007450.jpg`; the patch strips the
+		// trailing `.jpg` to match the bare IIIF object id, then
+		// re-appends it when composing the API title (File titles must
+		// carry an image extension for the imageinfo lookup to succeed).
 		const provider = makeProvider( env.mw, {
-			getUserParams: () => ( { gsrsearch: 'df_dk_0007450.png' } ),
+			getUserParams: () => ( { gsrsearch: 'df_dk_0007450.jpg' } ),
 		} );
 		await env.mw.widgets.MediaSearchProvider.prototype.fetchAPIresults.call(
 			provider,
 			10
 		);
 
-		// "png" should be stripped before composing the title (we re-append
-		// `.jpg` since File titles must carry an image extension).
 		expect( apiCalls[ 0 ].params.titles ).toBe( 'File:df_dk_0007450.jpg' );
 	} );
 
@@ -279,63 +281,6 @@ describe( 'media-search.js — IIIF provider routing', () => {
 
 		expect( results ).toEqual( [] );
 		expect( provider.isDepleted() ).toBe( true );
-	} );
-
-	test( 'hides the timestamp row in VE media-info panels for IIIF titles', async () => {
-		setupMediaSearchProvider( env.mw );
-
-		loadMediaSearch( window );
-		await new Promise( ( r ) => setTimeout( r, 0 ) );
-
-		document.body.innerHTML = `
-			<div class="ve-ui-mwMediaDialog-panel-imageinfo-info">
-				<div class="ve-ui-mwMediaDialog-panel-imageinfo-title">Df dk 0007450</div>
-				<div class="ve-ui-mwMediaDialog-panel-imageinfo-details">
-					<div class="ve-ui-mwMediaInfoFieldWidget" id="row-clock">
-						<span class="oo-ui-icon-clock"></span>
-						Hochgeladen: vor ein paar Sekunden
-					</div>
-					<div class="ve-ui-mwMediaInfoFieldWidget" id="row-info">
-						<span class="oo-ui-icon-info"></span>
-						Weitere Informationen
-					</div>
-				</div>
-			</div>
-		`;
-
-		await new Promise( ( r ) => setTimeout( r, 50 ) );
-
-		expect( document.getElementById( 'row-clock' ).style.display ).toBe(
-			'none'
-		);
-		expect( document.getElementById( 'row-info' ).style.display ).toBe(
-			''
-		);
-	} );
-
-	test( 'does not hide the timestamp row for non-IIIF titles (Commons hit)', async () => {
-		setupMediaSearchProvider( env.mw );
-
-		loadMediaSearch( window );
-		await new Promise( ( r ) => setTimeout( r, 0 ) );
-
-		document.body.innerHTML = `
-			<div class="ve-ui-mwMediaDialog-panel-imageinfo-info">
-				<div class="ve-ui-mwMediaDialog-panel-imageinfo-title">Kornhaus Burgdorf</div>
-				<div class="ve-ui-mwMediaDialog-panel-imageinfo-details">
-					<div class="ve-ui-mwMediaInfoFieldWidget" id="row-clock">
-						<span class="oo-ui-icon-clock"></span>
-						Hochgeladen: vor 5 Jahren
-					</div>
-				</div>
-			</div>
-		`;
-
-		await new Promise( ( r ) => setTimeout( r, 50 ) );
-
-		expect( document.getElementById( 'row-clock' ).style.display ).toBe(
-			''
-		);
 	} );
 
 	test( 'uses mw.Api (not ForeignApi) when the provider is flagged local', async () => {

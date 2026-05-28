@@ -1,0 +1,16 @@
+/*
+ * Hide the file-history section and file-size info on IIIF file detail
+ * pages. Version history is meaningless for hotlinked remote resources,
+ * and the auto-generated row would otherwise show misleading data
+ * (no user, today's date, 0 bytes). The row itself is cleared in
+ * HookHandler::onImagePageFileHistoryLine; this hides the heading and
+ * the file-size line that core still renders around it.
+ */
+h2#filehistory,
+#mw-imagepage-section-filehistory {
+	display: none;
+}
+
+span.fileInfo {
+	display: none;
+}

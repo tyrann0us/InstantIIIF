@@ -247,17 +247,22 @@ function loadResource( win, relativePath ) {
 
 /**
  * Load and execute resources/mmv-patch.js. Call after createMwEnv().
+ * Loads the shared iiif-title helpers first (the production module declares
+ * them as a dependency).
  * @param {Window} win
  */
 function loadMmvPatch( win ) {
+	loadResource( win, '../../resources/iiif-title.js' );
 	loadResource( win, '../../resources/mmv-patch.js' );
 }
 
 /**
  * Load and execute resources/media-search.js. Call after createMwEnv().
+ * Loads the shared iiif-title helpers first.
  * @param {Window} win
  */
 function loadMediaSearch( win ) {
+	loadResource( win, '../../resources/iiif-title.js' );
 	loadResource( win, '../../resources/media-search.js' );
 }
 

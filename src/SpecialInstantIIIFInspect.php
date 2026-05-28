@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace MediaWiki\Extension\InstantIIIF;
 
+use Config;
 use HTMLForm;
 use MediaWiki\Html\Html;
-use MediaWiki\MediaWikiServices;
+use MediaWiki\MainConfigNames;
 use MediaWiki\Title\Title;
+use RepoGroup;
 use SpecialPage;
 
 /**
@@ -17,7 +19,7 @@ use SpecialPage;
  * Intended for admins adding a new provider, debugging missing metadata
  * (a blank credit, wrong license link, missing landing page), or
  * sanity-checking that a manifest is reachable from the wiki. The page
- * deliberately reuses the production IIIFFile + Hooks code path — what
+ * deliberately reuses the production IIIFFile + HookHandler code path — what
  * you see here is what the parser, MMV, and the VE search will see.
  *
  * Read-only and side-effect-free aside from the manifest fetch (which
@@ -35,8 +37,12 @@ class SpecialInstantIIIFInspect extends SpecialPage
         'digitale-sammlungen',
     ];
 
-    public function __construct()
-    {
+    public function __construct(
+        private RepoGroup $repoGroup,
+        private Config $config,
+        private MetadataExtractor $metadataExtractor
+    ) {
+
         parent::__construct('InstantIIIFInspect', 'instantiiif-inspect');
     }
 
@@ -125,7 +131,7 @@ class SpecialInstantIIIFInspect extends SpecialPage
             return;
         }
 
-        $meta = $this->extractMetadataViaHook($file);
+        $meta = $this->metadataExtractor->extract($file, $this->getContext());
 
         $out->addHTML(Html::element('h2', [], $this->msg(
             'instantiiif-inspect-results-title'
@@ -141,8 +147,7 @@ class SpecialInstantIIIFInspect extends SpecialPage
         // 'backend' field is satisfied. The IIIF file is virtual and
         // never reads from the backend — we only need it for the
         // parent ::__construct() assertion.
-        $localBackend = MediaWikiServices::getInstance()
-            ->getRepoGroup()
+        $localBackend = $this->repoGroup
             ->getLocalRepo()
             ->getBackend();
 
@@ -150,7 +155,7 @@ class SpecialInstantIIIFInspect extends SpecialPage
             'name' => 'iiif-inspector',
             'class' => Repo::class,
             'backend' => $localBackend,
-            'directory' => $GLOBALS['wgUploadDirectory'] ?? '',
+            'directory' => (string) $this->config->get(MainConfigNames::UploadDirectory),
             'hashLevels' => 0,
             'iiifSources' => [
                 [
@@ -168,27 +173,6 @@ class SpecialInstantIIIFInspect extends SpecialPage
             throw new \RuntimeException('Failed to build inspector title');
         }
         return new IIIFFile($repo, $title);
-    }
-
-    /**
-     * Run the same extmetadata hook MMV consumes, against our synthetic
-     * file. Returns the resulting metadata map so the results table can
-     * surface the exact strings the rest of the wiki would see.
-     *
-     * @return array<string, array{value: string, source: string}>
-     */
-    private function extractMetadataViaHook(IIIFFile $file): array
-    {
-        $meta = [];
-        $maxCacheTime = null;
-        Hooks::onGetExtendedMetadata(
-            $meta,
-            $file,
-            $this->getContext(),
-            false,
-            $maxCacheTime
-        );
-        return $meta;
     }
 
     /**
@@ -296,10 +280,10 @@ class SpecialInstantIIIFInspect extends SpecialPage
             return '';
         }
         $value = $entry['value'] ?? '';
-        // The extmetadata hook stashes a `<>` sentinel for the DateTime
-        // field (to suppress MMV's "Uploaded" line). Surface that as
-        // "(suppressed)" rather than rendering the raw sentinel.
-        if ($value === '<>') {
+        // MetadataExtractor stashes IIIFFile::NO_TIMESTAMP_SENTINEL on the
+        // DateTime field to suppress MMV's "Uploaded" line. Surface that
+        // as "(suppressed)" rather than rendering the raw sentinel.
+        if ($value === IIIFFile::NO_TIMESTAMP_SENTINEL) {
             return '(suppressed)';
         }
         return (string) $value;

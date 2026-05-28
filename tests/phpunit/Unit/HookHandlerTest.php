@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace MediaWiki\Extension\InstantIIIF\Tests\Unit;
 
+use MediaWiki\Context\IContextSource;
 use MediaWiki\Context\RequestContext;
-use MediaWiki\Extension\InstantIIIF\Hooks;
+use MediaWiki\Extension\InstantIIIF\HookHandler;
 use MediaWiki\Extension\InstantIIIF\IIIFFile;
+use MediaWiki\Extension\InstantIIIF\MetadataExtractor;
 use MediaWiki\Extension\InstantIIIF\Repo;
 use MediaWiki\MediaWikiServices;
-use MediaWiki\Page\ImageHistoryList;
-use MediaWiki\Page\ImagePage;
 use MediaWiki\Title\Title;
 use OutputPage;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -19,11 +19,11 @@ use Skin;
 use ThumbnailImage;
 
 /**
- * Tests for Hooks: onBeforePageDisplay, onThumbnailBeforeProduceHTML,
+ * Tests for HookHandler: onBeforePageDisplay, onThumbnailBeforeProduceHTML,
  * onImagePageFileHistoryLine, onImagePageShowTOC, onGetExtendedMetadata.
  */
-#[CoversClass(Hooks::class)]
-class HooksTest extends TestCase
+#[CoversClass(HookHandler::class)]
+class HookHandlerTest extends TestCase
 {
     private const FIXTURES_DIR = __DIR__ . '/../Fixtures/';
 
@@ -41,6 +41,24 @@ class HooksTest extends TestCase
 
     // ─── Helpers ───────────────────────────────────────────────────
 
+    private function makeHandler(?\RepoGroup $repoGroup = null): HookHandler
+    {
+        return new HookHandler(
+            $repoGroup ?? new \RepoGroup(),
+            new \NamespaceInfo(),
+            new MetadataExtractor(new \Language('en'))
+        );
+    }
+
+    private function makeContext(): IContextSource
+    {
+        $context = $this->createStub(IContextSource::class);
+        $context->method('msg')->willReturnCallback(
+            static fn (string $key) => new \Message($key)
+        );
+        return $context;
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -56,12 +74,14 @@ class HooksTest extends TestCase
      */
     private function makeIiifFileMock(
         string $fixture,
-        string $dbKey = 'Df_dk_0007450.jpg',
+        string $dbKey = 'Df_dk_0007450',
         string $nsText = 'File',
         int $pageCount = 1,
         int $lastTransformPage = 1,
         bool $isMultipage = false,
         string $providerUrl = '',
+        int $fileWidth = 1600,
+        int $fileHeight = 1324,
     ): IIIFFile {
 
         $manifest = $this->loadFixture($fixture);
@@ -73,6 +93,8 @@ class HooksTest extends TestCase
         $file->method('pageCount')->willReturn($pageCount);
         $file->method('lastTransformPage')->willReturn($lastTransformPage);
         $file->method('getProviderUrl')->willReturn($providerUrl);
+        $file->method('getWidth')->willReturn($fileWidth);
+        $file->method('getHeight')->willReturn($fileHeight);
         $file->method('getResolvedManifest')->willReturn([
             'provider' => 'deutsche-fotothek',
             'objectId' => 'df_dk_0007450',
@@ -102,7 +124,7 @@ class HooksTest extends TestCase
         $skin = new Skin();
         // No title set — not a file page.
 
-        Hooks::onBeforePageDisplay($out, $skin);
+        $this->makeHandler()->onBeforePageDisplay($out, $skin);
 
         self::assertContains('ext.instantIIIF.mmvPatch', $out->modules);
     }
@@ -128,9 +150,8 @@ class HooksTest extends TestCase
                 $cb($iiifRepo);
                 return false;
             });
-        MediaWikiServices::$mockRepoGroup = $repoGroup;
 
-        Hooks::onBeforePageDisplay($out, $skin);
+        $this->makeHandler($repoGroup)->onBeforePageDisplay($out, $skin);
 
         self::assertContains('ext.instantIIIF.mediaSearch', $out->modules);
         self::assertArrayHasKey('wgInstantIIIFRepos', $out->jsConfigVars);
@@ -149,12 +170,9 @@ class HooksTest extends TestCase
         $skin = new Skin();
 
         $repoGroup = $this->createStub(\RepoGroup::class);
-        // forEachForeignRepo runs the callback with non-IIIF repos —
-        // simulated by simply not invoking it.
         $repoGroup->method('forEachForeignRepo')->willReturn(false);
-        MediaWikiServices::$mockRepoGroup = $repoGroup;
 
-        Hooks::onBeforePageDisplay($out, $skin);
+        $this->makeHandler($repoGroup)->onBeforePageDisplay($out, $skin);
 
         self::assertNotContains('ext.instantIIIF.mediaSearch', $out->modules);
         self::assertArrayNotHasKey('wgInstantIIIFRepos', $out->jsConfigVars);
@@ -173,37 +191,38 @@ class HooksTest extends TestCase
                 $cb($foreignNonIIIF);
                 return false;
             });
-        MediaWikiServices::$mockRepoGroup = $repoGroup;
 
-        Hooks::onBeforePageDisplay($out, $skin);
+        $this->makeHandler($repoGroup)->onBeforePageDisplay($out, $skin);
 
         self::assertNotContains('ext.instantIIIF.mediaSearch', $out->modules);
         self::assertArrayNotHasKey('wgInstantIIIFRepos', $out->jsConfigVars);
     }
 
-    public function testOnBeforePageDisplayPassesProviderUrlOnFilePage(): void
+    public function testOnBeforePageDisplayPassesProviderUrlAndStylesOnFilePage(): void
     {
-        $title = new Title('Df_dk_0007450.jpg', NS_FILE, 'File');
+        $title = new Title('Df_dk_0007450', NS_FILE, 'File');
         $out = new OutputPage();
         $out->setTitle($title);
         $skin = new Skin();
 
-        // Set up RepoGroup mock to return an IIIFFile.
         $file = $this->createStub(IIIFFile::class);
         $file->method('getProviderUrl')
             ->willReturn('https://www.deutschefotothek.de/documents/obj/12345678');
 
         $repoGroup = $this->createStub(\RepoGroup::class);
         $repoGroup->method('findFile')->willReturn($file);
-        MediaWikiServices::$mockRepoGroup = $repoGroup;
 
-        Hooks::onBeforePageDisplay($out, $skin);
+        $this->makeHandler($repoGroup)->onBeforePageDisplay($out, $skin);
 
+        // Provider URL passed to JS so the shared-upload link can be fixed.
         self::assertArrayHasKey('wgIIIFProviderUrl', $out->jsConfigVars);
         self::assertSame(
             'https://www.deutschefotothek.de/documents/obj/12345678',
             $out->jsConfigVars['wgIIIFProviderUrl']
         );
+
+        // Style module that hides the meaningless file-history section.
+        self::assertContains('ext.instantIIIF.filePage', $out->moduleStyles);
     }
 
     public function testOnBeforePageDisplaySkipsProviderUrlForNonIiifFile(): void
@@ -215,11 +234,11 @@ class HooksTest extends TestCase
 
         $repoGroup = $this->createStub(\RepoGroup::class);
         $repoGroup->method('findFile')->willReturn($this->makeRegularFileMock());
-        MediaWikiServices::$mockRepoGroup = $repoGroup;
 
-        Hooks::onBeforePageDisplay($out, $skin);
+        $this->makeHandler($repoGroup)->onBeforePageDisplay($out, $skin);
 
         self::assertArrayNotHasKey('wgIIIFProviderUrl', $out->jsConfigVars);
+        self::assertNotContains('ext.instantIIIF.filePage', $out->moduleStyles);
     }
 
     public function testOnBeforePageDisplaySkipsProviderUrlOnNonFilePage(): void
@@ -230,7 +249,7 @@ class HooksTest extends TestCase
         $out->setTitle($title);
         $skin = new Skin();
 
-        Hooks::onBeforePageDisplay($out, $skin);
+        $this->makeHandler()->onBeforePageDisplay($out, $skin);
 
         self::assertArrayNotHasKey('wgIIIFProviderUrl', $out->jsConfigVars);
     }
@@ -239,27 +258,35 @@ class HooksTest extends TestCase
 
     public function testThumbnailHookAddsIiifTitle(): void
     {
-        $file = $this->makeIiifFileMock('manifest-fotothek-v2.json');
+        // File reports 1600x1324 (its full dimensions); the rendered thumb is
+        // only 800x550 (a clamped article preview). data-file-width must be
+        // the FILE's value — MMV's lightboximage.js caps the requested
+        // lightbox thumb at data-file-width, so using the thumb's clamped
+        // width would make MMV show a tiny image.
+        $file = $this->makeIiifFileMock(
+            'manifest-fotothek-v2.json',
+            fileWidth: 1600,
+            fileHeight: 1324,
+        );
 
         $thumb = $this->createStub(ThumbnailImage::class);
         $thumb->method('getFile')->willReturn($file);
         $thumb->method('getWidth')->willReturn(800);
-        $thumb->method('getHeight')->willReturn(1100);
+        $thumb->method('getHeight')->willReturn(550);
 
         $imgAttrs = [];
         $linkAttrs = false;
 
-        Hooks::onThumbnailBeforeProduceHTML($thumb, $imgAttrs, $linkAttrs);
+        $this->makeHandler()->onThumbnailBeforeProduceHTML($thumb, $imgAttrs, $linkAttrs);
 
-        // data-iiif-title: title already ends with .jpg, so no extension
-        // is appended — otherwise the imageinfo API would later fail to
-        // resolve the manifest for the doubled-extension title.
+        // data-iiif-title carries the spoofed ".jpg" that MMV requires
+        // to recognise the file (the canonical wiki dbkey is extension-less).
         self::assertArrayHasKey('data-iiif-title', $imgAttrs);
         self::assertSame('File:Df_dk_0007450.jpg', $imgAttrs['data-iiif-title']);
 
-        // Bonus dimensions
-        self::assertSame(800, $imgAttrs['data-file-width']);
-        self::assertSame(1100, $imgAttrs['data-file-height']);
+        // The FILE's full dimensions (not the thumb's clamped 800x550).
+        self::assertSame(1600, $imgAttrs['data-file-width']);
+        self::assertSame(1324, $imgAttrs['data-file-height']);
     }
 
     public function testThumbnailHookAppendsJpgToExtensionlessTitle(): void
@@ -281,7 +308,7 @@ class HooksTest extends TestCase
         $imgAttrs = [];
         $linkAttrs = false;
 
-        Hooks::onThumbnailBeforeProduceHTML($thumb, $imgAttrs, $linkAttrs);
+        $this->makeHandler()->onThumbnailBeforeProduceHTML($thumb, $imgAttrs, $linkAttrs);
 
         self::assertSame('File:Bsb11610364.jpg', $imgAttrs['data-iiif-title']);
     }
@@ -296,7 +323,7 @@ class HooksTest extends TestCase
         $imgAttrs = [];
         $linkAttrs = false;
 
-        $result = Hooks::onThumbnailBeforeProduceHTML($thumb, $imgAttrs, $linkAttrs);
+        $result = $this->makeHandler()->onThumbnailBeforeProduceHTML($thumb, $imgAttrs, $linkAttrs);
 
         self::assertTrue($result);
         self::assertArrayNotHasKey('data-iiif-title', $imgAttrs);
@@ -321,7 +348,7 @@ class HooksTest extends TestCase
         $imgAttrs = [];
         $linkAttrs = false;
 
-        Hooks::onThumbnailBeforeProduceHTML($thumb, $imgAttrs, $linkAttrs);
+        $this->makeHandler()->onThumbnailBeforeProduceHTML($thumb, $imgAttrs, $linkAttrs);
 
         self::assertArrayHasKey('data-iiif-page', $imgAttrs);
         self::assertSame(2, $imgAttrs['data-iiif-page']);
@@ -344,7 +371,7 @@ class HooksTest extends TestCase
         $imgAttrs = [];
         $linkAttrs = false;
 
-        Hooks::onThumbnailBeforeProduceHTML($thumb, $imgAttrs, $linkAttrs);
+        $this->makeHandler()->onThumbnailBeforeProduceHTML($thumb, $imgAttrs, $linkAttrs);
 
         self::assertArrayHasKey('data-iiif-full-url', $imgAttrs);
         self::assertSame(
@@ -370,7 +397,7 @@ class HooksTest extends TestCase
         $imgAttrs = [];
         $linkAttrs = false;
 
-        Hooks::onThumbnailBeforeProduceHTML($thumb, $imgAttrs, $linkAttrs);
+        $this->makeHandler()->onThumbnailBeforeProduceHTML($thumb, $imgAttrs, $linkAttrs);
 
         // data-iiif-page is set, but data-iiif-full-url is NOT set for page 1.
         self::assertArrayHasKey('data-iiif-page', $imgAttrs);
@@ -390,7 +417,7 @@ class HooksTest extends TestCase
         );
 
         // Simulate: we're on the file detail page for this same file.
-        $pageTitle = new Title('Df_dk_0007450.jpg', NS_FILE, 'File');
+        $pageTitle = new Title('Df_dk_0007450', NS_FILE, 'File');
         RequestContext::getMain()->setTitle($pageTitle);
 
         $thumb = $this->createStub(ThumbnailImage::class);
@@ -401,10 +428,10 @@ class HooksTest extends TestCase
         $imgAttrs = [];
         $linkAttrs = [
             'class' => 'mw-file-description',
-            'href' => '/wiki/File:Df_dk_0007450.jpg?page=2',
+            'href' => '/wiki/File:Df_dk_0007450?page=2',
         ];
 
-        Hooks::onThumbnailBeforeProduceHTML($thumb, $imgAttrs, $linkAttrs);
+        $this->makeHandler()->onThumbnailBeforeProduceHTML($thumb, $imgAttrs, $linkAttrs);
 
         self::assertArrayHasKey('data-iiif-navigate', $imgAttrs);
         self::assertSame('1', $imgAttrs['data-iiif-navigate']);
@@ -420,7 +447,7 @@ class HooksTest extends TestCase
         );
 
         // We're on a DIFFERENT file's page.
-        $pageTitle = new Title('Other_File.jpg', NS_FILE, 'File');
+        $pageTitle = new Title('Other_File', NS_FILE, 'File');
         RequestContext::getMain()->setTitle($pageTitle);
 
         $thumb = $this->createStub(ThumbnailImage::class);
@@ -431,10 +458,10 @@ class HooksTest extends TestCase
         $imgAttrs = [];
         $linkAttrs = [
             'class' => 'mw-file-description',
-            'href' => '/wiki/File:Df_dk_0007450.jpg?page=2',
+            'href' => '/wiki/File:Df_dk_0007450?page=2',
         ];
 
-        Hooks::onThumbnailBeforeProduceHTML($thumb, $imgAttrs, $linkAttrs);
+        $this->makeHandler()->onThumbnailBeforeProduceHTML($thumb, $imgAttrs, $linkAttrs);
 
         self::assertArrayNotHasKey('data-iiif-navigate', $imgAttrs);
     }
@@ -461,7 +488,7 @@ class HooksTest extends TestCase
             'href' => 'https://iiif.example/page1/full/full/0/default.jpg',
         ];
 
-        Hooks::onThumbnailBeforeProduceHTML($thumb, $imgAttrs, $linkAttrs);
+        $this->makeHandler()->onThumbnailBeforeProduceHTML($thumb, $imgAttrs, $linkAttrs);
 
         // href should be replaced with the correct page URL.
         self::assertSame(
@@ -488,7 +515,7 @@ class HooksTest extends TestCase
         $originalHref = 'https://iiif.example/page1/full/full/0/default.jpg';
         $linkAttrs = ['href' => $originalHref];
 
-        Hooks::onThumbnailBeforeProduceHTML($thumb, $imgAttrs, $linkAttrs);
+        $this->makeHandler()->onThumbnailBeforeProduceHTML($thumb, $imgAttrs, $linkAttrs);
 
         // Page 1 → no fix needed.
         self::assertSame($originalHref, $linkAttrs['href']);
@@ -500,35 +527,35 @@ class HooksTest extends TestCase
     {
         $file = $this->createStub(IIIFFile::class);
         $out = new OutputPage();
-        $historyList = new ImageHistoryList($out);
+        $historyList = new \MediaWiki\Page\ImageHistoryList($out);
 
         $line = '<tr>some content</tr>';
         $css = null;
 
-        $result = Hooks::onImagePageFileHistoryLine($historyList, $file, $line, $css);
+        $result = $this->makeHandler()
+            ->onImagePageFileHistoryLine($historyList, $file, $line, $css);
 
+        // The row is cleared and suppressed; the surrounding heading /
+        // file-size info is hidden by the style module loaded in
+        // onBeforePageDisplay (see testOnBeforePageDisplayPassesProviderUrlAndStylesOnFilePage).
         self::assertFalse($result);
         self::assertSame('', $line);
-        // Inline style to hide the file history section header.
-        self::assertNotEmpty($out->inlineStyles);
-        self::assertStringContainsString('#filehistory', $out->inlineStyles[0]);
-        self::assertStringContainsString('.fileInfo', $out->inlineStyles[0]);
     }
 
     public function testFileHistoryLinePassesThroughForRegularFile(): void
     {
         $file = $this->makeRegularFileMock();
         $out = new OutputPage();
-        $historyList = new ImageHistoryList($out);
+        $historyList = new \MediaWiki\Page\ImageHistoryList($out);
 
         $line = '<tr>some content</tr>';
         $css = null;
 
-        $result = Hooks::onImagePageFileHistoryLine($historyList, $file, $line, $css);
+        $result = $this->makeHandler()
+            ->onImagePageFileHistoryLine($historyList, $file, $line, $css);
 
         self::assertTrue($result);
         self::assertSame('<tr>some content</tr>', $line);
-        self::assertEmpty($out->inlineStyles);
     }
 
     // ─── onImagePageShowTOC — remove filehistory entry ─────
@@ -536,7 +563,7 @@ class HooksTest extends TestCase
     public function testShowTOCRemovesFileHistoryForIiif(): void
     {
         $file = $this->createStub(IIIFFile::class);
-        $page = new ImagePage($file);
+        $page = new \MediaWiki\Page\ImagePage($file);
 
         $toc = [
             '<a href="#filelinks">File links</a>',
@@ -544,7 +571,7 @@ class HooksTest extends TestCase
             '<a href="#metadata">Metadata</a>',
         ];
 
-        Hooks::onImagePageShowTOC($page, $toc);
+        $this->makeHandler()->onImagePageShowTOC($page, $toc);
 
         self::assertCount(2, $toc);
         foreach ($toc as $entry) {
@@ -555,7 +582,7 @@ class HooksTest extends TestCase
     public function testShowTOCPreservesTocForRegularFile(): void
     {
         $file = $this->makeRegularFileMock();
-        $page = new ImagePage($file);
+        $page = new \MediaWiki\Page\ImagePage($file);
 
         $toc = [
             '<a href="#filelinks">File links</a>',
@@ -563,34 +590,16 @@ class HooksTest extends TestCase
         ];
         $original = $toc;
 
-        Hooks::onImagePageShowTOC($page, $toc);
+        $this->makeHandler()->onImagePageShowTOC($page, $toc);
 
         self::assertSame($original, $toc);
     }
 
-    // ─── onGetExtendedMetadata — extmetadata population ────
+    // ─── onGetExtendedMetadata — delegates to MetadataExtractor ────
 
-    public function testGetExtendedMetadataSetsDateTimeSentinel(): void
-    {
-        $file = $this->createStub(IIIFFile::class);
-        $file->method('getResolvedManifest')->willReturn(null);
-        $file->method('getProviderUrl')->willReturn('');
-
-        $meta = [];
-        $context = $this->createStub(\MediaWiki\Context\IContextSource::class);
-        $maxCacheTime = null;
-
-        Hooks::onGetExtendedMetadata($meta, $file, $context, false, $maxCacheTime);
-
-        // DateTime sentinel '<>' suppresses the upload date in MMV.
-        self::assertArrayHasKey('DateTime', $meta);
-        self::assertSame('<>', $meta['DateTime']['value']);
-    }
-
-    public function testGetExtendedMetadataPopulatesFieldsFromFotothekManifest(): void
+    public function testGetExtendedMetadataDelegatesForIiifFile(): void
     {
         $manifest = $this->loadFixture('manifest-fotothek-v2.json');
-
         $file = $this->createStub(IIIFFile::class);
         $file->method('getResolvedManifest')->willReturn([
             'provider' => 'deutsche-fotothek',
@@ -598,194 +607,20 @@ class HooksTest extends TestCase
             'manifestUrl' => 'https://example.org/manifest.json',
             'manifestRaw' => $manifest,
         ]);
-        $file->method('getProviderUrl')
-            ->willReturn('http://www.deutschefotothek.de/documents/obj/90062808');
+        $file->method('getProviderUrl')->willReturn('http://www.deutschefotothek.de/documents/obj/90062808');
 
         $meta = [];
-        $context = $this->createStub(\MediaWiki\Context\IContextSource::class);
         $maxCacheTime = null;
 
-        Hooks::onGetExtendedMetadata($meta, $file, $context, false, $maxCacheTime);
+        $this->makeHandler()
+            ->onGetExtendedMetadata($meta, $file, $this->makeContext(), false, $maxCacheTime);
 
-        // ObjectName from the Fotothek manifest's label.
+        // DateTime sentinel + a mapped field prove the extractor ran.
+        self::assertSame(
+            \MediaWiki\Extension\InstantIIIF\IIIFFile::NO_TIMESTAMP_SENTINEL,
+            $meta['DateTime']['value']
+        );
         self::assertStringContainsString('Meißen-Triebischtal', $meta['ObjectName']['value']);
-
-        // Credit comes from the HTML `attribution` field; the cleaned-up
-        // Attribution stripts tags and collapses whitespace.
-        self::assertStringContainsString('Deutschen Fotothek', $meta['Attribution']['value']);
-        self::assertSame('true', $meta['AttributionRequired']['value']);
-
-        // License: no manifest-level license → falls back to providerUrl.
-        self::assertSame(
-            'http://www.deutschefotothek.de/documents/obj/90062808',
-            $meta['LicenseUrl']['value']
-        );
-
-        // LicenseShortName is set (either from URL or message fallback).
-        self::assertArrayHasKey('LicenseShortName', $meta);
-    }
-
-    public function testGetExtendedMetadataPopulatesLicenseFromManifest(): void
-    {
-        $manifest = $this->loadFixture('manifest-bsb-v2.json');
-
-        $file = $this->createStub(IIIFFile::class);
-        $file->method('getResolvedManifest')->willReturn([
-            'provider' => 'digitale-sammlungen',
-            'objectId' => 'bsb00127289',
-            'manifestUrl' => 'https://example.org/manifest.json',
-            'manifestRaw' => $manifest,
-        ]);
-        $file->method('getProviderUrl')->willReturn('https://mdz-nbn-resolving.de/details:bsb00127289');
-
-        $meta = [];
-        $context = $this->createStub(\MediaWiki\Context\IContextSource::class);
-        $maxCacheTime = null;
-
-        Hooks::onGetExtendedMetadata($meta, $file, $context, false, $maxCacheTime);
-
-        // BSB manifest has `license: ["https://creativecommons.org/.../by-nc-sa/4.0/"]`.
-        self::assertSame(
-            'https://creativecommons.org/licenses/by-nc-sa/4.0/',
-            $meta['LicenseUrl']['value']
-        );
-        self::assertSame('CC BY-NC-SA 4.0', $meta['LicenseShortName']['value']);
-
-        // Attribution from array-of-language-objects shape.
-        self::assertSame('Bayerische Staatsbibliothek', $meta['Attribution']['value']);
-    }
-
-    public function testGetExtendedMetadataLicenseFromSlubMetadata(): void
-    {
-        // SLUB manifest has no top-level `license`/`rights`; the
-        // license URL lives inside an HTML <a> in metadata under the
-        // label "Rechteinformationen".
-        $manifest = $this->loadFixture('manifest-slub-v2.json');
-
-        $iiifFile = new \MediaWiki\Extension\InstantIIIF\IIIFFile(
-            $this->createStub(\MediaWiki\Extension\InstantIIIF\Repo::class),
-            new \MediaWiki\Title\Title('384671365-19500000.jpg', NS_FILE, 'File')
-        );
-        // Inject getLicenseUrlFromMetadata via a real call.
-        $file = $this->createStub(IIIFFile::class);
-        $resolved = [
-            'provider' => 'slub-dresden',
-            'objectId' => '384671365-19500000',
-            'manifestUrl' => 'https://example.org/manifest.json',
-            'manifestRaw' => $manifest,
-        ];
-        $file->method('getResolvedManifest')->willReturn($resolved);
-        $file->method('getProviderUrl')->willReturn('http://digital.slub-dresden.de/id384671365-19500000');
-        $file->method('getLicenseUrlFromMetadata')->willReturn(
-            'http://creativecommons.org/publicdomain/mark/1.0/'
-        );
-
-        $meta = [];
-        $context = $this->createStub(\MediaWiki\Context\IContextSource::class);
-        $maxCacheTime = null;
-
-        Hooks::onGetExtendedMetadata($meta, $file, $context, false, $maxCacheTime);
-
-        self::assertSame(
-            'http://creativecommons.org/publicdomain/mark/1.0/',
-            $meta['LicenseUrl']['value']
-        );
-        self::assertSame('Public Domain', $meta['LicenseShortName']['value']);
-    }
-
-    public function testGetExtendedMetadataV3RequiredStatement(): void
-    {
-        $manifest = $this->loadFixture('manifest-v3.json');
-
-        $file = $this->createStub(IIIFFile::class);
-        $file->method('getResolvedManifest')->willReturn([
-            'provider' => 'v3-test',
-            'objectId' => 'v3_001',
-            'manifestUrl' => 'https://example.org/manifest.json',
-            'manifestRaw' => $manifest,
-        ]);
-        $file->method('getProviderUrl')->willReturn('https://example.org/object/12345');
-
-        $meta = [];
-        $context = $this->createStub(\MediaWiki\Context\IContextSource::class);
-        $maxCacheTime = null;
-
-        Hooks::onGetExtendedMetadata($meta, $file, $context, false, $maxCacheTime);
-
-        // v3 label is a language map. No user language on the stub
-        // context and the default content-language code is 'en', so we
-        // pick the English translation. (See
-        // testLocalisedLabelHonoursUserAndContentLanguage for the
-        // matrix asserting other locales.)
-        self::assertSame('Test Manifest v3', $meta['ObjectName']['value']);
-
-        // v3 requiredStatement.value (only present in English in the fixture).
-        self::assertSame('Example Institution', $meta['Credit']['value']);
-
-        // v3 rights field
-        self::assertSame(
-            'https://creativecommons.org/licenses/by-sa/4.0/',
-            $meta['LicenseUrl']['value']
-        );
-        self::assertSame('CC BY-SA 4.0', $meta['LicenseShortName']['value']);
-    }
-
-    /**
-     * @return array<string, array{string|null, string, string}>
-     */
-    public static function languagePreferenceProvider(): array
-    {
-        // [user-language (null = unset), content-language, expected label]
-        return [
-            'user de wins over content en' => ['de', 'en', 'Test-Manifest v3'],
-            'user en wins over content de' => ['en', 'de', 'Test Manifest v3'],
-            'no user lang → content de' => [null, 'de', 'Test-Manifest v3'],
-            'no user lang → content en' => [null, 'en', 'Test Manifest v3'],
-            // Locale absent from the manifest: should fall back to the
-            // first translation present (en in the v3 fixture).
-            'user fr / content fr (neither present)' => ['fr', 'fr', 'Test Manifest v3'],
-        ];
-    }
-
-    /**
-     * The language priority must come from the wiki / user (not a
-     * hard-coded list), so the same extension running on a French
-     * wiki picks French where available and falls back to English
-     * otherwise.
-     */
-    #[\PHPUnit\Framework\Attributes\DataProvider('languagePreferenceProvider')]
-    public function testLocalisedLabelHonoursUserAndContentLanguage(
-        ?string $userLang,
-        string $contentLang,
-        string $expectedLabel
-    ): void {
-
-        $manifest = $this->loadFixture('manifest-v3.json');
-
-        $file = $this->createStub(IIIFFile::class);
-        $file->method('getResolvedManifest')->willReturn([
-            'provider' => 'v3-test',
-            'objectId' => 'v3_001',
-            'manifestUrl' => 'https://example.org/manifest.json',
-            'manifestRaw' => $manifest,
-        ]);
-        $file->method('getProviderUrl')->willReturn('https://example.org/object/12345');
-
-        $context = $this->createStub(\MediaWiki\Context\IContextSource::class);
-        if ($userLang !== null) {
-            $context->method('getLanguage')->willReturn(new \Language($userLang));
-        }
-        \MediaWiki\MediaWikiServices::$mockContentLanguageCode = $contentLang;
-
-        $meta = [];
-        $maxCacheTime = null;
-
-        Hooks::onGetExtendedMetadata($meta, $file, $context, false, $maxCacheTime);
-
-        self::assertSame($expectedLabel, $meta['ObjectName']['value']);
-
-        // Reset for the next test case.
-        \MediaWiki\MediaWikiServices::$mockContentLanguageCode = 'en';
     }
 
     public function testGetExtendedMetadataSkipsNonIiifFile(): void
@@ -793,65 +628,11 @@ class HooksTest extends TestCase
         $file = $this->makeRegularFileMock();
 
         $meta = [];
-        $context = $this->createStub(\MediaWiki\Context\IContextSource::class);
         $maxCacheTime = null;
 
-        Hooks::onGetExtendedMetadata($meta, $file, $context, false, $maxCacheTime);
+        $this->makeHandler()
+            ->onGetExtendedMetadata($meta, $file, $this->makeContext(), false, $maxCacheTime);
 
         self::assertEmpty($meta);
-    }
-
-    // ─── licenseShortName edge cases ───────────────────────
-
-    /**
-     * @return array<string, array{string, string}>
-     */
-    public static function licenseShortNameProvider(): array
-    {
-        return [
-            'CC BY 4.0' => [
-                'https://creativecommons.org/licenses/by/4.0/',
-                'CC BY 4.0',
-            ],
-            'CC BY-SA 3.0' => [
-                'https://creativecommons.org/licenses/by-sa/3.0/',
-                'CC BY-SA 3.0',
-            ],
-            'CC BY-NC-ND 2.0' => [
-                'https://creativecommons.org/licenses/by-nc-nd/2.0/',
-                'CC BY-NC-ND 2.0',
-            ],
-            'CC0' => [
-                'https://creativecommons.org/publicdomain/zero/1.0/',
-                'CC0',
-            ],
-            'Public Domain Mark' => [
-                'https://creativecommons.org/publicdomain/mark/1.0/',
-                'Public Domain',
-            ],
-            'RightsStatements InC' => [
-                'https://rightsstatements.org/vocab/InC/1.0/',
-                'InC',
-            ],
-            'RightsStatements NoC-US' => [
-                'https://rightsstatements.org/vocab/NoC-US/1.0/',
-                'NoC US',
-            ],
-            'Unknown URL' => [
-                'https://example.org/license',
-                '',
-            ],
-        ];
-    }
-
-    /**
-     * Test licenseShortName() via reflection since it's private.
-     */
-    #[\PHPUnit\Framework\Attributes\DataProvider('licenseShortNameProvider')]
-    public function testLicenseShortName(string $url, string $expected): void
-    {
-        $ref = new \ReflectionMethod(Hooks::class, 'licenseShortName');
-
-        self::assertSame($expected, $ref->invoke(null, $url));
     }
 }

@@ -20,22 +20,22 @@
 		return;
 	}
 
+	// Shared spoof/unspoof helpers (also used by mmv-patch.js, mirrored in
+	// src/IIIFTitle.php). Loaded via the ext.instantIIIF.title dependency.
+	const iiifTitle = window.iiifTitle;
+
 	const repoByApiUrl = {};
-	const allPatterns = [];
 	repos.forEach( function ( repo ) {
 		if ( ! repo || typeof repo.apiurl !== 'string' ) {
 			return;
 		}
 		const patterns = compilePatterns( repo.idPatterns || [] );
 		repoByApiUrl[ repo.apiurl ] = { patterns };
-		allPatterns.push.apply( allPatterns, patterns );
 	} );
 
 	mw.loader
 		.using( 'mediawiki.widgets.MediaSearch' )
 		.then( patchMediaSearchProvider );
-
-	hideMisleadingUploadDateForIIIFFiles();
 
 	function patchMediaSearchProvider() {
 		const proto =
@@ -69,12 +69,12 @@
 			return emptyPromise();
 		}
 
-		// IIIF identifiers in the wild are extension-less. Strip a trailing
-		// image extension before pattern-matching so the user can type with
-		// or without one without changing the lookup.
-		const query = String( this.getUserParams().gsrsearch || '' )
-			.trim()
-			.replace( /\.(jpg|jpeg|png|gif|bmp|webp)$/i, '' );
+		// IIIF identifiers in the wild are extension-less. Strip the
+		// trailing .jpg we'd spoof ourselves so the user typing the
+		// identifier with or without ".jpg" reaches the same lookup.
+		const query = iiifTitle.unspoof(
+			String( this.getUserParams().gsrsearch || '' ).trim()
+		);
 		if ( ! query ) {
 			this.toggleDepleted( true );
 			return emptyPromise();
@@ -96,7 +96,7 @@
 		const xhr = api.get( {
 			action: 'query',
 			format: 'json',
-			titles: 'File:' + query + '.jpg',
+			titles: 'File:' + iiifTitle.spoof( query ),
 			prop: 'imageinfo',
 			iiprop: 'dimensions|url|mediatype|extmetadata|timestamp|user',
 			iiextmetadatalanguage: this.getLang(),
@@ -166,80 +166,6 @@
 			}
 		} );
 		return compiled;
-	}
-
-	// Strip the "Uploaded: a few seconds ago" row from VE's media-info
-	// panel for IIIF files. The IIIFFile has no real upload timestamp, so
-	// ApiQueryImageInfo falls back to wfTimestampNow() and VE renders the
-	// dialog-opening time — misleading for hotlinked remote media. The
-	// same fallback bug is already cosmetically suppressed on the file
-	// description page via Hooks::onImagePageFileHistoryLine.
-	//
-	// A MutationObserver picks up newly-rendered media-info panels (the
-	// dialog rebuilds them per selection); for any whose title matches a
-	// configured IIIF idPattern we hide every `.oo-ui-icon-clock` row.
-	// IIIF files never carry a real `DateTimeOriginal` either, so the
-	// only clock row in practice is the timestamp.
-	function hideMisleadingUploadDateForIIIFFiles() {
-		if ( ! allPatterns.length || typeof MutationObserver !== 'function' ) {
-			return;
-		}
-		const observer = new MutationObserver( function ( records ) {
-			records.forEach( function ( record ) {
-				record.addedNodes.forEach( function ( node ) {
-					if ( node.nodeType !== 1 ) {
-						return;
-					}
-					findInfoPanels( node ).forEach( maybeHideClockRows );
-				} );
-			} );
-		} );
-		observer.observe( document.body, { childList: true, subtree: true } );
-	}
-
-	function findInfoPanels( node ) {
-		const panels = [];
-		if (
-			node.matches &&
-			node.matches( '.ve-ui-mwMediaDialog-panel-imageinfo-info' )
-		) {
-			panels.push( node );
-		}
-		if ( node.querySelectorAll ) {
-			node.querySelectorAll(
-				'.ve-ui-mwMediaDialog-panel-imageinfo-info'
-			).forEach( function ( el ) {
-				panels.push( el );
-			} );
-		}
-		return panels;
-	}
-
-	function maybeHideClockRows( panel ) {
-		const titleEl = panel.querySelector(
-			'.ve-ui-mwMediaDialog-panel-imageinfo-title'
-		);
-		if ( ! titleEl ) {
-			return;
-		}
-		// VE renders titles with spaces and a capitalised first character.
-		// Convert back to the IIIF object-id shape (lowercased, underscored)
-		// before pattern-matching.
-		const id = String( titleEl.textContent || '' )
-			.trim()
-			.replace( /\s+/g, '_' )
-			.toLowerCase();
-		if ( ! id || ! allPatterns.some( ( re ) => re.test( id ) ) ) {
-			return;
-		}
-		panel
-			.querySelectorAll( '.oo-ui-icon-clock' )
-			.forEach( function ( icon ) {
-				const row = icon.closest( '.ve-ui-mwMediaInfoFieldWidget' );
-				if ( row ) {
-					row.style.display = 'none';
-				}
-			} );
 	}
 
 	function emptyPromise() {

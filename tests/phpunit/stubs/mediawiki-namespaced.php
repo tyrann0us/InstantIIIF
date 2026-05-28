@@ -172,6 +172,50 @@ namespace MediaWiki {
         {
             public const ScriptPath = 'ScriptPath';
             public const Script = 'Script';
+            public const UploadDirectory = 'UploadDirectory';
+        }
+    }
+}
+
+// ─── Hook interfaces ──────────────────────────────────────────────
+
+namespace MediaWiki\Output\Hook {
+    if (!interface_exists(BeforePageDisplayHook::class)) {
+        interface BeforePageDisplayHook
+        {
+            public function onBeforePageDisplay($out, $skin): void;
+        }
+    }
+}
+
+namespace MediaWiki\Hook {
+    if (!interface_exists(ThumbnailBeforeProduceHTMLHook::class)) {
+        interface ThumbnailBeforeProduceHTMLHook
+        {
+            public function onThumbnailBeforeProduceHTML($thumbnail, &$attribs, &$linkAttribs);
+        }
+    }
+
+    if (!interface_exists(GetExtendedMetadataHook::class)) {
+        interface GetExtendedMetadataHook
+        {
+            public function onGetExtendedMetadata(&$combinedMeta, $file, $context, $single, &$maxCacheTime);
+        }
+    }
+}
+
+namespace MediaWiki\Page\Hook {
+    if (!interface_exists(ImagePageFileHistoryLineHook::class)) {
+        interface ImagePageFileHistoryLineHook
+        {
+            public function onImagePageFileHistoryLine($imageHistoryList, $file, &$line, &$css);
+        }
+    }
+
+    if (!interface_exists(ImagePageShowTOCHook::class)) {
+        interface ImagePageShowTOCHook
+        {
+            public function onImagePageShowTOC($page, &$toc);
         }
     }
 }
@@ -264,6 +308,8 @@ namespace MediaWiki\Context {
         interface IContextSource
         {
             public function getLanguage(): \Language;
+
+            public function msg(string $key, mixed ...$params): \Message;
         }
     }
 
@@ -284,6 +330,11 @@ namespace MediaWiki\Context {
             public function getLanguage(): \Language
             {
                 return $this->language;
+            }
+
+            public function msg(string $key, mixed ...$params): \Message
+            {
+                return new \Message($key, $params);
             }
 
             public function setLanguage(\Language $language): void

@@ -38,7 +38,7 @@ class IIIFFileTest extends TestCase
         ?array $manifestRaw,
         string $provider = 'deutsche-fotothek',
         string $objectId = 'df_dk_0007450',
-        string $dbKey = 'Df_dk_0007450.jpg',
+        string $dbKey = 'Df_dk_0007450',
         string $nsText = 'File',
     ): IIIFFile {
 
@@ -282,7 +282,7 @@ class IIIFFileTest extends TestCase
     {
         // bsb11610364 manifest has 622 canvases.
         $manifest = $this->loadFixture('manifest-multipage-v2.json');
-        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364.jpg');
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364');
 
         self::assertTrue($file->isMultipage());
         self::assertSame(622, $file->pageCount());
@@ -291,7 +291,7 @@ class IIIFFileTest extends TestCase
     public function testGetWidthReturnsCanvasDimensionsForPage(): void
     {
         $manifest = $this->loadFixture('manifest-multipage-v2.json');
-        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364.jpg');
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364');
 
         // First three canvases from the bsb11610364 manifest.
         self::assertSame(1768, $file->getWidth(1));
@@ -302,7 +302,7 @@ class IIIFFileTest extends TestCase
     public function testGetHeightReturnsCanvasDimensionsForPage(): void
     {
         $manifest = $this->loadFixture('manifest-multipage-v2.json');
-        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364.jpg');
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364');
 
         self::assertSame(2536, $file->getHeight(1));
         self::assertSame(2416, $file->getHeight(2));
@@ -333,7 +333,7 @@ class IIIFFileTest extends TestCase
     public function testGetUrlForPageReturnsCorrectServiceUrl(): void
     {
         $manifest = $this->loadFixture('manifest-multipage-v2.json');
-        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364.jpg');
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364');
 
         $url1 = $file->getUrlForPage(1);
         $url2 = $file->getUrlForPage(2);
@@ -352,7 +352,7 @@ class IIIFFileTest extends TestCase
     public function testGetUrlDefaultsToPage1WithoutTransform(): void
     {
         $manifest = $this->loadFixture('manifest-multipage-v2.json');
-        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364.jpg');
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364');
 
         // Before any transform, getUrl() returns the page 1 canvas.
         $url = $file->getUrl();
@@ -369,7 +369,7 @@ class IIIFFileTest extends TestCase
     public function testGetUrlReflectsLastTransformedPage(): void
     {
         $manifest = $this->loadFixture('manifest-multipage-v2.json');
-        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364.jpg');
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364');
 
         $file->transform(['width' => 800, 'page' => 2]);
         self::assertStringContainsString('bsb11610364_00002', $file->getUrl());
@@ -381,7 +381,7 @@ class IIIFFileTest extends TestCase
     public function testGetFullUrlReflectsLastTransformedPage(): void
     {
         $manifest = $this->loadFixture('manifest-multipage-v2.json');
-        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364.jpg');
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364');
 
         $file->transform(['width' => 800, 'page' => 6]);
         self::assertStringContainsString('bsb11610364_00006', $file->getFullUrl());
@@ -398,7 +398,7 @@ class IIIFFileTest extends TestCase
     public function testGetUrlHonoursRequestPageOverMultipleTransforms(): void
     {
         $manifest = $this->loadFixture('manifest-multipage-v2.json');
-        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364.jpg');
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364');
 
         $request = new \WebRequest();
         $request->setParams(['page' => '6']);
@@ -424,7 +424,7 @@ class IIIFFileTest extends TestCase
     public function testGetDescriptionUrlIncludesPageQueryAfterTransform(): void
     {
         $manifest = $this->loadFixture('manifest-multipage-v2.json');
-        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364.jpg');
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364');
 
         // Page 1 is the default — no query string needed.
         $file->transform(['width' => 600, 'page' => 1]);
@@ -493,7 +493,7 @@ class IIIFFileTest extends TestCase
     public function testTransformSetsLastTransformPage(): void
     {
         $manifest = $this->loadFixture('manifest-multipage-v2.json');
-        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364.jpg');
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364');
 
         self::assertSame(1, $file->lastTransformPage());
 
@@ -507,7 +507,7 @@ class IIIFFileTest extends TestCase
     public function testTransformPage2UsesCorrectService(): void
     {
         $manifest = $this->loadFixture('manifest-multipage-v2.json');
-        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364.jpg');
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364');
 
         $thumb = $file->transform(['width' => 600, 'page' => 2]);
 
@@ -623,7 +623,7 @@ class IIIFFileTest extends TestCase
     public function testPageNormalizationClampsToOne(): void
     {
         $manifest = $this->loadFixture('manifest-multipage-v2.json');
-        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364.jpg');
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364');
 
         // Page 0 and negative should be normalized to 1.
         self::assertSame($file->getWidth(1), $file->getWidth(0));
@@ -633,7 +633,7 @@ class IIIFFileTest extends TestCase
     public function testOutOfBoundsPageReturnsZeroDimensions(): void
     {
         $manifest = $this->loadFixture('manifest-multipage-v2.json');
-        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364.jpg');
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364');
 
         // Page beyond the 622 canvases → 0.
         self::assertSame(0, $file->getWidth(99999));
@@ -652,7 +652,7 @@ class IIIFFileTest extends TestCase
     public function testTransformReturnsErrorForPageBeyondCanvasCount(): void
     {
         $manifest = $this->loadFixture('manifest-multipage-v2.json');
-        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364.jpg');
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364');
 
         $result = $file->transform(['width' => 300, 'page' => 99999]);
 
@@ -662,7 +662,7 @@ class IIIFFileTest extends TestCase
     public function testGetUrlForPageBeyondCanvasCountReturnsEmpty(): void
     {
         $manifest = $this->loadFixture('manifest-multipage-v2.json');
-        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364.jpg');
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364');
 
         self::assertSame('', $file->getUrlForPage(99999));
     }
@@ -676,7 +676,7 @@ class IIIFFileTest extends TestCase
     public function testGetUrlReturnsEmptyAfterOutOfRangeTransform(): void
     {
         $manifest = $this->loadFixture('manifest-multipage-v2.json');
-        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364.jpg');
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364');
 
         $file->transform(['width' => 600, 'page' => 6]);
         self::assertStringContainsString('bsb11610364_00006', $file->getUrl());
@@ -714,39 +714,29 @@ class IIIFFileTest extends TestCase
     public function testNormalizePage(mixed $input, int $expected): void
     {
         $manifest = $this->loadFixture('manifest-multipage-v2.json');
-        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364.jpg');
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364');
 
         $ref = new \ReflectionMethod($file, 'normalizePage');
 
         self::assertSame($expected, $ref->invoke($file, $input));
     }
 
-    // ─── removeImageExtension ─────────────────────────────────────
-
     /**
-     * @return array<string, array{string, string}>
+     * getTimestamp() must be non-empty and non-numeric: a falsy value would
+     * make wfTimestamp() fall back to "now", and a digit-leading value risks
+     * parsing as a real date. The non-date sentinel makes wfTimestamp()
+     * return false so ApiQueryImageInfo emits an empty upload timestamp.
+     * The end-to-end blanking is verified against real MediaWiki in the
+     * imageinfo-api Playwright spec (the standalone wfTimestamp() stub
+     * always returns false, so it can't exercise that conversion here).
      */
-    public static function removeImageExtensionProvider(): array
+    public function testGetTimestampReturnsNonDateSentinel(): void
     {
-        return [
-            'jpg' => ['df_dk_0007450.jpg', 'df_dk_0007450'],
-            'jpeg' => ['df_dk_0007450.jpeg', 'df_dk_0007450'],
-            'png' => ['df_dk_0007450.png', 'df_dk_0007450'],
-            'no extension' => ['df_dk_0007450', 'df_dk_0007450'],
-            'double ext' => ['df_dk_0007450.tif.jpg', 'df_dk_0007450.tif'],
-            'uppercase' => ['df_dk_0007450.JPG', 'df_dk_0007450'],
-        ];
-    }
+        $file = $this->makeFile($this->loadFixture('manifest-fotothek-v2.json'));
 
-    #[DataProvider('removeImageExtensionProvider')]
-    public function testRemoveImageExtension(string $input, string $expected): void
-    {
-        // Access protected method via reflection
-        $manifest = $this->loadFixture('manifest-fotothek-v2.json');
-        $file = $this->makeFile($manifest);
+        $timestamp = $file->getTimestamp();
 
-        $ref = new \ReflectionMethod($file, 'removeImageExtension');
-
-        self::assertSame($expected, $ref->invoke($file, $input));
+        self::assertNotSame('', $timestamp);
+        self::assertSame(0, preg_match('/^\d/', $timestamp));
     }
 }

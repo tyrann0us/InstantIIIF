@@ -1,3 +1,8 @@
+// Spoof/unspoof helpers and EXTENSIONS character class shared with
+// media-search.js and (server-side) src/IIIFTitle.php. Loaded as a
+// dependency via the ext.instantIIIF.title ResourceLoader module.
+const iiifTitle = window.iiifTitle;
+
 // On file detail pages, prevent MMV from intercepting prev/next
 // navigation links for IIIF multi-page documents. The PHP hook
 // marks these <img> elements with data-iiif-navigate="1".
@@ -82,7 +87,7 @@ mw.loader.using( 'mediawiki.Title' ).then( function () {
 				typeof this.getNamespaceId === 'function' &&
 				this.getNamespaceId() === 6 // NS_FILE
 			) {
-				return 'jpg';
+				return iiifTitle.SPOOF_EXTENSION;
 			}
 			return ext;
 		};
@@ -90,17 +95,29 @@ mw.loader.using( 'mediawiki.Title' ).then( function () {
 
 	// --- IIIF-specific MMV patches ---
 
-	// Build a map of thumbnail src URL → IIIF page number from the DOM.
-	// This must happen before MMV opens so the patch can look up the page.
+	// Map of thumbnail src URL → IIIF page number. Rebuilt on every
+	// `wikipage.content` fire so it stays in sync after the
+	// `mediawiki.page.image.pagination` core module swaps `.mw-filepage-multipage`
+	// content via AJAX (pushState navigation between pages of a multi-page file).
 	const iiifPageByUrl = new Map();
-	document
-		.querySelectorAll( 'img[data-iiif-page]' )
-		.forEach( function ( img ) {
-			const page = parseInt( img.getAttribute( 'data-iiif-page' ), 10 );
-			if ( page > 1 ) {
-				iiifPageByUrl.set( img.getAttribute( 'src' ), page );
-			}
-		} );
+
+	function rebuildIiifPageByUrl() {
+		iiifPageByUrl.clear();
+		document
+			.querySelectorAll( 'img[data-iiif-page]' )
+			.forEach( function ( img ) {
+				const page = parseInt(
+					img.getAttribute( 'data-iiif-page' ),
+					10
+				);
+				if ( page > 1 ) {
+					iiifPageByUrl.set( img.getAttribute( 'src' ), page );
+				}
+			} );
+	}
+
+	rebuildIiifPageByUrl();
+	mw.hook( 'wikipage.content' ).add( rebuildIiifPageByUrl );
 
 	// Eagerly patch ThumbnailInfo so the fix is in place before MMV opens.
 	// MMV's ThumbnailInfo.get() extracts a page number from the sampleUrl
@@ -113,36 +130,46 @@ mw.loader.using( 'mediawiki.Title' ).then( function () {
 	// sends iiurlparam=pageN-{width}px to the API, which
 	// IIIFHandler::parseParamString() parses into {page: N, width: W}.
 	// The "#" fragment is harmless — it never reaches the HTTP request.
-	let thumbnailInfoPatched = false;
-	if ( iiifPageByUrl.size > 0 ) {
-		mw.loader.using( 'mmv' ).then( function ( require ) {
-			const ThumbnailInfo = require( 'mmv' ).ThumbnailInfo;
-			const origGet = ThumbnailInfo.prototype.get;
-			ThumbnailInfo.prototype.get = function (
-				file,
-				sampleUrl,
-				width,
-				height
-			) {
-				if ( sampleUrl ) {
-					const page = iiifPageByUrl.get( sampleUrl );
-					if ( page ) {
-						const marker =
-							'page' + page + '-' + ( width || 300 ) + 'px';
-						return origGet.call(
-							this,
-							file,
-							sampleUrl + '#' + marker,
-							width,
-							height
-						);
-					}
+	//
+	// Patched unconditionally on pages that load this module: the
+	// iiifPageByUrl map is rebuilt on every `wikipage.content` fire (see
+	// above), so a page that starts at canvas 1 and only later acquires a
+	// multi-page image (via the core mediawiki.page.image.pagination AJAX
+	// swap) still has the patch in place when MMV opens.
+	mw.loader.using( 'mmv' ).then( function ( require ) {
+		const ThumbnailInfo = require( 'mmv' ).ThumbnailInfo;
+		if (
+			! ThumbnailInfo ||
+			! ThumbnailInfo.prototype ||
+			ThumbnailInfo.prototype.__instantIIIFPatched
+		) {
+			return;
+		}
+		const origGet = ThumbnailInfo.prototype.get;
+		ThumbnailInfo.prototype.get = function (
+			file,
+			sampleUrl,
+			width,
+			height
+		) {
+			if ( sampleUrl ) {
+				const page = iiifPageByUrl.get( sampleUrl );
+				if ( page ) {
+					const marker =
+						'page' + page + '-' + ( width || 300 ) + 'px';
+					return origGet.call(
+						this,
+						file,
+						sampleUrl + '#' + marker,
+						width,
+						height
+					);
 				}
-				return origGet.call( this, file, sampleUrl, width, height );
-			};
-			thumbnailInfoPatched = true;
-		} );
-	}
+			}
+			return origGet.call( this, file, sampleUrl, width, height );
+		};
+		ThumbnailInfo.prototype.__instantIIIFPatched = true;
+	} );
 
 	// --- IIIF state tracking and MMV patches via mmv-metadata ---
 	let isCurrentImageIiif = false;
@@ -251,7 +278,51 @@ mw.loader.using( 'mediawiki.Title' ).then( function () {
 	if ( hasIiifImageOnPage ) {
 		mw.loader
 			.using( 'mmv' )
-			.then( function () {
+			.then( function ( require ) {
+				// "Open in Media Viewer" stripe button after client-side
+				// page navigation: MMV's processFilePageThumb is invoked
+				// when wikipage.content fires (after the core
+				// `mediawiki.page.image.pagination` AJAX swap), but in
+				// practice the button's click handler keeps firing with
+				// the LightboxImage from initial page load — so MMV ends
+				// up displaying the original page rather than the page
+				// the user is now on. Refresh the LightboxImage from the
+				// current `#file img[data-iiif-title]` DOM state every
+				// time MMV loads an image; the post-swap thumb's src,
+				// data-file-width and data-file-height reflect the
+				// current canvas, so MMV opens at the right page.
+				const MultimediaViewer = require( 'mmv' ).MultimediaViewer;
+				if (
+					MultimediaViewer &&
+					MultimediaViewer.prototype &&
+					MultimediaViewer.prototype.loadImage
+				) {
+					const origLoadImage = MultimediaViewer.prototype.loadImage;
+					MultimediaViewer.prototype.loadImage = function ( image ) {
+						const fileImg = document.querySelector(
+							'#file img[data-iiif-title]'
+						);
+						if ( fileImg && image ) {
+							image.src = fileImg.getAttribute( 'src' );
+							const w = parseInt(
+								fileImg.getAttribute( 'data-file-width' ),
+								10
+							);
+							const h = parseInt(
+								fileImg.getAttribute( 'data-file-height' ),
+								10
+							);
+							if ( w ) {
+								image.originalWidth = w;
+							}
+							if ( h ) {
+								image.originalHeight = h;
+							}
+						}
+						return origLoadImage.call( this, image );
+					};
+				}
+
 				return mw.loader.using( 'mmv.ui.reuse' );
 			} )
 			.then( function ( require ) {
@@ -421,7 +492,12 @@ mw.loader.using( 'mediawiki.Title' ).then( function () {
 						}
 						// Strip the spoofed `.jpg` from the title.
 						out = out.replace(
-							/^\[\[([^\|\]]+?)\.(?:jpg|jpeg|png|gif|bmp|webp)(?=[\|\]])/i,
+							new RegExp(
+								'^\\[\\[([^\\|\\]]+?)\\.' +
+									iiifTitle.SPOOF_EXTENSION +
+									'(?=[\\|\\]])',
+								'i'
+							),
 							'[[$1'
 						);
 						if ( currentIiifPage > 1 && ! /\|page=/.test( out ) ) {
@@ -457,7 +533,12 @@ mw.loader.using( 'mediawiki.Title' ).then( function () {
 
 		// 1. Strip spoofed `.jpg` from the `#/media/<title>.jpg[/N]` fragment.
 		out = out.replace(
-			/(#\/media\/[^?#]*?)\.(?:jpg|jpeg|png|gif|bmp|webp)(?=$|\/|\?|#)/i,
+			new RegExp(
+				'(#/media/[^?#]*?)\\.' +
+					iiifTitle.SPOOF_EXTENSION +
+					'(?=$|/|\\?|#)',
+				'i'
+			),
 			'$1'
 		);
 
@@ -488,10 +569,7 @@ mw.loader.using( 'mediawiki.Title' ).then( function () {
 		if ( ! currentIiifTitle ) {
 			return null;
 		}
-		const clean = currentIiifTitle.replace(
-			/\.(jpg|jpeg|png|gif|bmp|webp)$/i,
-			''
-		);
+		const clean = iiifTitle.unspoof( currentIiifTitle );
 		try {
 			const title = new mw.Title( clean );
 			return currentIiifPage > 1
@@ -578,42 +656,17 @@ mw.loader.using( 'mediawiki.Title' ).then( function () {
 		// Share / EmbedFileFormatter are patched eagerly above; nothing
 		// more to do here.
 
-		// Late ThumbnailInfo patch for pages loaded without multi-page images
-		// but where MMV navigates to one (e.g. via prev/next arrows).
+		// Defensive map update: if MMV navigates to a multi-page image whose
+		// thumbnail src wasn't in the DOM at the most recent
+		// wikipage.content rebuild (e.g. MMV's own prev/next arrows
+		// surfacing a canvas that wasn't pre-rendered on the page), make
+		// sure the eager ThumbnailInfo patch can still resolve its page.
 		if (
-			! thumbnailInfoPatched &&
-			image.thumbnail.hasAttribute( 'data-iiif-page' )
+			image.thumbnail.hasAttribute( 'data-iiif-page' ) &&
+			currentIiifPage > 1 &&
+			image.src
 		) {
-			if ( currentIiifPage > 1 && image.src ) {
-				iiifPageByUrl.set( image.src, currentIiifPage );
-			}
-			mw.loader.using( 'mmv' ).then( function ( require ) {
-				const ThumbnailInfo = require( 'mmv' ).ThumbnailInfo;
-				const origGet = ThumbnailInfo.prototype.get;
-				ThumbnailInfo.prototype.get = function (
-					file,
-					sampleUrl,
-					width,
-					height
-				) {
-					if ( sampleUrl ) {
-						const pg = iiifPageByUrl.get( sampleUrl );
-						if ( pg ) {
-							const marker =
-								'page' + pg + '-' + ( width || 300 ) + 'px';
-							return origGet.call(
-								this,
-								file,
-								sampleUrl + '#' + marker,
-								width,
-								height
-							);
-						}
-					}
-					return origGet.call( this, file, sampleUrl, width, height );
-				};
-				thumbnailInfoPatched = true;
-			} );
+			iiifPageByUrl.set( image.src, currentIiifPage );
 		}
 	} );
 } );

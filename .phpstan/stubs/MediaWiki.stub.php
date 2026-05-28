@@ -124,6 +124,8 @@ class MediaTransformError {
 class OutputPage {
     /** @param string|string[] $modules */
     public function addModules($modules): void {}
+    /** @param string|string[] $modules */
+    public function addModuleStyles($modules): void {}
     public function addInlineStyle(string $style): void {}
     public function getTitle(): ?Title {}
     /** @param string $name @param mixed $value */
@@ -138,6 +140,15 @@ class Skin {
 
 class MWNamespace {
     public static function getCanonicalName(int $index): string|false {}
+}
+
+class NamespaceInfo {
+    public function getCanonicalName(int $index): string|false {}
+}
+
+interface Config {
+    /** @return mixed */
+    public function get(string $name);
 }
 
 class ApiQueryBase {

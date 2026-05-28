@@ -21,8 +21,12 @@ class Repo extends FileRepo
     {
         // FileBackendGroup requires 'directory' for auto-backend creation;
         // IIIF has no local storage, so we default to the upload dir.
+        // Core constructs the repo from the $info array, so there is no
+        // constructor DI here — read the upload dir from the Config service.
         if (!isset($info['directory'])) {
-            $info['directory'] = $GLOBALS['wgUploadDirectory'] ?? '';
+            $info['directory'] = (string) MediaWikiServices::getInstance()
+                ->getMainConfig()
+                ->get(MainConfigNames::UploadDirectory);
         }
         parent::__construct($info);
         $this->iiifSources = $info['iiifSources'] ?? [];
@@ -76,10 +80,9 @@ class Repo extends FileRepo
     }
 
     /**
-     * Override to add an explicit `apiurl` (so the JS-side MediaSearchProvider
-     * hits a URL we can recognise) plus the `instantIIIFIdPatterns` field used
-     * by the client-side search patch to decide whether to attempt an IIIF
-     * lookup for a typed query.
+     * Override to add an explicit `apiurl` so the JS-side
+     * MediaSearchProvider hits a URL we can recognise (it is matched
+     * against the apiurls advertised in `wgInstantIIIFRepos`).
      *
      * Without our `apiurl`, MediaResourceProvider falls back to
      * `scriptDirUrl + '/api.php'`, which still works as an API endpoint but
@@ -92,7 +95,6 @@ class Repo extends FileRepo
     {
         $info = parent::getInfo();
         $info['apiurl'] = self::resolveLocalApiUrl();
-        $info['instantIIIFIdPatterns'] = $this->idPatterns();
         return $info;
     }
 
