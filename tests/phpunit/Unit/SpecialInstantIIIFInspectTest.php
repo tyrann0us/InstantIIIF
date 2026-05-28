@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace MediaWiki\Extension\InstantIIIF\Tests\Unit;
 
 use MediaWiki\Context\RequestContext;
-use MediaWiki\Extension\InstantIIIF\MetadataExtractor;
-use MediaWiki\Extension\InstantIIIF\SpecialInstantIIIFInspect;
+use MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\MetadataExtractor;
+use MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\SpecialInstantIIIFInspect;
 use MediaWiki\MediaWikiServices;
 use OutputPage;
 use PHPUnit\Framework\Attributes\CoversClass;

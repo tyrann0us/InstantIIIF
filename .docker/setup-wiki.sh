@@ -1,6 +1,21 @@
 #!/bin/bash
 set -e
 
+# Install MW dev dependencies (PHPUnit, wikimedia/testing-access-wrapper)
+# so the Integration suite can run inside the container. The official
+# mediawiki:1.44 image ships production deps only.
+if [ ! -d /var/www/html/vendor/phpunit ]; then
+    echo "Installing MW dev dependencies (one-time setup)..."
+    if [ ! -x /usr/local/bin/composer ]; then
+        apt-get update -qq
+        apt-get install -y -qq unzip
+        curl -sS https://getcomposer.org/installer | php -- \
+            --install-dir=/usr/local/bin --filename=composer
+    fi
+    (cd /var/www/html && composer install --no-interaction --prefer-dist \
+        --no-progress 2>&1 | tail -3)
+fi
+
 # Wait for the mock IIIF server to be ready.
 echo "Waiting for mock IIIF server..."
 for i in $(seq 1 30); do

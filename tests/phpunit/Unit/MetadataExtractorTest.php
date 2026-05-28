@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace MediaWiki\Extension\InstantIIIF\Tests\Unit;
 
 use MediaWiki\Context\IContextSource;
-use MediaWiki\Extension\InstantIIIF\IIIFFile;
-use MediaWiki\Extension\InstantIIIF\MetadataExtractor;
+use MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\IIIFFile;
+use MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\MetadataExtractor;
 use MediaWiki\MediaWikiServices;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -91,7 +91,7 @@ class MetadataExtractorTest extends TestCase
         // The shared no-timestamp sentinel suppresses the upload date in MMV.
         self::assertArrayHasKey('DateTime', $meta);
         self::assertSame(
-            \MediaWiki\Extension\InstantIIIF\IIIFFile::NO_TIMESTAMP_SENTINEL,
+            \MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\IIIFFile::NO_TIMESTAMP_SENTINEL,
             $meta['DateTime']['value']
         );
     }
@@ -298,31 +298,4 @@ class MetadataExtractorTest extends TestCase
         self::assertSame($expectedLabel, $meta['ObjectName']['value']);
     }
 
-    /**
-     * @return array<string, array{string, string}>
-     */
-    public static function licenseShortNameProvider(): array
-    {
-        return [
-            'CC BY 4.0' => ['https://creativecommons.org/licenses/by/4.0/', 'CC BY 4.0'],
-            'CC BY-SA 3.0' => ['https://creativecommons.org/licenses/by-sa/3.0/', 'CC BY-SA 3.0'],
-            'CC BY-NC-ND 2.0' => ['https://creativecommons.org/licenses/by-nc-nd/2.0/', 'CC BY-NC-ND 2.0'],
-            'CC0' => ['https://creativecommons.org/publicdomain/zero/1.0/', 'CC0'],
-            'Public Domain Mark' => ['https://creativecommons.org/publicdomain/mark/1.0/', 'Public Domain'],
-            'RightsStatements InC' => ['https://rightsstatements.org/vocab/InC/1.0/', 'InC'],
-            'RightsStatements NoC-US' => ['https://rightsstatements.org/vocab/NoC-US/1.0/', 'NoC US'],
-            'Unknown URL' => ['https://example.org/license', ''],
-        ];
-    }
-
-    /**
-     * Test licenseShortName() via reflection since it's private.
-     */
-    #[DataProvider('licenseShortNameProvider')]
-    public function testLicenseShortName(string $url, string $expected): void
-    {
-        $ref = new \ReflectionMethod(MetadataExtractor::class, 'licenseShortName');
-
-        self::assertSame($expected, $ref->invoke($this->makeExtractor(), $url));
-    }
 }

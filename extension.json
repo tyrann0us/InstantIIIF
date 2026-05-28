@@ -83,7 +83,7 @@
   ],
   "HookHandlers": {
     "main": {
-      "class": "MediaWiki\\Extension\\InstantIIIF\\HookHandler",
+      "class": "MediaWiki\\Extension\\InstantIIIF\\Infrastructure\\MediaWiki\\HookHandler",
       "services": [
         "RepoGroup",
         "NamespaceInfo",
@@ -100,7 +100,7 @@
   },
   "SpecialPages": {
     "InstantIIIFInspect": {
-      "class": "MediaWiki\\Extension\\InstantIIIF\\SpecialInstantIIIFInspect",
+      "class": "MediaWiki\\Extension\\InstantIIIF\\Infrastructure\\MediaWiki\\SpecialInstantIIIFInspect",
       "services": [
         "RepoGroup",
         "MainConfig",

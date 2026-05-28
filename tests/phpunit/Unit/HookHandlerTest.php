@@ -6,10 +6,10 @@ namespace MediaWiki\Extension\InstantIIIF\Tests\Unit;
 
 use MediaWiki\Context\IContextSource;
 use MediaWiki\Context\RequestContext;
-use MediaWiki\Extension\InstantIIIF\HookHandler;
-use MediaWiki\Extension\InstantIIIF\IIIFFile;
-use MediaWiki\Extension\InstantIIIF\MetadataExtractor;
-use MediaWiki\Extension\InstantIIIF\Repo;
+use MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\HookHandler;
+use MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\IIIFFile;
+use MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\MetadataExtractor;
+use MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\Repo;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Title\Title;
 use OutputPage;
@@ -617,7 +617,7 @@ class HookHandlerTest extends TestCase
 
         // DateTime sentinel + a mapped field prove the extractor ran.
         self::assertSame(
-            \MediaWiki\Extension\InstantIIIF\IIIFFile::NO_TIMESTAMP_SENTINEL,
+            \MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\IIIFFile::NO_TIMESTAMP_SENTINEL,
             $meta['DateTime']['value']
         );
         self::assertStringContainsString('Meißen-Triebischtal', $meta['ObjectName']['value']);

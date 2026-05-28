@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace MediaWiki\Extension\InstantIIIF\Tests\Unit;
 
 use MediaTransformError;
-use MediaWiki\Extension\InstantIIIF\IIIFFile;
-use MediaWiki\Extension\InstantIIIF\Repo;
+use MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\IIIFFile;
+use MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\Repo;
 use MediaWiki\Title\Title;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -299,6 +299,25 @@ class IIIFFileTest extends TestCase
         self::assertSame(1784, $file->getWidth(3));
     }
 
+    /**
+     * MediaWiki core's File::getWidth($page = 1) / getHeight($page = 1)
+     * signatures are untyped — MW calls them with `false` to mean
+     * "no page specified" (seen in production: ImagePage rendering for
+     * an IIIFFile triggers File::getWidth(false)). Internal coercion
+     * via Page::normalize must absorb that or strict_types fires a
+     * TypeError. Regression guard for the bug that surfaced on first
+     * deploy of the DDD refactor.
+     */
+    public function testGetWidthAcceptsFalseAsNoPage(): void
+    {
+        $manifest = $this->loadFixture('manifest-fotothek-v2.json');
+        $file = $this->makeFile($manifest);
+
+        // false should resolve to page 1 (the default), not throw.
+        self::assertSame($file->getWidth(1), $file->getWidth(false));
+        self::assertSame($file->getHeight(1), $file->getHeight(false));
+    }
+
     public function testGetHeightReturnsCanvasDimensionsForPage(): void
     {
         $manifest = $this->loadFixture('manifest-multipage-v2.json');
@@ -567,7 +586,7 @@ class IIIFFileTest extends TestCase
         $file = $this->makeFile($manifest);
 
         $handler = $file->getHandler();
-        self::assertInstanceOf(\MediaWiki\Extension\InstantIIIF\IIIFHandler::class, $handler);
+        self::assertInstanceOf(\MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\IIIFHandler::class, $handler);
     }
 
     public function testGetResolvedManifestExposesData(): void
@@ -683,42 +702,6 @@ class IIIFFileTest extends TestCase
 
         $file->transform(['width' => 600, 'page' => 99999]);
         self::assertSame('', $file->getUrl());
-    }
-
-    /**
-     * @return array<string, array{mixed, int}>
-     */
-    public static function pageNormalizationProvider(): array
-    {
-        return [
-            'integer 5' => [5, 5],
-            'string "5"' => ['5', 5],
-            'zero' => [0, 1],
-            'negative' => [-3, 1],
-            'string negative' => ['-7', 1],
-            'non-numeric string' => ['Some caption text', 1],
-            'float-like string' => ['3.5', 3],
-            'empty string' => ['', 1],
-            'null' => [null, 1],
-        ];
-    }
-
-    /**
-     * `normalizePage` underpins every page-aware code path; verify the
-     * full normalisation matrix so junky inputs from wikitext / URL
-     * params all settle on page 1.
-     *
-     * @param mixed $input
-     */
-    #[\PHPUnit\Framework\Attributes\DataProvider('pageNormalizationProvider')]
-    public function testNormalizePage(mixed $input, int $expected): void
-    {
-        $manifest = $this->loadFixture('manifest-multipage-v2.json');
-        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364');
-
-        $ref = new \ReflectionMethod($file, 'normalizePage');
-
-        self::assertSame($expected, $ref->invoke($file, $input));
     }
 
     /**

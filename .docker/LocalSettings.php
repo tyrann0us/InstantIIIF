@@ -53,7 +53,7 @@ wfLoadExtension( 'InstantIIIF' );
 # Configure IIIF provider pointing to the mock server.
 $wgForeignFileRepos[] = [
     'name' => 'iiif-test',
-    'class' => \MediaWiki\Extension\InstantIIIF\Repo::class,
+    'class' => \MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\Repo::class,
     'directory' => '/tmp/iiif-repo',
     'hashLevels' => 0,
     'iiifSources' => [

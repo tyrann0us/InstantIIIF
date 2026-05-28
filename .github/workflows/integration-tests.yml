@@ -1,0 +1,51 @@
+name: 'Integration Tests'
+on:
+  pull_request:
+    paths:
+      - '**.php'
+      - 'composer.*'
+      - 'extension.json'
+      - 'docker-compose.yml'
+      - '.docker/**'
+      - 'tests/phpunit/Integration/**'
+      - 'tests/phpunit/Fixtures/**'
+      - 'phpunit.integration.xml.dist'
+
+jobs:
+  phpunit-mwit:
+    # PHPUnit tests that extend MediaWikiIntegrationTestCase. They run
+    # inside the docker MW container (real MW 1.44, real services) and
+    # so cannot reuse the host-PHP `tests-unit-php` workflow.
+    name: 'PHPUnit (MediaWikiIntegrationTestCase)'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start docker compose
+        run: docker compose up -d
+
+      - name: Wait for wiki to be reachable
+        run: |
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:8080/ > /dev/null 2>&1; then
+              echo "Wiki is up."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Wiki failed to come up." >&2
+          docker compose logs wiki >&2
+          exit 1
+
+      - name: Run wiki setup (installs MW dev deps + test config)
+        run: docker compose exec -T wiki bash /var/www/html/extensions/InstantIIIF/.docker/setup-wiki.sh
+
+      - name: Run MWIT integration suite
+        run: |
+          docker compose exec -T wiki php /var/www/html/tests/phpunit/phpunit.php \
+            --configuration=/var/www/html/extensions/InstantIIIF/phpunit.integration.xml.dist
+
+      - name: Dump container logs on failure
+        if: failure()
+        run: docker compose logs
