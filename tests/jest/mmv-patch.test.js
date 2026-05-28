@@ -852,3 +852,148 @@ describe( 'MMV overlay button patches (multi-page)', () => {
 		expect( moreBtn.getAttribute( 'href' ) ).not.toContain( 'page=' );
 	} );
 } );
+
+// ─── Client-side pagination resilience ─────────────────────
+
+describe( 'iiifPageByUrl rebuild on wikipage.content', () => {
+	test( 'picks up new img[data-iiif-page] after content swap', async () => {
+		// Initial DOM has only a page-1 image (no multi-page entries).
+		buildDom( `
+			<img src="https://iiif.example/p1.jpg"
+				data-iiif-page="1" data-iiif-title="File:Test.jpg" />
+		` );
+
+		const getCalls = [];
+		function FakeThumbnailInfo() {}
+		FakeThumbnailInfo.prototype.get = function (
+			file,
+			sampleUrl,
+			width,
+			height
+		) {
+			getCalls.push( { file, sampleUrl, width, height } );
+			return { then: () => {} };
+		};
+		env.registerModule( 'mmv', { ThumbnailInfo: FakeThumbnailInfo } );
+
+		loadMmvPatch( window );
+		await new Promise( ( r ) => setTimeout( r, 10 ) );
+
+		// Simulate mediawiki.page.image.pagination swapping content to
+		// page 7 of the multi-page file via AJAX + pushState. After
+		// content replacement, fire wikipage.content so MMV's bootstrap
+		// (and our rebuild handler) re-process the DOM.
+		buildDom( `
+			<div id="file">
+				<a class="mw-file-description" href="https://iiif.example/p7/full/full/0/default.jpg">
+					<img src="https://iiif.example/p7.jpg"
+						data-iiif-page="7" data-iiif-title="File:Test.jpg"
+						data-iiif-full-url="https://iiif.example/p7/full/full/0/default.jpg"
+						data-file-width="1200" data-file-height="1600" />
+				</a>
+			</div>
+		` );
+		env.hookRegistry[ 'wikipage.content' ].fire( $( document.body ) );
+
+		// Calling ThumbnailInfo.get with the NEW page-7 sampleUrl should
+		// see it in the rebuilt map and append the page marker.
+		const instance = new FakeThumbnailInfo();
+		instance.get(
+			'File:Test.jpg',
+			'https://iiif.example/p7.jpg',
+			600,
+			400
+		);
+
+		expect( getCalls.length ).toBe( 1 );
+		expect( getCalls[ 0 ].sampleUrl ).toContain( '#page7-600px' );
+	} );
+} );
+
+describe( 'MultimediaViewer.loadImage refresh from current #file img', () => {
+	test( 'overrides image.src/originalWidth/originalHeight from current DOM', async () => {
+		buildDom( `
+			<div id="file">
+				<a class="mw-file-description" href="#">
+					<img src="https://iiif.example/CURRENT.jpg"
+						data-iiif-title="File:Test.jpg"
+						data-iiif-page="5"
+						data-file-width="1600" data-file-height="1200" />
+				</a>
+			</div>
+		` );
+
+		const loadImageCalls = [];
+		function FakeMultimediaViewer() {}
+		FakeMultimediaViewer.prototype.loadImage = function ( image ) {
+			loadImageCalls.push( {
+				src: image.src,
+				originalWidth: image.originalWidth,
+				originalHeight: image.originalHeight,
+			} );
+		};
+
+		env.registerModule( 'mmv', {
+			MultimediaViewer: FakeMultimediaViewer,
+			ThumbnailInfo: class {},
+		} );
+		env.registerModule( 'mmv.ui.reuse', {} );
+
+		loadMmvPatch( window );
+		await new Promise( ( r ) => setTimeout( r, 10 ) );
+
+		// Caller passes a STALE LightboxImage (e.g. the click handler
+		// closure captured at initial load before AJAX pagination swap).
+		const staleImage = {
+			src: 'https://iiif.example/STALE.jpg',
+			originalWidth: 300,
+			originalHeight: 200,
+		};
+		const viewer = new FakeMultimediaViewer();
+		viewer.loadImage( staleImage );
+
+		expect( loadImageCalls.length ).toBe( 1 );
+		expect( loadImageCalls[ 0 ].src ).toBe(
+			'https://iiif.example/CURRENT.jpg'
+		);
+		expect( loadImageCalls[ 0 ].originalWidth ).toBe( 1600 );
+		expect( loadImageCalls[ 0 ].originalHeight ).toBe( 1200 );
+	} );
+
+	test( 'leaves image untouched when no #file img with data-iiif-title is present', async () => {
+		// Article-page context: no #file img with our marker.
+		buildDom( `
+			<img src="https://iiif.example/article-thumb.jpg"
+				data-iiif-page="3" data-iiif-title="File:Test.jpg" />
+		` );
+
+		const loadImageCalls = [];
+		function FakeMultimediaViewer() {}
+		FakeMultimediaViewer.prototype.loadImage = function ( image ) {
+			loadImageCalls.push( {
+				src: image.src,
+				originalWidth: image.originalWidth,
+			} );
+		};
+
+		env.registerModule( 'mmv', {
+			MultimediaViewer: FakeMultimediaViewer,
+			ThumbnailInfo: class {},
+		} );
+		env.registerModule( 'mmv.ui.reuse', {} );
+
+		loadMmvPatch( window );
+		await new Promise( ( r ) => setTimeout( r, 10 ) );
+
+		const image = {
+			src: 'https://iiif.example/article-thumb.jpg',
+			originalWidth: 400,
+		};
+		new FakeMultimediaViewer().loadImage( image );
+
+		expect( loadImageCalls[ 0 ].src ).toBe(
+			'https://iiif.example/article-thumb.jpg'
+		);
+		expect( loadImageCalls[ 0 ].originalWidth ).toBe( 400 );
+	} );
+} );

@@ -10,8 +10,8 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Tests for Repo: idPatterns(), getInfo() with apiurl/instantIIIFIdPatterns
- * fields consumed by the JS-side media-search patch.
+ * Tests for Repo: idPatterns() and getInfo()'s apiurl field, which the
+ * JS-side media-search patch matches against to recognise IIIF repos.
  */
 #[CoversClass(Repo::class)]
 class RepoTest extends TestCase
@@ -62,7 +62,7 @@ class RepoTest extends TestCase
         self::assertSame(['/^(df_.+)$/'], $repo->idPatterns());
     }
 
-    public function testGetInfoExposesApiUrlAndPatternsForJs(): void
+    public function testGetInfoExposesApiUrlForJs(): void
     {
         $repo = $this->makeRepo([
             ['id' => 'fotothek', 'idPattern' => '/^(df_.+)$/'],
@@ -72,9 +72,6 @@ class RepoTest extends TestCase
 
         self::assertArrayHasKey('apiurl', $info);
         self::assertSame('https://wiki.example.org/w/api.php', $info['apiurl']);
-
-        self::assertArrayHasKey('instantIIIFIdPatterns', $info);
-        self::assertSame(['/^(df_.+)$/'], $info['instantIIIFIdPatterns']);
     }
 
     public function testGetInfoPreservesParentInfo(): void
@@ -94,8 +91,6 @@ class RepoTest extends TestCase
     {
         $repo = $this->makeRepo([]);
 
-        $info = $repo->getInfo();
-
-        self::assertSame([], $info['instantIIIFIdPatterns']);
+        self::assertSame([], $repo->idPatterns());
     }
 }

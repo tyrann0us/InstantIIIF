@@ -32,6 +32,15 @@
     "remoteExtPath": "InstantIIIF"
   },
   "ResourceModules": {
+    "ext.instantIIIF.title": {
+      "scripts": [
+        "resources/iiif-title.js"
+      ],
+      "targets": [
+        "desktop",
+        "mobile"
+      ]
+    },
     "ext.instantIIIF.mmvPatch": {
       "scripts": [
         "resources/mmv-patch.js"
@@ -41,7 +50,8 @@
         "mobile"
       ],
       "dependencies": [
-        "mediawiki.Title"
+        "mediawiki.Title",
+        "ext.instantIIIF.title"
       ],
       "position": "top"
     },
@@ -54,30 +64,48 @@
         "mobile"
       ],
       "dependencies": [
-        "mediawiki.api"
+        "mediawiki.api",
+        "ext.instantIIIF.title"
+      ]
+    },
+    "ext.instantIIIF.filePage": {
+      "styles": [
+        "resources/file-page.css"
+      ],
+      "targets": [
+        "desktop",
+        "mobile"
+      ]
+    }
+  },
+  "ServiceWiringFiles": [
+    "src/ServiceWiring.php"
+  ],
+  "HookHandlers": {
+    "main": {
+      "class": "MediaWiki\\Extension\\InstantIIIF\\HookHandler",
+      "services": [
+        "RepoGroup",
+        "NamespaceInfo",
+        "InstantIIIF.MetadataExtractor"
       ]
     }
   },
   "Hooks": {
-    "BeforePageDisplay": [
-      "MediaWiki\\Extension\\InstantIIIF\\Hooks::onBeforePageDisplay"
-    ],
-    "ThumbnailBeforeProduceHTML": [
-      "MediaWiki\\Extension\\InstantIIIF\\Hooks::onThumbnailBeforeProduceHTML"
-    ],
-    "ImagePageFileHistoryLine": [
-      "MediaWiki\\Extension\\InstantIIIF\\Hooks::onImagePageFileHistoryLine"
-    ],
-    "ImagePageShowTOC": [
-      "MediaWiki\\Extension\\InstantIIIF\\Hooks::onImagePageShowTOC"
-    ],
-    "GetExtendedMetadata": [
-      "MediaWiki\\Extension\\InstantIIIF\\Hooks::onGetExtendedMetadata"
-    ]
+    "BeforePageDisplay": "main",
+    "ThumbnailBeforeProduceHTML": "main",
+    "ImagePageFileHistoryLine": "main",
+    "ImagePageShowTOC": "main",
+    "GetExtendedMetadata": "main"
   },
   "SpecialPages": {
     "InstantIIIFInspect": {
-      "class": "MediaWiki\\Extension\\InstantIIIF\\SpecialInstantIIIFInspect"
+      "class": "MediaWiki\\Extension\\InstantIIIF\\SpecialInstantIIIFInspect",
+      "services": [
+        "RepoGroup",
+        "MainConfig",
+        "InstantIIIF.MetadataExtractor"
+      ]
     }
   },
   "AvailableRights": [

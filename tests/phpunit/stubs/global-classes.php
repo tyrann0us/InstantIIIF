@@ -7,6 +7,14 @@
 
 declare(strict_types=1);
 
+if (!interface_exists(Config::class)) {
+    // Real MediaWiki aliases MediaWiki\Config\Config to the global Config.
+    interface Config
+    {
+        public function get(string $name): mixed;
+    }
+}
+
 if (!class_exists(FileBackend::class)) {
     class FileBackend
     {
@@ -262,11 +270,26 @@ if (!class_exists(MWNamespace::class)) {
     }
 }
 
+if (!class_exists(NamespaceInfo::class)) {
+    class NamespaceInfo
+    {
+        public function getCanonicalName(int $index): string|false
+        {
+            return match ($index) {
+                NS_FILE => 'File',
+                default => false,
+            };
+        }
+    }
+}
+
 if (!class_exists(OutputPage::class)) {
     class OutputPage
     {
         /** @var string[] */
         public array $modules = [];
+        /** @var string[] */
+        public array $moduleStyles = [];
         /** @var string[] */
         public array $inlineStyles = [];
         /** @var array<string, mixed> */
@@ -285,6 +308,11 @@ if (!class_exists(OutputPage::class)) {
         public function addModules($modules): void
         {
             $this->modules = array_merge($this->modules, (array) $modules);
+        }
+
+        public function addModuleStyles($modules): void
+        {
+            $this->moduleStyles = array_merge($this->moduleStyles, (array) $modules);
         }
 
         public function addInlineStyle(string $style): void
@@ -335,7 +363,7 @@ if (!class_exists(StatusValue::class)) {
 }
 
 if (!class_exists(GlobalVarConfig::class)) {
-    class GlobalVarConfig
+    class GlobalVarConfig implements Config
     {
         /** @var array<string, mixed> */
         public array $overrides = [];
@@ -348,6 +376,7 @@ if (!class_exists(GlobalVarConfig::class)) {
             return match ($name) {
                 'InstantIIIFDefaultTimeout' => 5,
                 'ScriptPath' => '/w',
+                'UploadDirectory' => '/var/www/uploads',
                 default => null,
             };
         }

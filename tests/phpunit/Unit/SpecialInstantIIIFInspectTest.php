@@ -5,9 +5,7 @@ declare(strict_types=1);
 namespace MediaWiki\Extension\InstantIIIF\Tests\Unit;
 
 use MediaWiki\Context\RequestContext;
-use MediaWiki\Extension\InstantIIIF\Hooks;
-use MediaWiki\Extension\InstantIIIF\IIIFFile;
-use MediaWiki\Extension\InstantIIIF\Repo;
+use MediaWiki\Extension\InstantIIIF\MetadataExtractor;
 use MediaWiki\Extension\InstantIIIF\SpecialInstantIIIFInspect;
 use MediaWiki\MediaWikiServices;
 use OutputPage;
@@ -143,7 +141,11 @@ class SpecialInstantIIIFInspectTest extends TestCase
 
     private function makeSpecial(): SpecialInstantIIIFInspect
     {
-        $special = new SpecialInstantIIIFInspect();
+        $special = new SpecialInstantIIIFInspect(
+            new \RepoGroup(),
+            new \GlobalVarConfig(),
+            new MetadataExtractor(new \Language('en'))
+        );
         $special->injectedRequest = new WebRequest();
         $special->injectedOutput = new OutputPage();
         return $special;

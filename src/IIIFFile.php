@@ -33,7 +33,7 @@ class IIIFFile extends File
 
     /**
      * Page number from the most recent transform() call.
-     * Read by Hooks::onThumbnailBeforeProduceHTML to set data-iiif-page.
+     * Read by HookHandler::onThumbnailBeforeProduceHTML to set data-iiif-page.
      */
     protected int $lastTransformPage = 1;
 
@@ -54,6 +54,19 @@ class IIIFFile extends File
     private const LICENSE_META_KEYS = [
         'slub-dresden' => ['Rechteinformationen', 'Rights'],
     ];
+
+    /**
+     * Non-date marker used wherever the extension wants `wfTimestamp()` to
+     * return false (so consumers blank the upload date instead of falling
+     * back to "now"). Any string ConvertibleTimestamp cannot parse works;
+     * a falsy value would instead be treated as "now". Public so
+     * MetadataExtractor's `DateTime` extmetadata sentinel
+     * (used for the MMV overlay) and SpecialInstantIIIFInspect's check
+     * stay in lock-step with IIIFFile::getTimestamp() (used for the
+     * ApiQueryImageInfo timestamp field consumed by VisualEditor's media
+     * dialog).
+     */
+    public const NO_TIMESTAMP_SENTINEL = '<>';
 
     /**
      * @param Repo $repo
@@ -89,6 +102,24 @@ class IIIFFile extends File
     public function getMediaType(): string
     {
         return MEDIATYPE_BITMAP;
+    }
+
+    /**
+     * IIIF files have no upload timestamp. Returning a falsy value would
+     * make wfTimestamp() fall back to the current time — ConvertibleTimestamp
+     * treats 0/''/false as "now" — which surfaces a misleading
+     * "uploaded a few seconds ago" in ApiQueryImageInfo (the `timestamp`
+     * field consumed by VisualEditor's media dialog).
+     *
+     * Returning a non-date sentinel instead makes wfTimestamp() return false,
+     * so the API emits an empty timestamp and clients skip the upload line.
+     * The same sentinel is reused by MetadataExtractor for the `DateTime`
+     * extmetadata field MultimediaViewer reads (see NO_TIMESTAMP_SENTINEL).
+     */
+    // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound -- MediaWiki File override
+    public function getTimestamp(): string
+    {
+        return self::NO_TIMESTAMP_SENTINEL;
     }
 
     /**
@@ -260,7 +291,7 @@ class IIIFFile extends File
      * IIIF file — i.e. with the spoofed `.jpg` extension stripped off.
      *
      * MMV requires file titles to carry a recognised image extension,
-     * which Hooks::onThumbnailBeforeProduceHTML provides by appending
+     * which HookHandler::onThumbnailBeforeProduceHTML provides by appending
      * ".jpg" to extension-less DB keys. When MMV later round-trips
      * that spoofed title back through the imageinfo API, the IIIFFile
      * here carries the doctored title (e.g. "Bsb11610364.jpg"), but
@@ -280,7 +311,7 @@ class IIIFFile extends File
             return null;
         }
         $dbKey = $title->getDBkey();
-        $stripped = $this->removeImageExtension($dbKey);
+        $stripped = IIIFTitle::unspoof($dbKey);
         if ($stripped === $dbKey || $stripped === '') {
             return $title;
         }
@@ -681,7 +712,7 @@ class IIIFFile extends File
 
     /**
      * Page number from the most recent transform() call.
-     * Used by Hooks::onThumbnailBeforeProduceHTML to set data-iiif-page.
+     * Used by HookHandler::onThumbnailBeforeProduceHTML to set data-iiif-page.
      */
     // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound -- needed by hook
     public function lastTransformPage(): int
@@ -710,8 +741,8 @@ class IIIFFile extends File
             return null;
         }
         $objId = lcfirst($title->getDBkey());
-        // Remove the spoofed image extension we had to add because of MMV.
-        $objId = $this->removeImageExtension($objId);
+        // Strip the spoofed image extension we appended for MMV.
+        $objId = IIIFTitle::unspoof($objId);
 
         if (!$objId) {
             $this->resolved = null;
@@ -766,17 +797,6 @@ class IIIFFile extends File
         }
 
         return false;
-    }
-
-    protected function removeImageExtension(string $filename): string
-    {
-        $pattern = '/\.(jpg|jpeg|png|gif|bmp|webp)$/i';
-
-        if (!preg_match($pattern, $filename)) {
-            return $filename;
-        }
-
-        return preg_replace($pattern, '', $filename) ?? $filename;
     }
 
     /**

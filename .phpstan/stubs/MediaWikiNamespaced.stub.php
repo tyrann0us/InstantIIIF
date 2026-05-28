@@ -35,6 +35,7 @@ class MediaWikiServices {
 class MainConfigNames {
     public const ScriptPath = 'ScriptPath';
     public const Script = 'Script';
+    public const UploadDirectory = 'UploadDirectory';
 }
 
 namespace MediaWiki\Utils;
@@ -79,12 +80,15 @@ use MediaWiki\Title\Title;
 
 interface IContextSource {
     public function getLanguage(): \Language;
+    public function msg(string $key, mixed ...$params): \Message;
 }
 
 class RequestContext implements IContextSource {
     public static function getMain(): self {}
     public function getTitle(): ?Title {}
     public function getRequest(): \WebRequest {}
+    public function getLanguage(): \Language {}
+    public function msg(string $key, mixed ...$params): \Message {}
 }
 
 namespace MediaWiki\Page;
@@ -98,4 +102,30 @@ class ImageHistoryList {
 
 class ImagePage {
     public function getDisplayedFile(): File {}
+}
+
+namespace MediaWiki\Output\Hook;
+
+interface BeforePageDisplayHook {
+    public function onBeforePageDisplay($out, $skin): void;
+}
+
+namespace MediaWiki\Hook;
+
+interface ThumbnailBeforeProduceHTMLHook {
+    public function onThumbnailBeforeProduceHTML($thumbnail, &$attribs, &$linkAttribs);
+}
+
+interface GetExtendedMetadataHook {
+    public function onGetExtendedMetadata(&$combinedMeta, $file, $context, $single, &$maxCacheTime);
+}
+
+namespace MediaWiki\Page\Hook;
+
+interface ImagePageFileHistoryLineHook {
+    public function onImagePageFileHistoryLine($imageHistoryList, $file, &$line, &$css);
+}
+
+interface ImagePageShowTOCHook {
+    public function onImagePageShowTOC($page, &$toc);
 }

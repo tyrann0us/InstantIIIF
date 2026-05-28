@@ -1,5 +1,10 @@
 # InstantIIIF
 
+[![PHP QA](https://github.com/tyrann0us/InstantIIIF/actions/workflows/quality-assurance-php.yml/badge.svg)](https://github.com/tyrann0us/InstantIIIF/actions/workflows/quality-assurance-php.yml)
+[![JS QA](https://github.com/tyrann0us/InstantIIIF/actions/workflows/quality-assurance-js.yml/badge.svg)](https://github.com/tyrann0us/InstantIIIF/actions/workflows/quality-assurance-js.yml)
+[![E2E Tests](https://github.com/tyrann0us/InstantIIIF/actions/workflows/e2e-tests.yml/badge.svg)](https://github.com/tyrann0us/InstantIIIF/actions/workflows/e2e-tests.yml)
+[![codecov](https://codecov.io/gh/tyrann0us/InstantIIIF/graph/badge.svg)](https://codecov.io/gh/tyrann0us/InstantIIIF)
+
 MediaWiki extension that registers a virtual `FileRepo` so that ordinary file links (`[[File:...]]`) hotlink images from remote [IIIF](https://iiif.io/) sources (Presentation API v2 / v3) instead of requiring a local upload. Inspired by [Instant Commons](https://www.mediawiki.org/wiki/InstantCommons).
 
 ## Table of Contents
