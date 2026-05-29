@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace MediaWiki\Extension\InstantIIIF;
+namespace MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki;
 
 use FileRepo;
 use MediaWiki\MainConfigNames;

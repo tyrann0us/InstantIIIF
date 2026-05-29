@@ -41,6 +41,7 @@
     "phpcs:fix": "@php ./vendor/bin/phpcbf",
     "phpstan": "@php ./vendor/bin/phpstan analyse --memory-limit=1G",
     "tests": "@php ./vendor/bin/phpunit",
-    "tests:coverage": "@php ./vendor/bin/phpunit --coverage-clover=coverage.xml"
+    "tests:coverage": "@php ./vendor/bin/phpunit --coverage-clover=coverage.xml",
+    "tests:integration": "docker compose exec -T wiki php /var/www/html/tests/phpunit/phpunit.php --configuration=/var/www/html/extensions/InstantIIIF/phpunit.integration.xml.dist --testdox"
   }
 }

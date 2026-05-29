@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace MediaWiki\Extension\InstantIIIF\Tests\Unit;
 
-use MediaWiki\Extension\InstantIIIF\IIIFTitle;
+use MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\IIIFTitle;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

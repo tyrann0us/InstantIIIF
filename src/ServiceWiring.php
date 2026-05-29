@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use MediaWiki\Extension\InstantIIIF\MetadataExtractor;
+use MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\MetadataExtractor;
 use MediaWiki\MediaWikiServices;
 
 return [

@@ -162,7 +162,7 @@ class ApiQueryBase {
 class ApiQuery {
 }
 
-class GlobalVarConfig {
+class GlobalVarConfig implements Config {
     /** @return mixed */
     public function get(string $name) {}
 }

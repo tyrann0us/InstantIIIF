@@ -31,8 +31,19 @@ namespace MediaWiki\Title {
                 return new self($text, $defaultNamespace);
             }
 
+            /**
+             * When non-null, makeTitleSafe() returns null on its next call
+             * (and then clears the flag). Lets tests cover the defensive
+             * "Title::makeTitleSafe returned null" branches in production code.
+             */
+            public static bool $mockMakeTitleSafeReturnsNull = false;
+
             public static function makeTitleSafe(int $ns, string $title): ?self
             {
+                if (self::$mockMakeTitleSafeReturnsNull) {
+                    self::$mockMakeTitleSafeReturnsNull = false;
+                    return null;
+                }
                 if ($title === '') {
                     return null;
                 }
@@ -118,6 +129,8 @@ namespace MediaWiki {
                 self::$mockUrlUtils = null;
                 self::$mockMainConfig = null;
                 self::$mockHttpRequestFactory = null;
+                self::$mockContentLanguageCode = 'en';
+                self::$mockContentLanguageThrows = null;
             }
 
             public function getRepoGroup(): \RepoGroup
@@ -160,8 +173,18 @@ namespace MediaWiki {
             /** Override-able stub so tests can set the wiki's content language. */
             public static string $mockContentLanguageCode = 'en';
 
+            /**
+             * When non-null, getContentLanguage() throws this instead of
+             * returning a Language. Lets tests cover the Throwable catch
+             * blocks in IIIFFile::preferredLanguages().
+             */
+            public static ?\Throwable $mockContentLanguageThrows = null;
+
             public function getContentLanguage(): \Language
             {
+                if (self::$mockContentLanguageThrows !== null) {
+                    throw self::$mockContentLanguageThrows;
+                }
                 return new \Language(self::$mockContentLanguageCode);
             }
         }

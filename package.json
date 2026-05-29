@@ -32,7 +32,7 @@
     "license": "MIT",
     "scripts": {
         "docker:down": "docker compose down -v",
-        "docker:up": "docker compose up -d && docker compose exec wiki bash /var/www/html/extensions/InstantIIIF/.docker/setup-wiki.sh",
+        "docker:up": "docker compose up -d && docker compose exec -e INSTALL_DEV_DEPS=1 wiki bash /var/www/html/extensions/InstantIIIF/.docker/setup-wiki.sh",
         "lint:js": "wp-scripts lint-js '**/*.js'",
         "lint:md": "wp-scripts lint-md-docs '**/*.md'",
         "test": "jest",

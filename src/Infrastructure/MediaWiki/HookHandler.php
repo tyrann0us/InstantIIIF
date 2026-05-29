@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace MediaWiki\Extension\InstantIIIF;
+namespace MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki;
 
 use MediaWiki\Context\RequestContext;
 use MediaWiki\Hook\GetExtendedMetadataHook;

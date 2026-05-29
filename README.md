@@ -2,6 +2,7 @@
 
 [![PHP QA](https://github.com/tyrann0us/InstantIIIF/actions/workflows/quality-assurance-php.yml/badge.svg)](https://github.com/tyrann0us/InstantIIIF/actions/workflows/quality-assurance-php.yml)
 [![JS QA](https://github.com/tyrann0us/InstantIIIF/actions/workflows/quality-assurance-js.yml/badge.svg)](https://github.com/tyrann0us/InstantIIIF/actions/workflows/quality-assurance-js.yml)
+[![Integration Tests](https://github.com/tyrann0us/InstantIIIF/actions/workflows/integration-tests.yml/badge.svg)](https://github.com/tyrann0us/InstantIIIF/actions/workflows/integration-tests.yml)
 [![E2E Tests](https://github.com/tyrann0us/InstantIIIF/actions/workflows/e2e-tests.yml/badge.svg)](https://github.com/tyrann0us/InstantIIIF/actions/workflows/e2e-tests.yml)
 [![codecov](https://codecov.io/gh/tyrann0us/InstantIIIF/graph/badge.svg)](https://codecov.io/gh/tyrann0us/InstantIIIF)
 

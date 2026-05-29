@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace MediaWiki\Extension\InstantIIIF;
+namespace MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki;
 
 /**
  * Helpers for the spoofed image extension that lets MediaWiki / MMV treat

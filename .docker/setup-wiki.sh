@@ -1,6 +1,42 @@
 #!/bin/bash
 set -e
 
+# Install MW dev dependencies (PHPUnit, wikimedia/testing-access-wrapper)
+# so the Integration suite can run inside the container. The official
+# mediawiki:1.44 image ships production deps only.
+#
+# Opt-in via INSTALL_DEV_DEPS=1 — the dev-deps install rewrites
+# /var/www/html/vendor and busts Apache's already-warm opcache, which
+# manifests as "Class GuzzleHttp\Psr7\Rfc3986 not found" on the next
+# request. Only the integration-tests workflow (and `npm run docker:up`)
+# need this; e2e and ad-hoc shells skip it.
+if [ "${INSTALL_DEV_DEPS:-0}" = "1" ] && [ ! -d /var/www/html/vendor/phpunit ]; then
+    echo "Installing MW dev dependencies (one-time setup)..."
+    if [ ! -x /usr/local/bin/composer ]; then
+        apt-get update -qq
+        apt-get install -y -qq unzip
+        curl -sS https://getcomposer.org/installer | php -- \
+            --install-dir=/usr/local/bin --filename=composer
+    fi
+    (cd /var/www/html && composer install --no-interaction --prefer-dist \
+        --no-progress 2>&1 | tail -3)
+
+    # Install pcov so the Integration suite can produce a Clover XML
+    # for Codecov. Xdebug would also work, but pcov is far lighter —
+    # negligible overhead even when active. PHP_PCOV_DIRECTORY is read
+    # at runtime via the `-d` flag in the workflow, not baked in here.
+    if ! php -m | grep -qi '^pcov$'; then
+        apt-get install -y -qq --no-install-recommends ${PHPIZE_DEPS:-autoconf gcc g++ make pkg-config}
+        printf "\n" | pecl install pcov 2>&1 | tail -3
+        docker-php-ext-enable pcov
+    fi
+
+    # Apache's opcache pre-loaded the old vendor before our composer
+    # install touched it; reload so the new autoloader (and the pcov
+    # extension we just enabled) take effect.
+    apache2ctl graceful || service apache2 reload || true
+fi
+
 # Wait for the mock IIIF server to be ready.
 echo "Waiting for mock IIIF server..."
 for i in $(seq 1 30); do

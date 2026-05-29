@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace MediaWiki\Extension\InstantIIIF\Tests\Unit;
 
 use MediaWiki\Context\IContextSource;
-use MediaWiki\Extension\InstantIIIF\IIIFFile;
-use MediaWiki\Extension\InstantIIIF\MetadataExtractor;
+use MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\IIIFFile;
+use MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\MetadataExtractor;
 use MediaWiki\MediaWikiServices;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -91,7 +91,7 @@ class MetadataExtractorTest extends TestCase
         // The shared no-timestamp sentinel suppresses the upload date in MMV.
         self::assertArrayHasKey('DateTime', $meta);
         self::assertSame(
-            \MediaWiki\Extension\InstantIIIF\IIIFFile::NO_TIMESTAMP_SENTINEL,
+            \MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\IIIFFile::NO_TIMESTAMP_SENTINEL,
             $meta['DateTime']['value']
         );
     }
@@ -299,30 +299,52 @@ class MetadataExtractorTest extends TestCase
     }
 
     /**
-     * @return array<string, array{string, string}>
+     * `rights` / `license` is an IIIF v2 list — when none of its entries
+     * is an HTTP URL string, urlFromLicenseField must fall through to ''.
+     * Then MetadataExtractor walks the rest of its license-resolution
+     * chain (provider metadata, provider landing) — both empty here too,
+     * so no LicenseUrl/LicenseShortName appear at all.
      */
-    public static function licenseShortNameProvider(): array
+    public function testLicenseFieldWithListOfNonHttpStringsFallsThrough(): void
     {
-        return [
-            'CC BY 4.0' => ['https://creativecommons.org/licenses/by/4.0/', 'CC BY 4.0'],
-            'CC BY-SA 3.0' => ['https://creativecommons.org/licenses/by-sa/3.0/', 'CC BY-SA 3.0'],
-            'CC BY-NC-ND 2.0' => ['https://creativecommons.org/licenses/by-nc-nd/2.0/', 'CC BY-NC-ND 2.0'],
-            'CC0' => ['https://creativecommons.org/publicdomain/zero/1.0/', 'CC0'],
-            'Public Domain Mark' => ['https://creativecommons.org/publicdomain/mark/1.0/', 'Public Domain'],
-            'RightsStatements InC' => ['https://rightsstatements.org/vocab/InC/1.0/', 'InC'],
-            'RightsStatements NoC-US' => ['https://rightsstatements.org/vocab/NoC-US/1.0/', 'NoC US'],
-            'Unknown URL' => ['https://example.org/license', ''],
+        $manifest = [
+            '@context' => 'http://iiif.io/api/presentation/2/context.json',
+            'sequences' => [['canvases' => [
+                ['width' => 1, 'height' => 1, 'images' => [['resource' => []]]],
+            ]]],
+            // Non-URL entries in the rights array; the helper iterates,
+            // finds nothing matching `^https?://`, and returns '' (line 146).
+            'rights' => ['not-a-url', 'still-not', ''],
         ];
+        $file = $this->makeFile($manifest, 'unknown-provider', '');
+
+        $meta = $this->makeExtractor()->extract($file, $this->makeContext());
+
+        self::assertArrayNotHasKey('LicenseUrl', $meta);
+        self::assertArrayNotHasKey('LicenseShortName', $meta);
     }
 
     /**
-     * Test licenseShortName() via reflection since it's private.
+     * `preferredLanguages()` swallows any Throwable from
+     * $context->getLanguage() (a malformed context, MW bootstrap
+     * failure) and falls through to the content-language → 'en' chain.
+     * Verify the catch-block contract: extraction still succeeds.
      */
-    #[DataProvider('licenseShortNameProvider')]
-    public function testLicenseShortName(string $url, string $expected): void
+    public function testPreferredLanguagesFallsThroughWhenContextLanguageThrows(): void
     {
-        $ref = new \ReflectionMethod(MetadataExtractor::class, 'licenseShortName');
+        $context = $this->createStub(IContextSource::class);
+        $context->method('getLanguage')
+            ->willThrowException(new \RuntimeException('no language on context'));
+        $context->method('msg')
+            ->willReturnCallback(static fn (string $key) => new \Message($key));
 
-        self::assertSame($expected, $ref->invoke($this->makeExtractor(), $url));
+        $manifest = $this->loadFixture('manifest-fotothek-v2.json');
+        $file = $this->makeFile($manifest, 'deutsche-fotothek', 'http://example.org/landing');
+
+        // Extraction must succeed despite the context's broken getLanguage.
+        $meta = $this->makeExtractor('en')->extract($file, $context);
+
+        self::assertArrayHasKey('ObjectName', $meta);
+        self::assertNotSame('', $meta['ObjectName']['value']);
     }
 }
