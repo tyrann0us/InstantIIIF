@@ -39,7 +39,7 @@ jobs:
           exit 1
 
       - name: Run wiki setup (installs MW dev deps + test config)
-        run: docker compose exec -T wiki bash /var/www/html/extensions/InstantIIIF/.docker/setup-wiki.sh
+        run: docker compose exec -T -e INSTALL_DEV_DEPS=1 wiki bash /var/www/html/extensions/InstantIIIF/.docker/setup-wiki.sh
 
       - name: Run MWIT integration suite
         run: |

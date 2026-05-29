@@ -4,7 +4,13 @@ set -e
 # Install MW dev dependencies (PHPUnit, wikimedia/testing-access-wrapper)
 # so the Integration suite can run inside the container. The official
 # mediawiki:1.44 image ships production deps only.
-if [ ! -d /var/www/html/vendor/phpunit ]; then
+#
+# Opt-in via INSTALL_DEV_DEPS=1 — the dev-deps install rewrites
+# /var/www/html/vendor and busts Apache's already-warm opcache, which
+# manifests as "Class GuzzleHttp\Psr7\Rfc3986 not found" on the next
+# request. Only the integration-tests workflow (and `npm run docker:up`)
+# need this; e2e and ad-hoc shells skip it.
+if [ "${INSTALL_DEV_DEPS:-0}" = "1" ] && [ ! -d /var/www/html/vendor/phpunit ]; then
     echo "Installing MW dev dependencies (one-time setup)..."
     if [ ! -x /usr/local/bin/composer ]; then
         apt-get update -qq
@@ -14,6 +20,9 @@ if [ ! -d /var/www/html/vendor/phpunit ]; then
     fi
     (cd /var/www/html && composer install --no-interaction --prefer-dist \
         --no-progress 2>&1 | tail -3)
+    # Apache's opcache pre-loaded the old vendor before our composer
+    # install touched it; reload so the new autoloader takes effect.
+    apache2ctl graceful || service apache2 reload || true
 fi
 
 # Wait for the mock IIIF server to be ready.
