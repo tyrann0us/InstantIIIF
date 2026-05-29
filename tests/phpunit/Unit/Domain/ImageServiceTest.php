@@ -154,4 +154,131 @@ class ImageServiceTest extends TestCase
             $service->sizedUrl(2000, 0)
         );
     }
+
+    public function testClampZeroByZeroReturnsZeroPair(): void
+    {
+        $service = ImageService::fromInfoJson(self::BASE, [
+            'width' => 5000,
+            'height' => 4000,
+            'maxWidth' => 1000,
+            'maxHeight' => 1000,
+            'maxArea' => 1_000_000,
+        ]);
+        // clamp(0, 0) short-circuits before any limit is consulted.
+        self::assertSame([0, 0], $service->clamp(0, 0));
+    }
+
+    public function testClampWidthOnlyShrinksToMaxAreaSqrt(): void
+    {
+        $service = ImageService::fromInfoJson(self::BASE, [
+            'width' => 10000,
+            'height' => 10000,
+            'maxArea' => 1_000_000, // 1MP cap, square original.
+        ]);
+        [$w, $h] = $service->clamp(2000, 0);
+        // Estimated height equals width for a square source, so 2000*2000 > 1MP triggers shrink.
+        // sqrt(1MP * 10000/10000) = 1000.
+        self::assertSame(1000, $w);
+        self::assertSame(0, $h);
+    }
+
+    public function testClampHeightOnlyShrinksToMaxAreaSqrt(): void
+    {
+        $service = ImageService::fromInfoJson(self::BASE, [
+            'width' => 10000,
+            'height' => 10000,
+            'maxArea' => 1_000_000,
+        ]);
+        [$w, $h] = $service->clamp(0, 2000);
+        self::assertSame(0, $w);
+        self::assertSame(1000, $h);
+    }
+
+    public function testClampSkipsMaxAreaWhenOriginalDimsMissing(): void
+    {
+        // maxArea is set, but width/height absent → maxArea cannot be applied.
+        $service = ImageService::fromInfoJson(self::BASE, [
+            'maxArea' => 1_000_000,
+        ]);
+        self::assertSame([2000, 2000], $service->clamp(2000, 2000));
+    }
+
+    public function testClampLeavesAreaUnchangedWhenUnderCap(): void
+    {
+        $service = ImageService::fromInfoJson(self::BASE, [
+            'width' => 10000,
+            'height' => 10000,
+            'maxArea' => 4_000_000,
+        ]);
+        // 500*500 = 250k well under 4MP cap → returned unchanged.
+        self::assertSame([500, 500], $service->clamp(500, 500));
+    }
+
+    public function testClampBothWithinLimitsReturnsInput(): void
+    {
+        $service = ImageService::fromInfoJson(self::BASE, [
+            'width' => 5000,
+            'height' => 4000,
+            'maxWidth' => 2000,
+            'maxHeight' => 2000,
+        ]);
+        // Both dims already under maxWidth/maxHeight → scale stays 1.0.
+        self::assertSame([800, 600], $service->clamp(800, 600));
+    }
+
+    public function testClampBothScalesByBindingHeight(): void
+    {
+        $service = ImageService::fromInfoJson(self::BASE, [
+            'width' => 5000,
+            'height' => 4000,
+            'maxWidth' => 2000,
+            'maxHeight' => 500,
+        ]);
+        // 1000x2000 — maxHeight/height = 0.25 is tighter than maxWidth/width = 2.0.
+        [$w, $h] = $service->clamp(1000, 2000);
+        self::assertSame(250, $w);
+        self::assertSame(500, $h);
+    }
+
+    public function testClampWidthOnlyWithoutMaxWidthReturnsInput(): void
+    {
+        // No width/height/maxWidth in info.json → maxWidth defaults to 0 (unset).
+        $service = ImageService::fromInfoJson(self::BASE, []);
+        self::assertSame([2000, 0], $service->clamp(2000, 0));
+    }
+
+    public function testClampWidthOnlyUnderMaxWidthReturnsInput(): void
+    {
+        $service = ImageService::fromInfoJson(self::BASE, [
+            'width' => 5000,
+            'height' => 4000,
+            'maxWidth' => 3000,
+        ]);
+        // 1000 ≤ maxWidth 3000 → no clamp.
+        self::assertSame([1000, 0], $service->clamp(1000, 0));
+    }
+
+    public function testClampHeightOnlyWithoutMaxHeightReturnsInput(): void
+    {
+        $service = ImageService::fromInfoJson(self::BASE, []);
+        self::assertSame([0, 2000], $service->clamp(0, 2000));
+    }
+
+    public function testClampHeightOnlyUnderMaxHeightReturnsInput(): void
+    {
+        $service = ImageService::fromInfoJson(self::BASE, [
+            'width' => 5000,
+            'height' => 4000,
+            'maxHeight' => 3000,
+        ]);
+        self::assertSame([0, 1000], $service->clamp(0, 1000));
+    }
+
+    public function testSizeParamDefaultsToFullForZeroPair(): void
+    {
+        // sizedUrl() short-circuits (0,0) to fullUrl() before sizeParam runs,
+        // so probe the private default-return branch via reflection.
+        $method = new \ReflectionMethod(ImageService::class, 'sizeParam');
+        self::assertSame('full', $method->invoke(null, 0, 0));
+    }
 }

@@ -258,4 +258,195 @@ class ManifestTest extends TestCase
     {
         self::assertSame('', Manifest::from([])->rawAttribution());
     }
+
+    public function testRawAttributionEmptyStringFallsThroughToRequiredStatement(): void
+    {
+        // attribution='' must NOT short-circuit; requiredStatement should win.
+        $manifest = Manifest::from([
+            'attribution' => '',
+            'requiredStatement' => ['value' => 'Provided by example'],
+        ]);
+        self::assertSame('Provided by example', $manifest->rawAttribution());
+    }
+
+    /* -------------------- imageServiceIdFor extra branches -------------------- */
+
+    public function testImageServiceIdV2FallbackFromResourceIdRegex(): void
+    {
+        // v2 canvas where resource has NO service object — derive base from @id.
+        $raw = [
+            'sequences' => [['canvases' => [[
+                'width' => 100,
+                'height' => 100,
+                'images' => [['resource' => [
+                    '@id' => 'https://example.org/iiif/2/abc123/full/full/0/default.jpg',
+                ]]],
+            ]]]],
+        ];
+        self::assertSame(
+            'https://example.org/iiif/2/abc123',
+            Manifest::from($raw)->imageServiceIdFor(Page::normalize(1))
+        );
+    }
+
+    public function testImageServiceIdFromServiceList(): void
+    {
+        // v2 canvas where `service` is a list of services rather than an object.
+        $raw = [
+            'sequences' => [['canvases' => [[
+                'width' => 100,
+                'height' => 100,
+                'images' => [['resource' => ['service' => [
+                    ['@id' => 'https://example.org/svc-list-id'],
+                ]]]],
+            ]]]],
+        ];
+        self::assertSame(
+            'https://example.org/svc-list-id',
+            Manifest::from($raw)->imageServiceIdFor(Page::normalize(1))
+        );
+    }
+
+    public function testImageServiceIdFromV3PlainIdKey(): void
+    {
+        // v3 service keyed by plain `id` (no @-prefix).
+        $raw = [
+            'items' => [[
+                'items' => [['items' => [['body' => [
+                    'service' => ['id' => 'https://example.org/v3-svc'],
+                ]]]]],
+            ]],
+        ];
+        self::assertSame(
+            'https://example.org/v3-svc',
+            Manifest::from($raw)->imageServiceIdFor(Page::normalize(1))
+        );
+    }
+
+    public function testImageServiceIdFromServiceListWithPlainIdKey(): void
+    {
+        // Service list whose first entry uses plain `id`.
+        $raw = [
+            'items' => [[
+                'items' => [['items' => [['body' => [
+                    'service' => [
+                        ['id' => 'https://example.org/v3-svc-list'],
+                    ],
+                ]]]]],
+            ]],
+        ];
+        self::assertSame(
+            'https://example.org/v3-svc-list',
+            Manifest::from($raw)->imageServiceIdFor(Page::normalize(1))
+        );
+    }
+
+    /* -------------------- landingUrl extra branches -------------------- */
+
+    public function testLandingUrlFromHomepageObjectAtId(): void
+    {
+        $manifest = Manifest::from([
+            'homepage' => ['@id' => 'https://example.org/home-atid'],
+        ]);
+        self::assertSame('https://example.org/home-atid', $manifest->landingUrl());
+    }
+
+    public function testLandingUrlFromHomepageListOfObjectsWithPlainId(): void
+    {
+        $manifest = Manifest::from([
+            'homepage' => [
+                ['id' => 'https://example.org/home-list-id'],
+            ],
+        ]);
+        self::assertSame('https://example.org/home-list-id', $manifest->landingUrl());
+    }
+
+    public function testLandingUrlFallsThroughFromNonHttpHomepageToRelated(): void
+    {
+        $manifest = Manifest::from([
+            'homepage' => 'mailto:curator@example.org',
+            'related' => 'https://example.org/related-fallback',
+        ]);
+        self::assertSame('https://example.org/related-fallback', $manifest->landingUrl());
+    }
+
+    /* -------------------- findUrlInMetadataByLabels extra branches -------------------- */
+
+    public function testFindUrlInMetadataReturnsEmptyWhenMetadataIsScalar(): void
+    {
+        $manifest = Manifest::from(['metadata' => 'not-an-array']);
+        self::assertSame('', $manifest->findUrlInMetadataByLabels(['Any']));
+    }
+
+    public function testFindUrlInMetadataSkipsNonArrayEntries(): void
+    {
+        $manifest = Manifest::from([
+            'metadata' => [
+                'junk-scalar',
+                ['label' => 'Source URL', 'value' => 'https://example.org/after-junk'],
+            ],
+        ]);
+        self::assertSame(
+            'https://example.org/after-junk',
+            $manifest->findUrlInMetadataByLabels(['Source URL'])
+        );
+    }
+
+    public function testFindUrlInMetadataResolvesLanguageMapValue(): void
+    {
+        // v3 language-map value: requires LocalizedText::resolve + re-parse.
+        $manifest = Manifest::from([
+            'metadata' => [[
+                'label' => ['en' => ['Source URL']],
+                'value' => ['en' => ['https://example.org/lang-map-url']],
+            ]],
+        ]);
+        self::assertSame(
+            'https://example.org/lang-map-url',
+            $manifest->findUrlInMetadataByLabels(['Source URL'], ['en'])
+        );
+    }
+
+    public function testFindUrlInMetadataFallsBackToListRecursion(): void
+    {
+        // Value is a plain list (not a language map) — the foreach-recursion
+        // branch must dig into entries until it finds an http(s) URL.
+        $manifest = Manifest::from([
+            'metadata' => [[
+                'label' => 'Refs',
+                'value' => ['no-url-here', 'https://example.org/recursed'],
+            ]],
+        ]);
+        self::assertSame(
+            'https://example.org/recursed',
+            $manifest->findUrlInMetadataByLabels(['Refs'])
+        );
+    }
+
+    /* -------------------- canvases array_filter defensive branches -------------------- */
+
+    public function testPageCountSkipsNonArrayV3Items(): void
+    {
+        $raw = [
+            'items' => [
+                ['width' => 10, 'height' => 10],
+                'junk-string',
+                ['width' => 20, 'height' => 20],
+            ],
+        ];
+        self::assertSame(2, Manifest::from($raw)->pageCount());
+    }
+
+    public function testPageCountSkipsNonArrayV2Canvases(): void
+    {
+        $raw = [
+            'sequences' => [['canvases' => [
+                ['width' => 10, 'height' => 10],
+                42,
+                ['width' => 20, 'height' => 20],
+                ['width' => 30, 'height' => 30],
+            ]]],
+        ];
+        self::assertSame(3, Manifest::from($raw)->pageCount());
+    }
 }
