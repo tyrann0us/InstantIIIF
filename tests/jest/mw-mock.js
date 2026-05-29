@@ -30,14 +30,17 @@ function createMwEnv( win ) {
 		const wrap = {
 			_el: resolveElements( selector ),
 			on( event, handler ) {
+				// Strip jQuery event namespaces (`event.ns`) so
+				// triggerJqEvent( 'event' ) still finds the handler.
+				const bareEvent = event.split( '.' )[ 0 ];
 				wrap._el.forEach( ( el ) => {
 					if ( ! el.__jqHandlers ) {
 						el.__jqHandlers = {};
 					}
-					if ( ! el.__jqHandlers[ event ] ) {
-						el.__jqHandlers[ event ] = [];
+					if ( ! el.__jqHandlers[ bareEvent ] ) {
+						el.__jqHandlers[ bareEvent ] = [];
 					}
-					el.__jqHandlers[ event ].push( handler );
+					el.__jqHandlers[ bareEvent ].push( handler );
 				} );
 				return wrap;
 			},
@@ -165,6 +168,12 @@ function createMwEnv( win ) {
 
 	class MwTitle {
 		constructor( text ) {
+			if ( typeof text !== 'string' || text === '' ) {
+				// Match real mw.Title's "Invalid title" throw so the
+				// `try { new mw.Title(...) } catch {}` paths in code
+				// under test are exercisable from Jest.
+				throw new Error( 'Invalid title: ' + String( text ) );
+			}
 			this._text = text;
 		}
 
@@ -187,6 +196,19 @@ function createMwEnv( win ) {
 				}
 			}
 			return parts.length ? base + '?' + parts.join( '&' ) : base;
+		}
+
+		// MMV reads file extensions off Title. Real mw.Title infers it
+		// from the dbkey; the stub returns the dot-suffix or empty.
+		getExtension() {
+			const m = /\.([^.]+)$/.exec( this._text || '' );
+			return m ? m[ 1 ] : '';
+		}
+
+		getNamespaceId() {
+			// Treat any "Foo:..." prefix as NS_FILE so the override's
+			// namespace check has something to compare against.
+			return this._text && /^File:/i.test( this._text ) ? 6 : 0;
 		}
 	}
 
