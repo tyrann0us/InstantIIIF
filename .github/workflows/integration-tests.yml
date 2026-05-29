@@ -10,6 +10,12 @@ on:
       - 'tests/phpunit/Integration/**'
       - 'tests/phpunit/Fixtures/**'
       - 'phpunit.integration.xml.dist'
+  # Also run on every push to main so Codecov's snapshot of the
+  # default branch always carries a fresh integration-coverage
+  # upload, even when the PR that just merged didn't touch any
+  # PHP / integration-test files.
+  push:
+    branches: [main]
 
 jobs:
   phpunit-mwit:

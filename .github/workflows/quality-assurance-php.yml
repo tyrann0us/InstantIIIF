@@ -6,6 +6,11 @@ on:
       - 'composer.*'
       - 'phpcs.*'
       - 'phpstan.*'
+  # Also run on every push to main so Codecov's snapshot of the
+  # default branch always carries a fresh PHP-unit coverage upload,
+  # even when the PR that just merged didn't touch any PHP files.
+  push:
+    branches: [main]
 jobs:
   lint-php:
     uses: inpsyde/reusable-workflows/.github/workflows/lint-php.yml@main
