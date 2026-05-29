@@ -1010,7 +1010,9 @@ describe( 'mmv-viewfile redirects to data-iiif-full-url', () => {
 			.dispatchEvent( new Event( 'click', { bubbles: true } ) );
 
 		const stopFn = jest.fn();
-		env.triggerJqEvent( 'mmv-viewfile', { stopImmediatePropagation: stopFn } );
+		env.triggerJqEvent( 'mmv-viewfile', {
+			stopImmediatePropagation: stopFn,
+		} );
 
 		expect( stopFn ).toHaveBeenCalled();
 	} );
@@ -1022,7 +1024,9 @@ describe( 'mmv-viewfile redirects to data-iiif-full-url', () => {
 		await new Promise( ( r ) => setTimeout( r, 10 ) );
 
 		const stopFn = jest.fn();
-		env.triggerJqEvent( 'mmv-viewfile', { stopImmediatePropagation: stopFn } );
+		env.triggerJqEvent( 'mmv-viewfile', {
+			stopImmediatePropagation: stopFn,
+		} );
 
 		// No IIIF context → handler bails before stopping propagation.
 		expect( stopFn ).not.toHaveBeenCalled();
@@ -1046,9 +1050,11 @@ describe( 'click capture resets IIIF state for non-IIIF MediaViewer thumbs', () 
 		// at the next mmv-metadata fire.
 		function FakeShare() {
 			this.$pageInput = {
-				val: jest.fn().mockReturnValue(
-					'https://wiki.example/wiki/File:Foo.jpg#/media/File:Foo'
-				),
+				val: jest
+					.fn()
+					.mockReturnValue(
+						'https://wiki.example/wiki/File:Foo.jpg#/media/File:Foo'
+					),
 			};
 		}
 		FakeShare.prototype.set = jest.fn();
@@ -1105,7 +1111,9 @@ describe( 'click capture resets IIIF state for non-IIIF MediaViewer thumbs', () 
 			.dispatchEvent( new Event( 'click', { bubbles: true } ) );
 
 		// Sanity assert that the DOM is still intact.
-		expect( document.querySelector( 'a.mw-file-description' ) ).not.toBeNull();
+		expect(
+			document.querySelector( 'a.mw-file-description' )
+		).not.toBeNull();
 	} );
 } );
 
@@ -1120,8 +1128,7 @@ describe( 'Share.set / Download.set / EmbedFileFormatter.getThumbnailHtml', () =
 		// then hits the `if (! isCurrentImageIiif) return` guard.
 		buildDom( '<img id="x" data-iiif-title="File:Foo.jpg" />' );
 
-		const initial =
-			'https://wiki.example/wiki/File:Foo#/media/File:Foo';
+		const initial = 'https://wiki.example/wiki/File:Foo#/media/File:Foo';
 		let captured = initial;
 		function FakeShare() {
 			this.$pageInput = {
@@ -1187,7 +1194,9 @@ describe( 'Share.set / Download.set / EmbedFileFormatter.getThumbnailHtml', () =
 
 		const handleSizeSwitch = jest.fn();
 		function FakeDownload() {
-			this.image = { url: 'https://iiif.example/p1/full/full/0/default.jpg' };
+			this.image = {
+				url: 'https://iiif.example/p1/full/full/0/default.jpg',
+			};
 			this.handleSizeSwitch = handleSizeSwitch;
 		}
 		FakeDownload.prototype.set = function () {};

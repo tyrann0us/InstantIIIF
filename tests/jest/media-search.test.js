@@ -367,7 +367,8 @@ describe( 'media-search.js — IIIF provider routing', () => {
 		env.mw.ForeignApi = FakeForeignApi;
 		env.mw.widgets = env.mw.widgets || {};
 		env.mw.widgets.MediaSearchProvider = function () {};
-		env.mw.widgets.MediaSearchProvider.prototype.fetchAPIresults = jest.fn();
+		env.mw.widgets.MediaSearchProvider.prototype.fetchAPIresults =
+			jest.fn();
 		env.mw.loader.using = () => Promise.resolve( () => ( {} ) );
 
 		loadMediaSearch( window );
@@ -498,7 +499,9 @@ describe( 'media-search.js — branch edge cases', () => {
 		// patch falls back to an empty pattern list (any query is
 		// allowed). Verifies the `repo.idPatterns || []` short-circuit.
 		env.config.set( 'wgInstantIIIFRepos', [
-			{ apiurl: 'https://wiki.example.org/w/api.php' /* no idPatterns */ },
+			{
+				apiurl: 'https://wiki.example.org/w/api.php' /* no idPatterns */,
+			},
 		] );
 
 		const { apiCalls } = setupMediaSearchProvider( env.mw );
@@ -528,7 +531,9 @@ describe( 'media-search.js — branch edge cases', () => {
 		await new Promise( ( r ) => setTimeout( r, 0 ) );
 
 		const provider = makeProvider( env.mw, {
-			getUserParams: () => ( { /* no gsrsearch */ } ),
+			getUserParams: () => ( {
+				/* no gsrsearch */
+			} ),
 		} );
 		const results =
 			await env.mw.widgets.MediaSearchProvider.prototype.fetchAPIresults.call(
