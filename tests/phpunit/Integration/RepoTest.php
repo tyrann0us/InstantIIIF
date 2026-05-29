@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace MediaWiki\Extension\InstantIIIF\Tests\Integration;
 
+use MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\IIIFFile;
 use MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\Repo;
 use MediaWiki\MainConfigNames;
+use MediaWiki\Title\Title;
 use MediaWikiIntegrationTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 
@@ -126,5 +128,73 @@ class RepoTest extends MediaWikiIntegrationTestCase
 
         self::assertSame([], $repo->idPatterns());
         self::assertInstanceOf(Repo::class, $repo);
+    }
+
+    /**
+     * `iiifSources()` is the accessor IIIFFile uses to look up the
+     * provider patterns at resolve time — verify the constructor stored
+     * what we passed in.
+     */
+    public function testIiifSourcesReturnsConfiguredArray(): void
+    {
+        $sources = [
+            ['id' => 'fotothek', 'idPattern' => '/^(df_.+)$/'],
+            ['id' => 'slub', 'manifestPattern' => 'https://example/$1/manifest.json'],
+        ];
+        $repo = $this->makeRepo($sources);
+
+        self::assertSame($sources, $repo->iiifSources());
+    }
+
+    /**
+     * `newFile()` is the FileRepo override that makes wikitext
+     * `[[File:…]]` resolve to an IIIFFile rather than a missing-file
+     * placeholder. Pass a Title object directly.
+     */
+    public function testNewFileFromTitleObjectReturnsIiifFile(): void
+    {
+        $repo = $this->makeRepo([
+            ['id' => 'fotothek', 'manifestPattern' => 'https://example/$1/manifest.json'],
+        ]);
+        $title = Title::makeTitle(NS_FILE, 'Df_dk_0007450');
+
+        $file = $repo->newFile($title);
+
+        self::assertInstanceOf(IIIFFile::class, $file);
+        self::assertSame($title, $file->getTitle());
+    }
+
+    /**
+     * `newFile()` also accepts a plain string — Repo runs it through
+     * Title::newFromText. Verifies the string-coercion path.
+     */
+    public function testNewFileFromStringReturnsIiifFile(): void
+    {
+        $repo = $this->makeRepo([
+            ['id' => 'fotothek', 'manifestPattern' => 'https://example/$1/manifest.json'],
+        ]);
+
+        $file = $repo->newFile('File:Df_dk_0007450');
+
+        self::assertInstanceOf(IIIFFile::class, $file);
+        $title = $file->getTitle();
+        self::assertInstanceOf(Title::class, $title);
+        self::assertSame('Df_dk_0007450', $title->getDBkey());
+    }
+
+    /**
+     * When `Title::newFromText` can't parse the input, Repo bails with
+     * an InvalidArgumentException instead of constructing an IIIFFile
+     * with a null Title (which would crash downstream in ensureResolved).
+     */
+    public function testNewFileThrowsForInvalidTitleString(): void
+    {
+        $repo = $this->makeRepo([]);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid title provided');
+
+        // Empty title text → Title::newFromText returns null.
+        $repo->newFile('');
     }
 }
