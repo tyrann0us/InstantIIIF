@@ -299,4 +299,305 @@ describe( 'media-search.js — IIIF provider routing', () => {
 
 		expect( apiCalls[ 0 ].kind ).toBe( 'local' );
 	} );
+
+	test( 'skips malformed wgInstantIIIFRepos entries (null / missing apiurl)', async () => {
+		// Configure a mix of malformed and valid entries — the malformed
+		// ones must be ignored without throwing so the valid one still
+		// routes through our patch.
+		env.config.set( 'wgInstantIIIFRepos', [
+			null,
+			{ /* no apiurl */ idPatterns: [ '/^df_.+$/' ] },
+			{ apiurl: 42 /* not a string */ },
+			{
+				apiurl: 'https://wiki.example.org/w/api.php',
+				idPatterns: [ '/^df_.+$/' ],
+			},
+		] );
+
+		const { apiCalls } = setupMediaSearchProvider( env.mw );
+		loadMediaSearch( window );
+		await new Promise( ( r ) => setTimeout( r, 0 ) );
+
+		const provider = makeProvider( env.mw );
+		await env.mw.widgets.MediaSearchProvider.prototype.fetchAPIresults.call(
+			provider,
+			10
+		);
+
+		// Patch still routes via direct title lookup for the one valid entry.
+		expect( apiCalls ).toHaveLength( 1 );
+	} );
+
+	test( 'returns empty result when the query is empty after unspoof', async () => {
+		// User typed only `.jpg` (or nothing at all) — after stripping
+		// the spoofed extension the query is empty, so the patch must
+		// report depletion without firing an API call.
+		const { apiCalls } = setupMediaSearchProvider( env.mw );
+		loadMediaSearch( window );
+		await new Promise( ( r ) => setTimeout( r, 0 ) );
+
+		const provider = makeProvider( env.mw, {
+			getUserParams: () => ( { gsrsearch: '.jpg' } ),
+		} );
+		const results =
+			await env.mw.widgets.MediaSearchProvider.prototype.fetchAPIresults.call(
+				provider,
+				10
+			);
+
+		expect( apiCalls ).toHaveLength( 0 );
+		expect( results ).toEqual( [] );
+		expect( provider.isDepleted() ).toBe( true );
+	} );
+
+	test( 'reports depletion when the API request rejects', async () => {
+		// Network or 5xx from the imageinfo lookup must not bubble up as
+		// a rejected promise — the queue would treat that as a fatal
+		// error. Resolve to [] instead and flip depletion.
+		const apiCalls = [];
+		function FakeForeignApi() {
+			this.get = ( params ) => {
+				apiCalls.push( params );
+				const p = Promise.reject( new Error( 'simulated 500' ) );
+				p.abort = jest.fn();
+				return p;
+			};
+		}
+		env.mw.Api = function () {};
+		env.mw.ForeignApi = FakeForeignApi;
+		env.mw.widgets = env.mw.widgets || {};
+		env.mw.widgets.MediaSearchProvider = function () {};
+		env.mw.widgets.MediaSearchProvider.prototype.fetchAPIresults =
+			jest.fn();
+		env.mw.loader.using = () => Promise.resolve( () => ( {} ) );
+
+		loadMediaSearch( window );
+		await new Promise( ( r ) => setTimeout( r, 0 ) );
+
+		const provider = makeProvider( env.mw );
+		const results =
+			await env.mw.widgets.MediaSearchProvider.prototype.fetchAPIresults.call(
+				provider,
+				10
+			);
+
+		expect( apiCalls ).toHaveLength( 1 );
+		expect( results ).toEqual( [] );
+		expect( provider.isDepleted() ).toBe( true );
+	} );
+
+	test( 'drops pages whose imageinfo array is missing or empty', async () => {
+		// imagerepository=iiif but no imageinfo[0] (rare: imageinfo
+		// queries can return the marker without per-revision data).
+		// The result list must be empty rather than include `undefined`.
+		const { apiCalls } = setupMediaSearchProvider( env.mw, {
+			apiResponse: {
+				query: {
+					pages: {
+						'-1': {
+							title: 'File:Df_dk_0007450.jpg',
+							imagerepository: 'iiif',
+							// No imageinfo key at all.
+						},
+						'-2': {
+							title: 'File:Df_dk_0007451.jpg',
+							imagerepository: 'iiif',
+							imageinfo: [],
+						},
+					},
+				},
+			},
+		} );
+
+		loadMediaSearch( window );
+		await new Promise( ( r ) => setTimeout( r, 0 ) );
+
+		const provider = makeProvider( env.mw );
+		const results =
+			await env.mw.widgets.MediaSearchProvider.prototype.fetchAPIresults.call(
+				provider,
+				10
+			);
+
+		expect( apiCalls ).toHaveLength( 1 );
+		expect( results ).toEqual( [] );
+	} );
+
+	test( 'compilePatterns skips non-string and empty entries', async () => {
+		// idPatterns may carry junk from configuration — compile what
+		// we can, drop the rest. A bad entry must not stop the search
+		// from matching a good one.
+		env.config.set( 'wgInstantIIIFRepos', [
+			{
+				apiurl: 'https://wiki.example.org/w/api.php',
+				idPatterns: [ '', null, 42, '/^df_.+$/' ],
+			},
+		] );
+
+		const { apiCalls } = setupMediaSearchProvider( env.mw );
+		loadMediaSearch( window );
+		await new Promise( ( r ) => setTimeout( r, 0 ) );
+
+		const provider = makeProvider( env.mw );
+		await env.mw.widgets.MediaSearchProvider.prototype.fetchAPIresults.call(
+			provider,
+			10
+		);
+
+		// The single valid pattern still permits the lookup.
+		expect( apiCalls ).toHaveLength( 1 );
+	} );
+} );
+
+describe( 'media-search.js — patch idempotency', () => {
+	beforeEach( () => {
+		env.config.set( 'wgInstantIIIFRepos', [
+			{
+				apiurl: 'https://wiki.example.org/w/api.php',
+				idPatterns: [],
+			},
+		] );
+	} );
+
+	test( 'does not re-patch a prototype already marked _instantIIIFPatched', async () => {
+		// Simulate the patch having been applied by a previous module
+		// load on the same page — the guard at the top of
+		// patchMediaSearchProvider must short-circuit and leave the
+		// existing fetchAPIresults intact.
+		setupMediaSearchProvider( env.mw );
+		const proto = env.mw.widgets.MediaSearchProvider.prototype;
+		const sentinel = jest.fn( () => Promise.resolve( [] ) );
+		proto.fetchAPIresults = sentinel;
+		proto._instantIIIFPatched = true;
+
+		loadMediaSearch( window );
+		await new Promise( ( r ) => setTimeout( r, 0 ) );
+
+		// Our patch left the prior sentinel in place — no rewrite.
+		expect( proto.fetchAPIresults ).toBe( sentinel );
+	} );
+
+	test( 'does nothing when mw.widgets.MediaSearchProvider is missing', async () => {
+		// `mw.loader.using('mediawiki.widgets.MediaSearch').then(...)`
+		// can resolve without the widget being on the page — the
+		// guard handles a missing prototype without crashing.
+		env.mw.widgets = {}; // No MediaSearchProvider.
+		env.mw.loader.using = () => Promise.resolve( () => ( {} ) );
+
+		loadMediaSearch( window );
+		await new Promise( ( r ) => setTimeout( r, 0 ) );
+
+		// No throw means the test passed. Assert something concrete
+		// so jest reports a meaningful expectation count.
+		expect( env.mw.widgets.MediaSearchProvider ).toBeUndefined();
+	} );
+} );
+
+describe( 'media-search.js — branch edge cases', () => {
+	test( 'repo without idPatterns key still patches (falls through `|| []`)', async () => {
+		// idPatterns is optional in the config — when omitted, the
+		// patch falls back to an empty pattern list (any query is
+		// allowed). Verifies the `repo.idPatterns || []` short-circuit.
+		env.config.set( 'wgInstantIIIFRepos', [
+			{
+				apiurl: 'https://wiki.example.org/w/api.php' /* no idPatterns */,
+			},
+		] );
+
+		const { apiCalls } = setupMediaSearchProvider( env.mw );
+		loadMediaSearch( window );
+		await new Promise( ( r ) => setTimeout( r, 0 ) );
+
+		const provider = makeProvider( env.mw );
+		await env.mw.widgets.MediaSearchProvider.prototype.fetchAPIresults.call(
+			provider,
+			10
+		);
+
+		// No patterns → no idPattern filter → the lookup still runs.
+		expect( apiCalls ).toHaveLength( 1 );
+	} );
+
+	test( 'missing gsrsearch param is normalised to empty string', async () => {
+		// `getUserParams()` may not include `gsrsearch` at all if the
+		// search input is blank — the patch must coerce undefined to
+		// '' before calling .trim() (otherwise the call would throw).
+		env.config.set( 'wgInstantIIIFRepos', [
+			{ apiurl: 'https://wiki.example.org/w/api.php' },
+		] );
+
+		const { apiCalls } = setupMediaSearchProvider( env.mw );
+		loadMediaSearch( window );
+		await new Promise( ( r ) => setTimeout( r, 0 ) );
+
+		const provider = makeProvider( env.mw, {
+			getUserParams: () => ( {
+				/* no gsrsearch */
+			} ),
+		} );
+		const results =
+			await env.mw.widgets.MediaSearchProvider.prototype.fetchAPIresults.call(
+				provider,
+				10
+			);
+
+		expect( apiCalls ).toHaveLength( 0 );
+		expect( results ).toEqual( [] );
+		expect( provider.isDepleted() ).toBe( true );
+	} );
+
+	test( 'empty result promise exposes an abort no-op', async () => {
+		// The xhr returned by fetchAPIresults always carries an
+		// `.abort` callback so the MediaSearchProvider queue can cancel
+		// in-flight requests. For empty/deplete-path results the
+		// abort is a no-op — calling it must not throw.
+		env.config.set( 'wgInstantIIIFRepos', [
+			{
+				apiurl: 'https://wiki.example.org/w/api.php',
+				idPatterns: [ '/^df_.+$/' ],
+			},
+		] );
+
+		setupMediaSearchProvider( env.mw );
+		loadMediaSearch( window );
+		await new Promise( ( r ) => setTimeout( r, 0 ) );
+
+		// `kornhaus` fails the idPattern → returns emptyPromise().
+		const provider = makeProvider( env.mw, {
+			getUserParams: () => ( { gsrsearch: 'kornhaus' } ),
+		} );
+		const xhr =
+			env.mw.widgets.MediaSearchProvider.prototype.fetchAPIresults.call(
+				provider,
+				10
+			);
+
+		expect( typeof xhr.abort ).toBe( 'function' );
+		expect( () => xhr.abort() ).not.toThrow();
+	} );
+
+	test( 'pattern without PHP delimiters is treated as a literal regex', async () => {
+		// PHP regexes carry delimiters (`/^foo$/i`). If a pattern from
+		// config doesn't match the delimiter-shaped pattern, the patch
+		// must still try to compile it as a JS regex source.
+		env.config.set( 'wgInstantIIIFRepos', [
+			{
+				apiurl: 'https://wiki.example.org/w/api.php',
+				idPatterns: [ '^df_' /* no delimiters */ ],
+			},
+		] );
+
+		const { apiCalls } = setupMediaSearchProvider( env.mw );
+		loadMediaSearch( window );
+		await new Promise( ( r ) => setTimeout( r, 0 ) );
+
+		const provider = makeProvider( env.mw );
+		await env.mw.widgets.MediaSearchProvider.prototype.fetchAPIresults.call(
+			provider,
+			10
+		);
+
+		// The literal-compiled regex still matches `df_dk_0007450`.
+		expect( apiCalls ).toHaveLength( 1 );
+	} );
 } );
