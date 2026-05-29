@@ -1404,14 +1404,18 @@ describe( 'buildLocalFileUrl: defensive null returns', () => {
 		env.mw.hook( 'wikipage.content' ).fire();
 
 		// No crash; the lonely img is still there.
-		expect( document.querySelector( 'img[data-iiif-navigate]' ) ).not.toBeNull();
+		expect(
+			document.querySelector( 'img[data-iiif-navigate]' )
+		).not.toBeNull();
 	} );
 
 	test( 'ThumbnailInfo.get with no sampleUrl falls through to the original', async () => {
 		// Defensive: MMV may call .get with an empty/undefined sampleUrl
 		// for placeholder fetches. The patch's `if (sampleUrl)` guard
 		// must skip the URL-rewriting branch.
-		buildDom( '<img data-iiif-page="2" data-iiif-title="File:X.jpg" src="x.jpg" />' );
+		buildDom(
+			'<img data-iiif-page="2" data-iiif-title="File:X.jpg" src="x.jpg" />'
+		);
 
 		const getCalls = [];
 		function FakeThumbnailInfo() {}
@@ -1627,8 +1631,14 @@ describe( 'buildLocalFileUrl: defensive null returns', () => {
 		);
 
 		function FakeEFF() {}
-		FakeEFF.prototype.getThumbnailWikitext = function ( title, width, caption ) {
-			return '[[' + title.getPrefixedText() + '|' + ( caption || '' ) + ']]';
+		FakeEFF.prototype.getThumbnailWikitext = function (
+			title,
+			width,
+			caption
+		) {
+			return (
+				'[[' + title.getPrefixedText() + '|' + ( caption || '' ) + ']]'
+			);
 		};
 
 		env.registerModule( 'mmv', { ThumbnailInfo: class {} } );
