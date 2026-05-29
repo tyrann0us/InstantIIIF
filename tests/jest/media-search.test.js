@@ -546,6 +546,36 @@ describe( 'media-search.js — branch edge cases', () => {
 		expect( provider.isDepleted() ).toBe( true );
 	} );
 
+	test( 'empty result promise exposes an abort no-op', async () => {
+		// The xhr returned by fetchAPIresults always carries an
+		// `.abort` callback so the MediaSearchProvider queue can cancel
+		// in-flight requests. For empty/deplete-path results the
+		// abort is a no-op — calling it must not throw.
+		env.config.set( 'wgInstantIIIFRepos', [
+			{
+				apiurl: 'https://wiki.example.org/w/api.php',
+				idPatterns: [ '/^df_.+$/' ],
+			},
+		] );
+
+		setupMediaSearchProvider( env.mw );
+		loadMediaSearch( window );
+		await new Promise( ( r ) => setTimeout( r, 0 ) );
+
+		// `kornhaus` fails the idPattern → returns emptyPromise().
+		const provider = makeProvider( env.mw, {
+			getUserParams: () => ( { gsrsearch: 'kornhaus' } ),
+		} );
+		const xhr =
+			env.mw.widgets.MediaSearchProvider.prototype.fetchAPIresults.call(
+				provider,
+				10
+			);
+
+		expect( typeof xhr.abort ).toBe( 'function' );
+		expect( () => xhr.abort() ).not.toThrow();
+	} );
+
 	test( 'pattern without PHP delimiters is treated as a literal regex', async () => {
 		// PHP regexes carry delimiters (`/^foo$/i`). If a pattern from
 		// config doesn't match the delimiter-shaped pattern, the patch
