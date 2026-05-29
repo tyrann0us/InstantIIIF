@@ -313,6 +313,64 @@ class HookHandlerTest extends TestCase
         self::assertSame('File:Bsb11610364.jpg', $imgAttrs['data-iiif-title']);
     }
 
+    /**
+     * Defensive guard at the top of onThumbnailBeforeProduceHTML: when the
+     * IIIFFile somehow lacks a Title (no Title constructed for whatever
+     * reason), the hook must bail out cleanly without crashing on later
+     * `$title->getNsText()` calls.
+     */
+    public function testThumbnailHookReturnsTrueWhenFileHasNoTitle(): void
+    {
+        $file = $this->createStub(IIIFFile::class);
+        $file->method('getTitle')->willReturn(null);
+
+        $thumb = $this->createStub(ThumbnailImage::class);
+        $thumb->method('getFile')->willReturn($file);
+
+        $attribs = [];
+        $linkAttribs = [];
+
+        $result = $this->makeHandler()->onThumbnailBeforeProduceHTML(
+            $thumb,
+            $attribs,
+            $linkAttribs
+        );
+
+        self::assertTrue($result);
+        // None of the data-iiif-* attribs were set — we bailed early.
+        self::assertArrayNotHasKey('data-iiif-title', $attribs);
+    }
+
+    /**
+     * When the Title's namespace text is empty (e.g. on a wiki where the
+     * file namespace alias isn't registered), the hook falls back to
+     * NamespaceInfo::getCanonicalName(NS_FILE). Verifying the fallback
+     * branch keeps the data-iiif-title attribute building defensively.
+     */
+    public function testThumbnailHookFallsBackToCanonicalNamespaceWhenNsTextEmpty(): void
+    {
+        // Title with empty nsText forces the fallback branch.
+        $title = new Title('Df_dk_0007450', NS_FILE, '');
+
+        $file = $this->createStub(IIIFFile::class);
+        $file->method('getTitle')->willReturn($title);
+        $file->method('lastTransformPage')->willReturn(1);
+        $file->method('isMultipage')->willReturn(false);
+        $file->method('getWidth')->willReturn(1600);
+        $file->method('getHeight')->willReturn(1324);
+
+        $thumb = $this->createStub(ThumbnailImage::class);
+        $thumb->method('getFile')->willReturn($file);
+
+        $attribs = [];
+        $linkAttribs = [];
+
+        $this->makeHandler()->onThumbnailBeforeProduceHTML($thumb, $attribs, $linkAttribs);
+
+        // NamespaceInfo stub returns 'File' for NS_FILE.
+        self::assertSame('File:Df_dk_0007450.jpg', $attribs['data-iiif-title']);
+    }
+
     public function testThumbnailHookSkipsNonIiifFile(): void
     {
         $file = $this->makeRegularFileMock();

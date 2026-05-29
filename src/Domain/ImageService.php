@@ -160,6 +160,10 @@ final class ImageService
         return [$width, $height];
     }
 
+    /**
+     * Only called from sizedUrl(), which short-circuits to fullUrl()
+     * when both axes are zero — so we never reach this with (0, 0).
+     */
     private static function sizeParam(int $width, int $height): string
     {
         if ($width && $height) {
@@ -168,9 +172,6 @@ final class ImageService
         if ($width) {
             return $width . ',';
         }
-        if ($height) {
-            return ',' . $height;
-        }
-        return 'full';
+        return ',' . $height;
     }
 }

@@ -273,12 +273,4 @@ class ImageServiceTest extends TestCase
         ]);
         self::assertSame([0, 1000], $service->clamp(0, 1000));
     }
-
-    public function testSizeParamDefaultsToFullForZeroPair(): void
-    {
-        // sizedUrl() short-circuits (0,0) to fullUrl() before sizeParam runs,
-        // so probe the private default-return branch via reflection.
-        $method = new \ReflectionMethod(ImageService::class, 'sizeParam');
-        self::assertSame('full', $method->invoke(null, 0, 0));
-    }
 }

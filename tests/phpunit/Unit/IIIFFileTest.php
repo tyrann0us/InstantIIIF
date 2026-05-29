@@ -637,6 +637,251 @@ class IIIFFileTest extends TestCase
         self::assertSame('http://creativecommons.org/publicdomain/mark/1.0/', $licenseUrl);
     }
 
+    /**
+     * Providers without a metadata-label fallback (everyone but SLUB) skip
+     * the search entirely via the early-return guard on the labels list.
+     */
+    public function testGetLicenseUrlFromMetadataReturnsEmptyForProviderWithoutLabels(): void
+    {
+        $file = $this->makeFile($this->loadFixture('manifest-fotothek-v2.json'));
+
+        // Fotothek has no LICENSE_META_KEYS entry → empty result.
+        self::assertSame('', $file->getLicenseUrlFromMetadata([
+            'provider' => 'deutsche-fotothek',
+            'manifestRaw' => [],
+        ]));
+    }
+
+    /**
+     * Defensive guard for malformed resolved arrays: when `manifestRaw`
+     * isn't an array we bail out instead of passing junk into
+     * Manifest::from().
+     */
+    public function testGetLicenseUrlFromMetadataReturnsEmptyWhenManifestRawIsNotArray(): void
+    {
+        $file = $this->makeFile($this->loadFixture('manifest-slub-v2.json'));
+
+        self::assertSame('', $file->getLicenseUrlFromMetadata([
+            'provider' => 'slub-dresden',
+            'manifestRaw' => 'not-an-array',
+        ]));
+    }
+
+    /**
+     * The static `manifestFetcher()` factory is private and is the boundary
+     * where IIIFFile reaches into MediaWikiServices. Verify it returns a
+     * CachedHttpManifestFetcher so the wiring stays correct after refactors.
+     */
+    public function testManifestFetcherFactoryReturnsCachedHttpManifestFetcher(): void
+    {
+        $ref = new \ReflectionMethod(IIIFFile::class, 'manifestFetcher');
+        $fetcher = $ref->invoke(null);
+
+        self::assertInstanceOf(
+            \MediaWiki\Extension\InstantIIIF\Infrastructure\CachedHttpManifestFetcher::class,
+            $fetcher
+        );
+    }
+
+    /**
+     * `fetchJsonCached()` is the seam between IIIFFile and the
+     * Infrastructure HTTP layer. Production code goes through it but the
+     * other tests mock it out — exercise the real body once so the
+     * one-line delegation to manifestFetcher() is covered. Returns null
+     * because the standalone HTTP stub responds with an empty body.
+     */
+    public function testFetchJsonCachedDelegatesToManifestFetcher(): void
+    {
+        $file = $this->makeFile($this->loadFixture('manifest-fotothek-v2.json'));
+        $ref = new \ReflectionMethod(IIIFFile::class, 'fetchJsonCached');
+
+        // The stub HttpRequestFactory returns an MWHttpRequest with an
+        // empty body, so the fetcher decodes to null. The point is to
+        // execute the line, not to assert on the result.
+        $result = $ref->invoke($file, 'https://example.org/missing.json');
+
+        self::assertNull($result);
+    }
+
+    /**
+     * Public helper used by SpecialInstantIIIFInspect — exposes the service
+     * @id for a given canvas as a plain string, with the input page run
+     * through Page::normalize so callers can pass junk.
+     */
+    public function testGetServiceIdForPageReturnsServiceUrl(): void
+    {
+        $manifest = $this->loadFixture('manifest-multipage-v2.json');
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364');
+
+        self::assertStringContainsString('bsb11610364_00001', (string) $file->getServiceIdForPage(1));
+        self::assertStringContainsString('bsb11610364_00002', (string) $file->getServiceIdForPage(2));
+        // Out-of-range page → null.
+        self::assertNull($file->getServiceIdForPage(99999));
+    }
+
+    /**
+     * Public helper used by SpecialInstantIIIFInspect's canvas table —
+     * returns a `[width, height]` tuple.
+     */
+    public function testGetCanvasDimensionsReturnsTuple(): void
+    {
+        $manifest = $this->loadFixture('manifest-multipage-v2.json');
+        $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364');
+
+        self::assertSame([1768, 2536], $file->getCanvasDimensions(1));
+        self::assertSame([1464, 2416], $file->getCanvasDimensions(2));
+        // Out-of-range page → 0×0 (unknown).
+        self::assertSame([0, 0], $file->getCanvasDimensions(99999));
+    }
+
+    /**
+     * When the canvas has no width/height but info.json does, getWidth /
+     * getHeight should fall through to info.json. The standard makeFile()
+     * stub returns `[]` for info.json so this branch is otherwise
+     * unreachable — we override it inline.
+     */
+    public function testGetWidthFallsBackToInfoJsonWhenCanvasDimsMissing(): void
+    {
+        $manifest = [
+            '@context' => 'http://iiif.io/api/presentation/2/context.json',
+            'sequences' => [['canvases' => [[
+                // No width/height on the canvas itself.
+                'images' => [['resource' => ['service' => ['@id' => 'https://example/svc']]]],
+            ]]]],
+        ];
+
+        $title = new Title('Test', NS_FILE, 'File');
+        $repo = $this->createStub(Repo::class);
+        $repo->method('iiifSources')->willReturn([
+            ['id' => 'test', 'manifestPattern' => 'https://example/$1/manifest.json'],
+        ]);
+
+        $file = new class ($repo, $title, $manifest) extends IIIFFile {
+            private array $injectedManifest;
+            public function __construct(Repo $repo, Title $title, array $manifest)
+            {
+                parent::__construct($repo, $title);
+                $this->injectedManifest = $manifest;
+            }
+            protected function ensureResolved(): ?array
+            {
+                if ($this->resolved !== null) {
+                    return $this->resolved;
+                }
+                $this->resolved = [
+                    'provider' => 'test',
+                    'objectId' => 'test',
+                    'manifestUrl' => 'https://example/test/manifest.json',
+                    'manifestRaw' => $this->injectedManifest,
+                ];
+                return $this->resolved;
+            }
+            protected function ensureInfoJsonFor(string $serviceId): array
+            {
+                // Pretend info.json returned these dims.
+                return ['width' => 4000, 'height' => 3000];
+            }
+        };
+
+        self::assertSame(4000, $file->getWidth(1));
+        self::assertSame(3000, $file->getHeight(1));
+    }
+
+    /**
+     * Defensive path in dimensionsForPage: when the manifest can't be
+     * resolved at all (no providers match the title), getWidth must
+     * return 0 instead of crashing on a null manifest reference.
+     */
+    public function testGetWidthReturnsZeroWhenManifestUnresolved(): void
+    {
+        $file = $this->makeFile(null);
+
+        self::assertSame(0, $file->getWidth(1));
+        self::assertSame(0, $file->getHeight(1));
+    }
+
+    /**
+     * `transform()` uses originalDimensionsFor to decide the rendered
+     * dimensions on the resulting ThumbnailImage. When the canvas has no
+     * width/height, that helper falls through to the image service's
+     * info.json. Exercise the fallback so it stays correct (it powers
+     * MMV's data-file-width on info-only manifests).
+     */
+    public function testTransformOriginalDimsFallBackToInfoJsonWhenCanvasMissing(): void
+    {
+        $manifest = [
+            '@context' => 'http://iiif.io/api/presentation/2/context.json',
+            'sequences' => [['canvases' => [[
+                // No width/height on the canvas.
+                'images' => [['resource' => ['service' => ['@id' => 'https://example/svc']]]],
+            ]]]],
+        ];
+
+        $title = new Title('Test', NS_FILE, 'File');
+        $repo = $this->createStub(Repo::class);
+        $repo->method('iiifSources')->willReturn([
+            ['id' => 'test', 'manifestPattern' => 'https://example/$1/manifest.json'],
+        ]);
+
+        $file = new class ($repo, $title, $manifest) extends IIIFFile {
+            private array $injectedManifest;
+            public function __construct(Repo $repo, Title $title, array $manifest)
+            {
+                parent::__construct($repo, $title);
+                $this->injectedManifest = $manifest;
+            }
+            protected function ensureResolved(): ?array
+            {
+                if ($this->resolved !== null) {
+                    return $this->resolved;
+                }
+                $this->resolved = [
+                    'provider' => 'test',
+                    'objectId' => 'test',
+                    'manifestUrl' => 'https://example/test/manifest.json',
+                    'manifestRaw' => $this->injectedManifest,
+                ];
+                return $this->resolved;
+            }
+            protected function ensureInfoJsonFor(string $serviceId): array
+            {
+                return ['width' => 4000, 'height' => 3000];
+            }
+        };
+
+        // transform with no size → originalDimensionsFor takes the info.json
+        // dims, which surface on the ThumbnailImage.
+        $thumb = $file->transform([]);
+        self::assertInstanceOf(ThumbnailImage::class, $thumb);
+        self::assertSame(4000, $thumb->getWidth());
+        self::assertSame(3000, $thumb->getHeight());
+    }
+
+    /**
+     * `ensureResolved()` memoises its result on `$this->resolved` — a
+     * second call must short-circuit at the cache check (line 1) instead
+     * of re-running the provider loop. Use the real-resolve harness and
+     * count fetchJsonCached invocations to prove it.
+     */
+    public function testEnsureResolvedMemoisesResultAcrossCalls(): void
+    {
+        $manifest = $this->loadFixture('manifest-fotothek-v2.json');
+        $title = new Title('Df_dk_0007450', NS_FILE, 'File');
+
+        $file = $this->makeFileWithRealResolve(
+            [['id' => 'deutsche-fotothek', 'manifestPattern' => 'https://fotothek.example/$1/manifest.json']],
+            ['https://fotothek.example/df_dk_0007450/manifest.json' => $manifest],
+            $title,
+        );
+
+        $first = $file->getResolvedManifest();
+        $second = $file->getResolvedManifest();
+
+        self::assertSame($first, $second);
+        // Memoisation: the second call must NOT re-issue a fetch.
+        self::assertSame(1, $file->fetchCalls);
+    }
+
     // ─── Page normalization ───────────────────────────────────────
 
     public function testPageNormalizationClampsToOne(): void
@@ -1183,6 +1428,34 @@ class IIIFFileTest extends TestCase
             );
         } finally {
             \MediaWiki\MediaWikiServices::$mockContentLanguageCode = $previous;
+        }
+    }
+
+    /**
+     * `preferredLanguages()` swallows any Throwable from
+     * MediaWikiServices::getInstance()->getContentLanguage() (extreme
+     * bootstrap failure scenario) and falls through to ['en'] only.
+     * Forces the catch block via the stub's mockContentLanguageThrows.
+     */
+    public function testPreferredLanguagesFallsBackToEnWhenContentLanguageThrows(): void
+    {
+        \MediaWiki\MediaWikiServices::$mockContentLanguageThrows
+            = new \RuntimeException('content language service unavailable');
+
+        try {
+            // Use SLUB so getProviderUrl exercises preferredLanguages().
+            $manifest = $this->loadFixture('manifest-slub-v2.json');
+            $file = $this->makeFile($manifest, 'slub-dresden', '384671365-19500000', '384671365-19500000.jpg');
+
+            // No throw — the catch block absorbs it. The 'en' fallback
+            // still finds the PURL metadata label (which is 'PURL' in the
+            // fixture, not language-keyed).
+            self::assertSame(
+                'http://digital.slub-dresden.de/id384671365-19500000',
+                $file->getProviderUrl()
+            );
+        } finally {
+            \MediaWiki\MediaWikiServices::$mockContentLanguageThrows = null;
         }
     }
 }

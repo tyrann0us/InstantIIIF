@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace MediaWiki\Extension\InstantIIIF\Tests\Unit;
 
 use MediaWiki\Context\RequestContext;
+use MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\IIIFFile;
 use MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\MetadataExtractor;
 use MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\SpecialInstantIIIFInspect;
 use MediaWiki\MediaWikiServices;
@@ -207,5 +208,103 @@ class SpecialInstantIIIFInspectTest extends TestCase
         $json = file_get_contents(self::FIXTURES_DIR . $name);
         self::assertIsString($json);
         return json_decode($json, true);
+    }
+
+    public function testGetDescriptionReturnsAMessage(): void
+    {
+        $special = $this->makeSpecial();
+
+        self::assertInstanceOf(\Message::class, $special->getDescription());
+    }
+
+    public function testGetGroupNameIsWiki(): void
+    {
+        $special = $this->makeSpecial();
+        $ref = new \ReflectionMethod($special, 'getGroupName');
+
+        self::assertSame('wiki', $ref->invoke($special));
+    }
+
+    /**
+     * `metaValue()` is a private helper that surfaces the
+     * NO_TIMESTAMP_SENTINEL as the human-readable "(suppressed)" string
+     * and skips non-array entries. Exercise both via reflection so the
+     * private logic stays guarded.
+     */
+    public function testMetaValueRendersSuppressedForNoTimestampSentinel(): void
+    {
+        $special = $this->makeSpecial();
+        $ref = new \ReflectionMethod($special, 'metaValue');
+
+        $meta = [
+            'DateTime' => ['value' => IIIFFile::NO_TIMESTAMP_SENTINEL, 'source' => 'extension'],
+        ];
+
+        self::assertSame('(suppressed)', $ref->invoke($special, $meta, 'DateTime'));
+    }
+
+    public function testMetaValueReturnsEmptyWhenEntryNotArray(): void
+    {
+        $special = $this->makeSpecial();
+        $ref = new \ReflectionMethod($special, 'metaValue');
+
+        // Entry is a string (or anything not an array) → early return.
+        self::assertSame('', $ref->invoke($special, ['LicenseUrl' => 'not-an-array'], 'LicenseUrl'));
+        // Key missing entirely → also empty.
+        self::assertSame('', $ref->invoke($special, [], 'LicenseUrl'));
+    }
+
+    /**
+     * `formatValue()` is the inspector's per-cell rendering hook. Each
+     * shape — empty, URL, plain text — picks a different HTML element.
+     */
+    public function testFormatValueRendersPlaceholderForEmptyString(): void
+    {
+        $special = $this->makeSpecial();
+        $ref = new \ReflectionMethod($special, 'formatValue');
+
+        $html = $ref->invoke($special, '');
+
+        self::assertStringContainsString('<em>', $html);
+        self::assertStringContainsString('instantiiif-inspect-empty', $html);
+    }
+
+    /**
+     * `renderCanvasTable()` short-circuits to an empty string when the
+     * resolved manifest has no canvases (the v2 fallback for malformed
+     * manifests). Exercise the branch so a regression there doesn't
+     * silently leave the inspector emitting a bare `<h3>` followed by an
+     * empty `<table>`.
+     */
+    public function testRenderCanvasTableReturnsEmptyWhenPageCountIsZero(): void
+    {
+        $special = $this->makeSpecialWithCannedManifest(['no' => 'canvases']);
+        $ref = new \ReflectionMethod($special, 'renderCanvasTable');
+
+        $file = (new \ReflectionMethod($special, 'buildInspectorFile'))
+            ->invoke($special, 'https://example.org/manifest.json', 'inspector');
+
+        self::assertSame('', $ref->invoke($special, $file));
+    }
+
+    /**
+     * `buildInspectorFile()` throws if `Title::makeTitleSafe(NS_FILE,
+     * INSPECT_DBKEY)` returns null. In real MediaWiki this can't happen
+     * for a fixed valid dbkey, but the guard exists as belt-and-braces —
+     * defend the contract so we'd hear about it if MW ever changes.
+     */
+    public function testBuildInspectorFileThrowsWhenTitleConstructionFails(): void
+    {
+        $special = $this->makeSpecial();
+        \MediaWiki\Title\Title::$mockMakeTitleSafeReturnsNull = true;
+
+        try {
+            $ref = new \ReflectionMethod($special, 'buildInspectorFile');
+            $this->expectException(\RuntimeException::class);
+            $this->expectExceptionMessage('Failed to build inspector title');
+            $ref->invoke($special, 'https://example.org/manifest.json', 'inspector');
+        } finally {
+            \MediaWiki\Title\Title::$mockMakeTitleSafeReturnsNull = false;
+        }
     }
 }

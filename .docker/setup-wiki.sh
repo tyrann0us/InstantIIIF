@@ -20,8 +20,20 @@ if [ "${INSTALL_DEV_DEPS:-0}" = "1" ] && [ ! -d /var/www/html/vendor/phpunit ]; 
     fi
     (cd /var/www/html && composer install --no-interaction --prefer-dist \
         --no-progress 2>&1 | tail -3)
+
+    # Install pcov so the Integration suite can produce a Clover XML
+    # for Codecov. Xdebug would also work, but pcov is far lighter —
+    # negligible overhead even when active. PHP_PCOV_DIRECTORY is read
+    # at runtime via the `-d` flag in the workflow, not baked in here.
+    if ! php -m | grep -qi '^pcov$'; then
+        apt-get install -y -qq --no-install-recommends ${PHPIZE_DEPS:-autoconf gcc g++ make pkg-config}
+        printf "\n" | pecl install pcov 2>&1 | tail -3
+        docker-php-ext-enable pcov
+    fi
+
     # Apache's opcache pre-loaded the old vendor before our composer
-    # install touched it; reload so the new autoloader takes effect.
+    # install touched it; reload so the new autoloader (and the pcov
+    # extension we just enabled) take effect.
     apache2ctl graceful || service apache2 reload || true
 fi
 

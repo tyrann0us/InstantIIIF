@@ -298,4 +298,53 @@ class MetadataExtractorTest extends TestCase
         self::assertSame($expectedLabel, $meta['ObjectName']['value']);
     }
 
+    /**
+     * `rights` / `license` is an IIIF v2 list — when none of its entries
+     * is an HTTP URL string, urlFromLicenseField must fall through to ''.
+     * Then MetadataExtractor walks the rest of its license-resolution
+     * chain (provider metadata, provider landing) — both empty here too,
+     * so no LicenseUrl/LicenseShortName appear at all.
+     */
+    public function testLicenseFieldWithListOfNonHttpStringsFallsThrough(): void
+    {
+        $manifest = [
+            '@context' => 'http://iiif.io/api/presentation/2/context.json',
+            'sequences' => [['canvases' => [
+                ['width' => 1, 'height' => 1, 'images' => [['resource' => []]]],
+            ]]],
+            // Non-URL entries in the rights array; the helper iterates,
+            // finds nothing matching `^https?://`, and returns '' (line 146).
+            'rights' => ['not-a-url', 'still-not', ''],
+        ];
+        $file = $this->makeFile($manifest, 'unknown-provider', '');
+
+        $meta = $this->makeExtractor()->extract($file, $this->makeContext());
+
+        self::assertArrayNotHasKey('LicenseUrl', $meta);
+        self::assertArrayNotHasKey('LicenseShortName', $meta);
+    }
+
+    /**
+     * `preferredLanguages()` swallows any Throwable from
+     * $context->getLanguage() (a malformed context, MW bootstrap
+     * failure) and falls through to the content-language → 'en' chain.
+     * Verify the catch-block contract: extraction still succeeds.
+     */
+    public function testPreferredLanguagesFallsThroughWhenContextLanguageThrows(): void
+    {
+        $context = $this->createStub(IContextSource::class);
+        $context->method('getLanguage')
+            ->willThrowException(new \RuntimeException('no language on context'));
+        $context->method('msg')
+            ->willReturnCallback(static fn (string $key) => new \Message($key));
+
+        $manifest = $this->loadFixture('manifest-fotothek-v2.json');
+        $file = $this->makeFile($manifest, 'deutsche-fotothek', 'http://example.org/landing');
+
+        // Extraction must succeed despite the context's broken getLanguage.
+        $meta = $this->makeExtractor('en')->extract($file, $context);
+
+        self::assertArrayHasKey('ObjectName', $meta);
+        self::assertNotSame('', $meta['ObjectName']['value']);
+    }
 }

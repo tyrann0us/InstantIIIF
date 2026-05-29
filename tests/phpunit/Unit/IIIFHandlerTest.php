@@ -8,6 +8,7 @@ use MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\IIIFHandler;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use ThumbnailImage;
 
 /**
  * AC 8: IIIFHandler parses and produces "page{N}-{W}px" param strings
@@ -155,5 +156,84 @@ class IIIFHandlerTest extends TestCase
     public function testGetSizeAndMetadataReturnsEmptyArray(): void
     {
         self::assertSame([], $this->handler->getSizeAndMetadata(null, ''));
+    }
+
+    // ─── getScriptParams ───────────────────────────────────────────
+
+    /**
+     * `getScriptParams` is the MediaHandler hook the parser uses to
+     * shape the thumb URL's query string. Multi-page IIIF files need
+     * the page index to ride along — without it, `?width=800` would
+     * always render canvas 1.
+     */
+    public function testGetScriptParamsCarriesPageAlongsideWidth(): void
+    {
+        $method = new \ReflectionMethod($this->handler, 'getScriptParams');
+
+        self::assertSame(
+            ['width' => 600, 'page' => 3],
+            $method->invoke($this->handler, ['width' => 600, 'page' => 3])
+        );
+    }
+
+    /**
+     * When wikitext omits `page=`, getScriptParams defaults to page 1
+     * (matching makeParamString's behavior and IIIFFile's normalize).
+     */
+    public function testGetScriptParamsDefaultsPageToOne(): void
+    {
+        $method = new \ReflectionMethod($this->handler, 'getScriptParams');
+
+        self::assertSame(
+            ['width' => 800, 'page' => 1],
+            $method->invoke($this->handler, ['width' => 800])
+        );
+    }
+
+    // ─── doTransform ───────────────────────────────────────────────
+
+    /**
+     * `doTransform` exists only to satisfy MediaHandler's abstract
+     * contract — IIIFFile::transform() short-circuits it in production
+     * by overriding File::transform() directly. Still, MW's media
+     * pipeline can reach doTransform via the lower-level handler API,
+     * so it must produce a syntactically valid ThumbnailImage with
+     * the requested dimensions.
+     */
+    public function testDoTransformProducesThumbnailWithRequestedDimensions(): void
+    {
+        $file = $this->createStub(\File::class);
+
+        $result = $this->handler->doTransform(
+            $file,
+            '/unused/dst/path',
+            'https://example.org/full/800,/0/default.jpg',
+            ['width' => 800, 'height' => 600]
+        );
+
+        self::assertInstanceOf(ThumbnailImage::class, $result);
+        self::assertSame('https://example.org/full/800,/0/default.jpg', $result->getUrl());
+        self::assertSame(800, $result->getWidth());
+        self::assertSame(600, $result->getHeight());
+    }
+
+    /**
+     * Missing width/height params coerce to 0 — the thumbnail still
+     * builds (no exceptions) but reports unknown dimensions.
+     */
+    public function testDoTransformCoercesMissingDimensionsToZero(): void
+    {
+        $file = $this->createStub(\File::class);
+
+        $result = $this->handler->doTransform(
+            $file,
+            '/unused/dst',
+            'https://example.org/full/full/0/default.jpg',
+            []
+        );
+
+        self::assertInstanceOf(ThumbnailImage::class, $result);
+        self::assertSame(0, $result->getWidth());
+        self::assertSame(0, $result->getHeight());
     }
 }
