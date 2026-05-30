@@ -989,12 +989,12 @@ describe( 'mmv-viewfile redirects to data-iiif-full-url', () => {
 		// multi-page IIIF docs the patched stripe-button URL is the
 		// current canvas's full IIIF URL, captured at click time.
 		//
-		// jsdom can't actually navigate (and silently no-ops the
-		// `document.location =` assignment with a "Not implemented"
-		// console warning), so we only assert that the handler took
-		// the IIIF branch — proven by stopImmediatePropagation being
-		// invoked, which only happens when both isCurrentImageIiif
-		// and currentIiifFullUrl are set.
+		// jsdom can't actually navigate: `document.location =` triggers
+		// a "Not implemented" error. We suppress it and only assert
+		// that the handler took the IIIF branch — proven by
+		// stopImmediatePropagation being invoked, which only happens
+		// when both isCurrentImageIiif and currentIiifFullUrl are set.
+		jest.spyOn( console, 'error' ).mockImplementation( () => {} );
 		buildDom( `
 			<img id="thumb"
 			     data-iiif-title="File:Bsb11610364.jpg"
