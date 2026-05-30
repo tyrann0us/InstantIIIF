@@ -13,6 +13,7 @@
 # IDE & System Files
 /.DS_Store
 /.idea/
+/.claude/settings.local.json
 
 # Logs & Cache
 *.log
