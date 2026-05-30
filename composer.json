@@ -13,8 +13,8 @@
     "ext-mbstring": "*"
   },
   "require-dev": {
-    "phpstan/phpstan": "^2.1.55",
-    "phpunit/phpunit": "^13.1.12",
+    "phpstan/phpstan": "^2.2.1",
+    "phpunit/phpunit": "^13.1.13",
     "syde/phpcs": "^1.0.1"
   },
   "minimum-stability": "dev",
