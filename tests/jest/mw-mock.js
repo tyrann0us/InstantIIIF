@@ -288,4 +288,19 @@ function loadMediaSearch( win ) {
 	loadResource( win, '../../resources/media-search.js' );
 }
 
-module.exports = { createMwEnv, loadMmvPatch, loadMediaSearch };
+/**
+ * Load and execute resources/ve-media-insert.js. Call after createMwEnv().
+ * Loads the shared iiif-title helpers first.
+ * @param {Window} win
+ */
+function loadVeMediaInsert( win ) {
+	loadResource( win, '../../resources/iiif-title.js' );
+	loadResource( win, '../../resources/ve-media-insert.js' );
+}
+
+module.exports = {
+	createMwEnv,
+	loadMmvPatch,
+	loadMediaSearch,
+	loadVeMediaInsert,
+};
