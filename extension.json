@@ -90,6 +90,13 @@
       ]
     }
   },
+  "attributes": {
+    "VisualEditor": {
+      "PluginModules": [
+        "ext.instantIIIF.veMediaInsert"
+      ]
+    }
+  },
   "ServiceWiringFiles": [
     "src/ServiceWiring.php"
   ],

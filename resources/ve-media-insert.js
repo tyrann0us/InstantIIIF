@@ -11,6 +11,11 @@
 //
 // The `.jpg` the MMV overlay needs on rendered thumbnails is re-added
 // independently by the ThumbnailBeforeProduceHTML hook (data-iiif-title).
+//
+// Registered as a VisualEditorPluginModules attribute (extension.json), so VE
+// loads and runs this only while the editor is initialising — before the user
+// can open the media dialog. We still wait on ext.visualEditor.mwimage (which
+// defines ve.ui.MWMediaDialog) since plugin-module load order isn't guaranteed.
 ( function () {
 	'use strict';
 
@@ -18,14 +23,7 @@
 	// the ext.instantIIIF.title dependency.
 	const iiifTitle = window.iiifTitle;
 
-	// ve.ui.MWMediaDialog lives in the ext.visualEditor.mwimage module, which
-	// is only present once the editor has activated. Patch then — before the
-	// user can open the media dialog.
-	mw.hook( 've.activationComplete' ).add( function () {
-		mw.loader
-			.using( 'ext.visualEditor.mwimage' )
-			.then( patch, function () {} );
-	} );
+	mw.loader.using( 'ext.visualEditor.mwimage' ).then( patch, function () {} );
 
 	function patch() {
 		const ve = window.ve;

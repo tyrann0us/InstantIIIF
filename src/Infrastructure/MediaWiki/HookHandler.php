@@ -45,7 +45,7 @@ class HookHandler implements
         $iiifRepos = $this->collectIIIFRepoDescriptors();
         if ($iiifRepos !== []) {
             $out->addJsConfigVars('wgInstantIIIFRepos', $iiifRepos);
-            $out->addModules(['ext.instantIIIF.mediaSearch', 'ext.instantIIIF.veMediaInsert']);
+            $out->addModules(['ext.instantIIIF.mediaSearch']);
         }
 
         $title = $out->getTitle();

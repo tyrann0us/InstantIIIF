@@ -2,6 +2,11 @@
  * Tests for resources/ve-media-insert.js — the patch that strips the spoofed
  * `.jpg` from IIIF files when VisualEditor's media dialog turns a chosen
  * search result into the inserted node (ve.ui.MWMediaDialog#confirmSelectedImage).
+ *
+ * The module is loaded as a VisualEditorPluginModules attribute, so its IIFE
+ * runs while VE initialises: it resolves ext.visualEditor.mwimage and then
+ * patches the dialog prototype. The tests load the module and flush microtasks
+ * to let that mw.loader.using().then( patch ) chain settle.
  */
 
 'use strict';
@@ -47,7 +52,6 @@ describe( 've-media-insert.js — confirmSelectedImage patch', () => {
 		const { MWMediaDialog, seen } = installFakeVe( window );
 
 		loadVeMediaInsert( window );
-		env.mw.hook( 've.activationComplete' ).fire();
 		await flush();
 
 		const dialog = new MWMediaDialog();
@@ -77,7 +81,6 @@ describe( 've-media-insert.js — confirmSelectedImage patch', () => {
 		const { MWMediaDialog, seen } = installFakeVe( window );
 
 		loadVeMediaInsert( window );
-		env.mw.hook( 've.activationComplete' ).fire();
 		await flush();
 
 		const dialog = new MWMediaDialog();
@@ -93,7 +96,6 @@ describe( 've-media-insert.js — confirmSelectedImage patch', () => {
 		const { MWMediaDialog, seen } = installFakeVe( window );
 
 		loadVeMediaInsert( window );
-		env.mw.hook( 've.activationComplete' ).fire();
 		await flush();
 
 		const dialog = new MWMediaDialog();
@@ -107,7 +109,6 @@ describe( 've-media-insert.js — confirmSelectedImage patch', () => {
 		const { MWMediaDialog, seen } = installFakeVe( window );
 
 		loadVeMediaInsert( window );
-		env.mw.hook( 've.activationComplete' ).fire();
 		await flush();
 
 		const dialog = new MWMediaDialog();
@@ -125,7 +126,6 @@ describe( 've-media-insert.js — confirmSelectedImage patch', () => {
 		const { MWMediaDialog, seen } = installFakeVe( window );
 
 		loadVeMediaInsert( window );
-		env.mw.hook( 've.activationComplete' ).fire();
 		await flush();
 
 		const dialog = new MWMediaDialog();
@@ -141,40 +141,34 @@ describe( 've-media-insert.js — confirmSelectedImage patch', () => {
 		expect( seen[ 0 ].canonicaltitle ).toBe( 'File:Bsb11610364' );
 	} );
 
-	test( 'does not re-patch the prototype on a second activation', async () => {
+	test( 'does not re-patch the prototype when loaded twice', async () => {
 		const { MWMediaDialog } = installFakeVe( window );
 
 		loadVeMediaInsert( window );
-		env.mw.hook( 've.activationComplete' ).fire();
 		await flush();
 		const patched = MWMediaDialog.prototype.confirmSelectedImage;
 
-		// Second activation must short-circuit on the _instantIIIFPatched guard.
-		env.mw.hook( 've.activationComplete' ).fire();
+		// A second module load (e.g. VE re-initialised) must short-circuit on
+		// the _instantIIIFPatched guard rather than wrap the wrapper.
+		loadVeMediaInsert( window );
 		await flush();
 
 		expect( MWMediaDialog.prototype.confirmSelectedImage ).toBe( patched );
 	} );
 
 	test( 'does nothing when ve.ui.MWMediaDialog is unavailable', async () => {
-		// ve present but no ui/dialog (e.g. a stripped editor bundle).
+		// ve present but no dialog class (e.g. a stripped editor bundle).
 		window.ve = { ui: {} };
 
 		loadVeMediaInsert( window );
-		expect( () => {
-			env.mw.hook( 've.activationComplete' ).fire();
-		} ).not.toThrow();
 		await flush();
 
 		expect( window.ve.ui.MWMediaDialog ).toBeUndefined();
 	} );
 
 	test( 'does nothing when ve is absent entirely', async () => {
-		// No window.ve at all.
+		// No window.ve at all — patch guard returns without throwing.
 		loadVeMediaInsert( window );
-		expect( () => {
-			env.mw.hook( 've.activationComplete' ).fire();
-		} ).not.toThrow();
 		await flush();
 
 		expect( window.ve ).toBeUndefined();
@@ -187,7 +181,6 @@ describe( 've-media-insert.js — confirmSelectedImage patch', () => {
 			Promise.reject( new Error( 'load failed' ) );
 
 		loadVeMediaInsert( window );
-		env.mw.hook( 've.activationComplete' ).fire();
 		await flush();
 
 		// No throw / unhandled rejection; prototype stays unpatched.
