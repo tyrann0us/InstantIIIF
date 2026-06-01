@@ -869,7 +869,7 @@ class IIIFFileTest extends TestCase
         $title = new Title('Df_dk_0007450', NS_FILE, 'File');
 
         $file = $this->makeFileWithRealResolve(
-            [['id' => 'deutsche-fotothek', 'manifestPattern' => 'https://fotothek.example/$1/manifest.json']],
+            [['id' => 'deutsche-fotothek', 'idPattern' => '/^df_/', 'manifestPattern' => 'https://fotothek.example/$1/manifest.json']],
             ['https://fotothek.example/df_dk_0007450/manifest.json' => $manifest],
             $title,
         );
@@ -1021,6 +1021,7 @@ class IIIFFileTest extends TestCase
                 // Second entry: matches and returns a valid manifest.
                 [
                     'id' => 'deutsche-fotothek',
+                    'idPattern' => '/^df_/',
                     'manifestPattern' => 'https://fotothek.example/$1/manifest.json',
                 ],
             ],
@@ -1115,7 +1116,10 @@ class IIIFFileTest extends TestCase
         $title = new Title('Df_dk_0007450', NS_FILE, 'File');
         $file = $this->makeFileWithRealResolve(
             [
-                ['id' => 'no-pattern'],
+                // idPattern matches, but there's no manifestPattern to build
+                // a URL from — the manifestPattern guard returns before any
+                // fetch.
+                ['id' => 'no-manifest', 'idPattern' => '/^df_/'],
             ],
             [],
             $title,
@@ -1133,6 +1137,7 @@ class IIIFFileTest extends TestCase
             [
                 [
                     'id' => 'fetches-but-fails',
+                    'idPattern' => '/^df_/',
                     'manifestPattern' => 'https://fotothek.example/$1/manifest.json',
                 ],
             ],
@@ -1154,6 +1159,7 @@ class IIIFFileTest extends TestCase
             [
                 [
                     'id' => 'fotothek',
+                    'idPattern' => '/^df_/',
                     'manifestPattern' => 'https://fotothek.example/$1/manifest.json',
                 ],
             ],
@@ -1171,7 +1177,7 @@ class IIIFFileTest extends TestCase
         $file = $this->makeFileWithRealResolve(
             [
                 // No `id` key → default to 'default'.
-                ['manifestPattern' => 'https://fotothek.example/$1/manifest.json'],
+                ['idPattern' => '/^df_/', 'manifestPattern' => 'https://fotothek.example/$1/manifest.json'],
             ],
             ['https://fotothek.example/df_dk_0007450/manifest.json' => $manifest],
             $title,

@@ -170,6 +170,10 @@ describe( 'media-search.js — IIIF provider routing', () => {
 				url: 'https://iiif.example/full.jpg',
 				title: 'File:Df_dk_0007450.jpg',
 				index: 0,
+				// Flag consumed by ve-media-insert.js to strip the spoofed
+				// `.jpg` from the inserted node (the result title stays
+				// spoofed so VE displays it).
+				isInstantIIIF: true,
 			},
 		] );
 		expect( provider.isDepleted() ).toBe( true );

@@ -68,6 +68,18 @@
         "ext.instantIIIF.title"
       ]
     },
+    "ext.instantIIIF.veMediaInsert": {
+      "scripts": [
+        "resources/ve-media-insert.js"
+      ],
+      "targets": [
+        "desktop",
+        "mobile"
+      ],
+      "dependencies": [
+        "ext.instantIIIF.title"
+      ]
+    },
     "ext.instantIIIF.filePage": {
       "styles": [
         "resources/file-page.css"
@@ -75,6 +87,13 @@
       "targets": [
         "desktop",
         "mobile"
+      ]
+    }
+  },
+  "attributes": {
+    "VisualEditor": {
+      "PluginModules": [
+        "ext.instantIIIF.veMediaInsert"
       ]
     }
   },

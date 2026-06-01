@@ -47,18 +47,29 @@ wfLoadSkin( 'Vector' );
 wfLoadExtension( 'MultimediaViewer' );
 $wgMediaViewerEnableByDefault = true;
 
+# Enable VisualEditor. VE's "Insert media" dialog is the path that
+# exercises resources/media-search.js, # so it must be present for the
+# media-search e2e tests.
+wfLoadExtension( 'VisualEditor' );
+$wgDefaultUserOptions['visualeditor-enable'] = 1;
+$wgVisualEditorEnableWikitext = true;
+# Suppress the one-time "beta welcome" dialog so it doesn't intercept the
+# media-insert dialog in e2e tests.
+$wgVisualEditorShowBetaWelcome = false;
+
 # Load InstantIIIF.
 wfLoadExtension( 'InstantIIIF' );
 
 # Configure IIIF provider pointing to the mock server.
 $wgForeignFileRepos[] = [
-    'name' => 'iiif-test',
+    'name' => 'iiif',
     'class' => \MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\Repo::class,
     'directory' => '/tmp/iiif-repo',
     'hashLevels' => 0,
     'iiifSources' => [
         [
             'id' => 'deutsche-fotothek',
+            'idPattern' => '/^df_[a-z0-9_-]+$/i',
             'manifestPattern' => 'http://iiif-mock:8111/iiif/2/$1/manifest.json',
         ],
     ],

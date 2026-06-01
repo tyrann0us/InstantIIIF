@@ -138,6 +138,12 @@
 			}
 			info.title = page.title;
 			info.index = 0;
+			// Flag the result as ours so ve-media-insert.js can strip the
+			// spoofed `.jpg` when VE turns it into the inserted node. The
+			// spoofed title must stay on `info.title` here — VE filters the
+			// media-search grid by file extension, so dropping it would hide
+			// the result entirely.
+			info.isInstantIIIF = true;
 			out.push( info );
 		} );
 		return out;

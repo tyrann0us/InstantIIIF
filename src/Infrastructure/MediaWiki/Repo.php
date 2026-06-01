@@ -29,7 +29,41 @@ class Repo extends FileRepo
                 ->get(MainConfigNames::UploadDirectory);
         }
         parent::__construct($info);
-        $this->iiifSources = $info['iiifSources'] ?? [];
+        $sources = $info['iiifSources'] ?? [];
+        self::assertSourcesHaveIdPattern($sources);
+        $this->iiifSources = $sources;
+    }
+
+    /**
+     * Every configured IIIF source must declare a non-empty `idPattern`.
+     *
+     * The pattern scopes which identifiers route to a source. Without one a
+     * source would match every identifier, so the resolver would fire an HTTP
+     * manifest request to it for ids that belong to another provider (or to
+     * no provider at all). Requiring it keeps `IIIFFile::tryProvider()` from
+     * making those needless calls. A single-provider setup that genuinely
+     * wants to accept anything can use a catch-all regex such as `/./`.
+     *
+     * @param array<int, mixed> $sources
+     * @throws \InvalidArgumentException when a source omits a valid idPattern.
+     */
+    private static function assertSourcesHaveIdPattern(array $sources): void
+    {
+        foreach ($sources as $index => $src) {
+            $pattern = is_array($src) ? ($src['idPattern'] ?? null) : null;
+            if (is_string($pattern) && $pattern !== '') {
+                continue;
+            }
+            $id = is_array($src) ? ($src['id'] ?? null) : null;
+            $label = is_string($id) && $id !== '' ? "'{$id}'" : "#{$index}";
+            throw new \InvalidArgumentException(
+                // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- internal config-error message, never rendered as web output
+                "InstantIIIF: iiifSources entry {$label} must define a non-empty "
+                . "'idPattern' (a PHP regex with delimiters, e.g. '/^df_/'). It "
+                . 'scopes which identifiers route to the source and prevents '
+                . 'needless IIIF manifest fetches; use \'/./\' to accept any id.'
+            );
+        }
     }
 
     /**
@@ -68,13 +102,7 @@ class Repo extends FileRepo
     {
         $patterns = [];
         foreach ($this->iiifSources as $src) {
-            if (!is_array($src)) {
-                continue;
-            }
-            $pattern = $src['idPattern'] ?? null;
-            if (is_string($pattern) && $pattern !== '') {
-                $patterns[] = $pattern;
-            }
+            $patterns[] = (string) $src['idPattern'];
         }
         return $patterns;
     }
