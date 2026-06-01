@@ -102,13 +102,7 @@ class Repo extends FileRepo
     {
         $patterns = [];
         foreach ($this->iiifSources as $src) {
-            if (!is_array($src)) {
-                continue;
-            }
-            $pattern = $src['idPattern'] ?? null;
-            if (is_string($pattern) && $pattern !== '') {
-                $patterns[] = $pattern;
-            }
+            $patterns[] = (string) $src['idPattern'];
         }
         return $patterns;
     }
