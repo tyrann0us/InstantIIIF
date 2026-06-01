@@ -128,11 +128,11 @@ Once the extension is loaded, IIIF identifiers also resolve in VisualEditor's "I
 
 Each entry in `iiifSources`:
 
-| Key               | Required | Description                                                                                                                                                                                                                                     |
-|-------------------|----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `id`              | yes      | Short provider identifier. Use one of the officially-supported IDs above to enable provider-specific fallbacks; any other string is fine for unsupported providers.                                                                             |
-| `manifestPattern` | yes      | URL of the IIIF manifest. `$1` is replaced with the file identifier.                                                                                                                                                                            |
-| `idPattern`       | no       | PHP regex (**with delimiters**, e.g. `/^df_[a-z0-9_-]+$/i`) constraining which file titles route to this source. When omitted, the source is treated as a catch-all and tried for every identifier — useful when only one source is configured. |
+| Key               | Required | Description                                                                                                                                                                                                                                                                                                           |
+|-------------------|----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `id`              | yes      | Short provider identifier. Use one of the officially-supported IDs above to enable provider-specific fallbacks; any other string is fine for unsupported providers.                                                                                                                                                   |
+| `manifestPattern` | yes      | URL of the IIIF manifest. `$1` is replaced with the file identifier.                                                                                                                                                                                                                                                  |
+| `idPattern`       | yes      | PHP regex (**with delimiters**, e.g. `/^df_[a-z0-9_-]+$/i`) constraining which file titles route to this source. Required: it scopes which identifiers are fetched from this provider, so a manifest request is never fired for ids that belong elsewhere. For a single catch-all source, use `/./` (matches any id). |
 
 Optional globals:
 

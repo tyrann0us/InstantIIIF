@@ -69,6 +69,7 @@ $wgForeignFileRepos[] = [
     'iiifSources' => [
         [
             'id' => 'deutsche-fotothek',
+            'idPattern' => '/^df_[a-z0-9_-]+$/i',
             'manifestPattern' => 'http://iiif-mock:8111/iiif/2/$1/manifest.json',
         ],
     ],

@@ -60,16 +60,36 @@ class RepoTest extends MediaWikiIntegrationTestCase
         );
     }
 
-    public function testIdPatternsSkipsSourcesWithoutPattern(): void
+    public function testConstructorRejectsSourceMissingIdPattern(): void
     {
-        $repo = $this->makeRepo([
-            ['id' => 'fotothek', 'idPattern' => '/^(df_.+)$/'],
-            ['id' => 'noPattern'],
-            ['id' => 'emptyPattern', 'idPattern' => ''],
-            'malformedNonArrayEntry',
-        ]);
+        // idPattern is required so a provider is only fetched for ids that
+        // belong to it; a source without one is a configuration error.
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("entry 'noPattern' must define");
 
-        self::assertSame(['/^(df_.+)$/'], $repo->idPatterns());
+        $this->makeRepo([
+            ['id' => 'fotothek', 'idPattern' => '/^(df_.+)$/'],
+            ['id' => 'noPattern', 'manifestPattern' => 'https://example/$1/manifest.json'],
+        ]);
+    }
+
+    public function testConstructorRejectsEmptyIdPattern(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        $this->makeRepo([
+            ['id' => 'emptyPattern', 'idPattern' => ''],
+        ]);
+    }
+
+    public function testConstructorRejectsNonArraySource(): void
+    {
+        // A non-array entry can't carry an idPattern, so it's rejected and
+        // reported by its index.
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('entry #0 must define');
+
+        $this->makeRepo([ 'malformedNonArrayEntry' ]);
     }
 
     public function testGetInfoExposesApiUrlForJs(): void
@@ -139,7 +159,11 @@ class RepoTest extends MediaWikiIntegrationTestCase
     {
         $sources = [
             ['id' => 'fotothek', 'idPattern' => '/^(df_.+)$/'],
-            ['id' => 'slub', 'manifestPattern' => 'https://example/$1/manifest.json'],
+            [
+                'id' => 'slub',
+                'idPattern' => '/^([0-9].+)$/',
+                'manifestPattern' => 'https://example/$1/manifest.json',
+            ],
         ];
         $repo = $this->makeRepo($sources);
 
@@ -154,7 +178,11 @@ class RepoTest extends MediaWikiIntegrationTestCase
     public function testNewFileFromTitleObjectReturnsIiifFile(): void
     {
         $repo = $this->makeRepo([
-            ['id' => 'fotothek', 'manifestPattern' => 'https://example/$1/manifest.json'],
+            [
+                'id' => 'fotothek',
+                'idPattern' => '/^(df_.+)$/',
+                'manifestPattern' => 'https://example/$1/manifest.json',
+            ],
         ]);
         $title = Title::makeTitle(NS_FILE, 'Df_dk_0007450');
 
@@ -171,7 +199,11 @@ class RepoTest extends MediaWikiIntegrationTestCase
     public function testNewFileFromStringReturnsIiifFile(): void
     {
         $repo = $this->makeRepo([
-            ['id' => 'fotothek', 'manifestPattern' => 'https://example/$1/manifest.json'],
+            [
+                'id' => 'fotothek',
+                'idPattern' => '/^(df_.+)$/',
+                'manifestPattern' => 'https://example/$1/manifest.json',
+            ],
         ]);
 
         $file = $repo->newFile('File:Df_dk_0007450');

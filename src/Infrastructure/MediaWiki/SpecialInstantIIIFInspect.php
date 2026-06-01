@@ -160,9 +160,11 @@ class SpecialInstantIIIFInspect extends SpecialPage
             'iiifSources' => [
                 [
                     'id' => $providerId !== '' ? $providerId : 'inspector',
-                    // No idPattern — catch-all so our synthetic title
-                    // resolves. The URL is used verbatim because it
-                    // doesn't contain $1.
+                    // Catch-all pattern so our synthetic title resolves
+                    // regardless of its id (idPattern is required on every
+                    // source; '/./' matches any non-empty id). The URL is
+                    // used verbatim because it doesn't contain $1.
+                    'idPattern' => '/./',
                     'manifestPattern' => $manifestUrl,
                 ],
             ],

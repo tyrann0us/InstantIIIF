@@ -573,7 +573,11 @@ class IIIFFile extends File
      */
     private function tryProvider(array $src, string $objId): ?array
     {
-        if (isset($src['idPattern']) && !preg_match($src['idPattern'], $objId)) {
+        // A source must declare an idPattern (enforced at Repo construction)
+        // and the id must match it. Bail before any HTTP fetch otherwise, so
+        // a provider is only queried for ids that belong to it.
+        $pattern = $src['idPattern'] ?? null;
+        if (!is_string($pattern) || $pattern === '' || !preg_match($pattern, $objId)) {
             return null;
         }
         $manifestUrl = str_replace('$1', $objId, $src['manifestPattern'] ?? '');
