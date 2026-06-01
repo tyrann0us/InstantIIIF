@@ -45,7 +45,7 @@ test.describe( 'imageinfo API — IIIF upload timestamp', () => {
 		const page = await imageInfo( request, 'File:Df_dk_0007450.jpg' );
 
 		// Sanity: the file resolves through the IIIF repo.
-		expect( page.imagerepository ).toBe( 'iiif-test' );
+		expect( page.imagerepository ).toBe( 'iiif' );
 
 		const info = page.imageinfo[ 0 ];
 		// The misleading "uploaded just now" timestamp must not be emitted.
@@ -59,7 +59,7 @@ test.describe( 'imageinfo API — IIIF upload timestamp', () => {
 	} ) => {
 		const page = await imageInfo( request, 'File:Df_dk_multipage.jpg' );
 
-		expect( page.imagerepository ).toBe( 'iiif-test' );
+		expect( page.imagerepository ).toBe( 'iiif' );
 
 		const info = page.imageinfo[ 0 ];
 		expect( info.timestamp ).toBeFalsy();
