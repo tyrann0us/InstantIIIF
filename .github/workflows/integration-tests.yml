@@ -64,7 +64,7 @@ jobs:
           sed -i 's|/var/www/html/extensions/InstantIIIF/||g' ./integration-clover.xml
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v6
+        uses: codecov/codecov-action@v7
         with:
           files: ./integration-clover.xml
           token: ${{ secrets.CODECOV_TOKEN }}
