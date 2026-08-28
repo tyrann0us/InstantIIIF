@@ -75,6 +75,31 @@ class RepoCacheConfigTest extends TestCase
         self::assertTrue($repo->cacheImagesEnabled());
     }
 
+    public function testNamedBackendIsLeftAloneWhenThumbZoneIsRelocated(): void
+    {
+        // Caching on, but the admin relocated the `thumb` zone to a container
+        // they back themselves and named their backend as a string (the usual
+        // $wgForeignFileRepos shape). withCacheBackend() must early-return and
+        // leave that backend alone: the cache container is not ours to wire.
+        //
+        // The assertion is that construction *succeeds*. Falling through to
+        // buildCacheBackend() here would fatal — the standalone suite stubs
+        // neither FSFileBackend nor MediaWiki's backend service wiring — so
+        // this fails loudly if the early return regresses.
+        $repo = new Repo([
+            'name' => 'iiif',
+            'class' => Repo::class,
+            'backend' => 'admin-managed-backend',
+            'directory' => '/tmp/iiif',
+            'zones' => ['thumb' => ['container' => 'custom', 'url' => '/custom']],
+            'iiifSources' => [
+                ['id' => 'fotothek', 'idPattern' => '/^df_/'],
+            ],
+        ]);
+
+        self::assertTrue($repo->cacheImagesEnabled());
+    }
+
     public function testNonArrayZonesConfigIsCoercedBeforeAddingCacheZone(): void
     {
         // A malformed (non-array) `zones` value must be replaced rather than

@@ -61,6 +61,26 @@ class IIIFImageCacheTest extends MediaWikiIntegrationTestCase
     }
 
     /**
+     * `backend` given as a *string* is a backend name, not an injected object,
+     * so we still build the FSFileBackend ourselves — but under the admin's
+     * name rather than the derived `<repo>-backend` default.
+     */
+    public function testNamedBackendKeepsItsConfiguredName(): void
+    {
+        $repo = $this->makeRepo(['backend' => 'admin-named-backend']);
+
+        $backend = $repo->getBackend();
+        self::assertInstanceOf(FSFileBackend::class, $backend);
+        self::assertSame('admin-named-backend', $backend->getName());
+
+        // Still a working cache zone — naming it must not cost the wiring.
+        $zonePath = $repo->getZonePath('thumb');
+        self::assertIsString($zonePath);
+        self::assertStringContainsString('iiif-cache', $zonePath);
+        self::assertTrue($backend->prepare(['dir' => $zonePath])->isOK());
+    }
+
+    /**
      * On a miss the bytes are fetched once and written through the real
      * backend; the returned URL is served from the local cache zone and the
      * file physically lands under `<directory>/iiif-cache`.
@@ -113,14 +133,17 @@ class IIIFImageCacheTest extends MediaWikiIntegrationTestCase
         self::assertSame($first, $hit->localUrlFor(self::REMOTE));
     }
 
-    private function makeRepo(): Repo
+    /**
+     * @param array<string, mixed> $extra
+     */
+    private function makeRepo(array $extra = []): Repo
     {
-        return new Repo([
+        return new Repo(array_merge([
             'name' => 'iiif',
             'class' => Repo::class,
             'directory' => $this->tmpDir,
             'iiifSources' => [],
-        ]);
+        ], $extra));
     }
 
     private function httpFactoryReturning(bool $ok, string $body): HttpRequestFactory
