@@ -4,15 +4,37 @@ declare(strict_types=1);
 
 namespace MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki;
 
+use FileBackend;
 use FileRepo;
+use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MainConfigNames;
 use MediaWiki\MediaWikiServices;
+use MediaWiki\Status\Status;
 use MediaWiki\Title\Title;
+use MediaWiki\WikiMap\WikiMap;
+use Wikimedia\FileBackend\FSFileBackend;
 
 class Repo extends FileRepo
 {
+    /**
+     * Default image-cache TTL: one year. IIIF object bytes (and their
+     * manifests) are effectively immutable, so caching is enabled by
+     * default; set `imageCacheExpiry => 0` in the repo config to disable.
+     */
+    public const DEFAULT_IMAGE_CACHE_EXPIRY = 31536000;
+
+    /**
+     * Container — and default URL leaf under $wgUploadPath — for cached IIIF
+     * image bytes. Kept in a dedicated zone so the cache is isolated from
+     * genuine local uploads (safe to prune wholesale, excludable from
+     * backups, clearly an ephemeral hot-cache rather than a republication).
+     */
+    private const CACHE_CONTAINER = 'iiif-cache';
+
     /** @var array<int, array<string, mixed>> */
     private array $iiifSources = [];
+
+    private int $imageCacheExpiry = 0;
 
     /**
      * @param array<string, mixed> $info
@@ -20,18 +42,169 @@ class Repo extends FileRepo
     public function __construct(array $info)
     {
         // FileBackendGroup requires 'directory' for auto-backend creation;
-        // IIIF has no local storage, so we default to the upload dir.
-        // Core constructs the repo from the $info array, so there is no
-        // constructor DI here — read the upload dir from the Config service.
+        // it is the FS root of the repo's backend. Core constructs the repo
+        // from the $info array, so there is no constructor DI here — read the
+        // upload dir from the Config service.
         if (!isset($info['directory'])) {
             $info['directory'] = (string) MediaWikiServices::getInstance()
                 ->getMainConfig()
                 ->get(MainConfigNames::UploadDirectory);
         }
+
+        $expiry = (int) ($info['imageCacheExpiry'] ?? self::DEFAULT_IMAGE_CACHE_EXPIRY);
+        if ($expiry > 0) {
+            $info = self::withCacheZone($info);
+            $info = self::withCacheBackend($info);
+        }
+
         parent::__construct($info);
+
+        $this->imageCacheExpiry = $expiry;
         $sources = $info['iiifSources'] ?? [];
         self::assertSourcesHaveIdPattern($sources);
         $this->iiifSources = $sources;
+    }
+
+    /**
+     * Configure the `thumb` zone used to store cached IIIF image bytes.
+     *
+     * Leaves the repo's `directory` (the auto-backend root) untouched and
+     * isolates the cache in its own container served from a dedicated URL,
+     * defaulting to `{$wgUploadPath}/iiif-cache`. Supplying the URL is the
+     * one genuinely new piece of config: FileRepo gives every repo a `thumb`
+     * zone by default but with no `url`, so it cannot be served otherwise.
+     * An explicitly configured `zones.thumb` is respected and never
+     * overridden, so admins can relocate the cache the native FileRepo way.
+     *
+     * @param array<string, mixed> $info
+     * @return array<string, mixed>
+     */
+    private static function withCacheZone(array $info): array
+    {
+        $zones = $info['zones'] ?? [];
+        if (!is_array($zones)) {
+            $zones = [];
+        }
+        if (isset($zones['thumb'])) {
+            return $info;
+        }
+        $uploadPath = (string) MediaWikiServices::getInstance()
+            ->getMainConfig()
+            ->get(MainConfigNames::UploadPath);
+        $zones['thumb'] = [
+            'container' => self::CACHE_CONTAINER,
+            'url' => rtrim($uploadPath, '/') . '/' . self::CACHE_CONTAINER,
+        ];
+        $info['zones'] = $zones;
+        return $info;
+    }
+
+    /**
+     * Give the repo a backend that can actually resolve the cache container.
+     *
+     * `FileBackendGroup` builds a repo's auto-backend straight from the raw
+     * `$wgForeignFileRepos` config — it never instantiates this class, so the
+     * `iiif-cache` container added by withCacheZone() is unknown to it, and
+     * for a plain FileRepo subclass (unlike ForeignAPIRepo) it never defaults
+     * `directory` either, leaving the default-zone containers on relative
+     * paths with a null basePath. Either way every cache write fails with
+     * `backend-fail-invalidpath` / `directorycreateerror` and
+     * IIIFImageCache silently falls back to hotlinking.
+     *
+     * So when we manage the default cache zone and no backend object was
+     * injected, build an FSFileBackend ourselves with absolute container
+     * paths — including `iiif-cache` — mirroring how core wires LocalRepo /
+     * ForeignAPIRepo backends. An explicitly supplied backend (tests,
+     * FileBackendMultiWrite, admin config) is left untouched.
+     *
+     * @param array<string, mixed> $info
+     * @return array<string, mixed>
+     */
+    private static function withCacheBackend(array $info): array
+    {
+        if (($info['backend'] ?? null) instanceof FileBackend) {
+            return $info;
+        }
+        if (!self::usesDefaultCacheZone($info)) {
+            return $info;
+        }
+        $info['backend'] = self::buildCacheBackend($info);
+        return $info;
+    }
+
+    /**
+     * Whether the `thumb` zone routes to our dedicated cache container — i.e.
+     * withCacheZone() supplied it rather than the admin relocating the cache
+     * to a container they are responsible for backing themselves.
+     *
+     * @param array<string, mixed> $info
+     */
+    private static function usesDefaultCacheZone(array $info): bool
+    {
+        $zones = $info['zones'] ?? [];
+        return is_array($zones)
+            && is_array($zones['thumb'] ?? null)
+            && ($zones['thumb']['container'] ?? null) === self::CACHE_CONTAINER;
+    }
+
+    /**
+     * Construct an FSFileBackend with absolute container paths rooted at the
+     * repo's `directory`, including the dedicated `iiif-cache` container. The
+     * service-level wiring (lock manager, temp-file factory, WAN cache,
+     * status wrapper, logger) mirrors what FileBackendGroup injects into an
+     * auto-created backend so the cache behaves like any other FS backend.
+     *
+     * @param array<string, mixed> $info
+     */
+    private static function buildCacheBackend(array $info): FileBackend
+    {
+        $services = MediaWikiServices::getInstance();
+
+        $name = (string) ($info['name'] ?? 'iiif');
+        $backendName = is_string($info['backend'] ?? null) && $info['backend'] !== ''
+            ? (string) $info['backend']
+            : $name . '-backend';
+        $directory = rtrim((string) $info['directory'], '/');
+
+        return new FSFileBackend([
+            'name' => $backendName,
+            'domainId' => WikiMap::getCurrentWikiId(),
+            'basePath' => $directory,
+            'containerPaths' => [
+                "{$name}-public" => $directory,
+                "{$name}-thumb" => $info['thumbDir'] ?? "{$directory}/thumb",
+                "{$name}-transcoded" => $info['transcodedDir'] ?? "{$directory}/transcoded",
+                "{$name}-deleted" => $info['deletedDir'] ?? false,
+                "{$name}-temp" => "{$directory}/temp",
+                self::CACHE_CONTAINER => "{$directory}/" . self::CACHE_CONTAINER,
+            ],
+            'fileMode' => $info['fileMode'] ?? 0644,
+            'directoryMode' => $services->getMainConfig()->get(MainConfigNames::DirectoryMode),
+            'lockManager' => $services->getLockManagerGroupFactory()
+                ->getLockManagerGroup()
+                ->get((string) ($info['lockManager'] ?? 'fsLockManager')),
+            'tmpFileFactory' => $services->getTempFSFileFactory(),
+            'wanCache' => $services->getMainWANObjectCache(),
+            'statusWrapper' => [Status::class, 'wrap'],
+            'logger' => LoggerFactory::getInstance('FileOperation'),
+        ]);
+    }
+
+    /**
+     * Whether local image caching is enabled for this repo.
+     */
+    public function cacheImagesEnabled(): bool
+    {
+        return $this->imageCacheExpiry > 0;
+    }
+
+    /**
+     * Image-cache TTL in seconds; 0 when caching is disabled. Also governs
+     * the manifest/info.json WAN cache (see CachedHttpManifestFetcher).
+     */
+    public function imageCacheExpiry(): int
+    {
+        return $this->imageCacheExpiry;
     }
 
     /**

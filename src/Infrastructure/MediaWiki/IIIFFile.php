@@ -195,7 +195,10 @@ class IIIFFile extends File
     public function getUrl(): string
     {
         $serviceId = $this->serviceIdForPage($this->resolveCurrentPage());
-        return $serviceId !== null ? ImageService::fullUrlFor($serviceId) : '';
+        if ($serviceId === null) {
+            return '';
+        }
+        return $this->cachedImageUrl(ImageService::fullUrlFor($serviceId));
     }
 
     /**
@@ -222,7 +225,10 @@ class IIIFFile extends File
     public function getUrlForPage(int $page): string
     {
         $serviceId = $this->serviceIdForPage(Page::normalize($page));
-        return $serviceId !== null ? ImageService::fullUrlFor($serviceId) : '';
+        if ($serviceId === null) {
+            return '';
+        }
+        return $this->cachedImageUrl(ImageService::fullUrlFor($serviceId));
     }
 
     /**
@@ -416,7 +422,7 @@ class IIIFFile extends File
     ): ThumbnailImage {
 
         if (!$width && !$height) {
-            return new ThumbnailImage($this, $service->fullUrl(), false, [
+            return new ThumbnailImage($this, $this->cachedImageUrl($service->fullUrl()), false, [
                 'width' => $original->width,
                 'height' => $original->height,
                 'page' => $page->value,
@@ -434,11 +440,47 @@ class IIIFFile extends File
             $clampedW = $clampedW ?: (int) round($original->width * ($clampedH / $original->height));
         }
 
-        return new ThumbnailImage($this, $service->sizedUrl($width, $height), false, [
+        $url = $this->cachedImageUrl($service->sizedUrl($width, $height));
+        return new ThumbnailImage($this, $url, false, [
             'width' => $clampedW,
             'height' => $clampedH,
             'page' => $page->value,
         ]);
+    }
+
+    /* -------------------- Local image cache -------------------- */
+
+    /**
+     * Route a remote IIIF Image API URL through the local cache, returning a
+     * local wiki URL when the bytes are cached (or could be fetched + stored)
+     * and falling back to the remote URL otherwise. Applied to both thumbnail
+     * transforms and the full-resolution URL methods so that — once warmed —
+     * neither the inline thumbnails nor MMV's full-size image nor the
+     * imageinfo `url` field send traffic to the provider.
+     */
+    private function cachedImageUrl(string $remoteUrl): string
+    {
+        return $this->imageCache()?->localUrlFor($remoteUrl) ?? $remoteUrl;
+    }
+
+    /**
+     * Build the image cache for this file's repo, or null when the repo is
+     * not an InstantIIIF Repo or has caching disabled. Protected so tests can
+     * override it without a real FileBackend (mirrors manifestFetcher()).
+     */
+    protected function imageCache(): ?ImageCache
+    {
+        $repo = $this->repo;
+        if (!$repo instanceof Repo || !$repo->cacheImagesEnabled()) {
+            return null;
+        }
+        $services = MediaWikiServices::getInstance();
+        return new IIIFImageCache(
+            $repo,
+            $services->getHttpRequestFactory(),
+            $repo->imageCacheExpiry(),
+            (int) $services->getMainConfig()->get('InstantIIIFDefaultTimeout')
+        );
     }
 
     /* -------------------- Resolution helpers -------------------- */
@@ -621,7 +663,7 @@ class IIIFFile extends File
      */
     protected function fetchJsonCached(string $url): ?array
     {
-        return self::manifestFetcher()->fetch($url);
+        return $this->manifestFetcher()->fetch($url);
     }
 
     /**
@@ -638,14 +680,30 @@ class IIIFFile extends File
         return $info;
     }
 
-    private static function manifestFetcher(): ManifestFetcher
+    private function manifestFetcher(): ManifestFetcher
     {
         $services = MediaWikiServices::getInstance();
         return new CachedHttpManifestFetcher(
             $services->getMainWANObjectCache(),
             $services->getHttpRequestFactory(),
-            $services->getMainConfig()
+            $services->getMainConfig(),
+            $this->manifestCacheTtl()
         );
+    }
+
+    /**
+     * TTL for the manifest/info.json WAN cache. Reuses the repo's image-cache
+     * expiry so a single `imageCacheExpiry` setting governs all IIIF caching;
+     * falls back to the fetcher default when caching is off or the repo is
+     * not an InstantIIIF Repo.
+     */
+    private function manifestCacheTtl(): int
+    {
+        $repo = $this->repo;
+        if ($repo instanceof Repo && $repo->imageCacheExpiry() > 0) {
+            return $repo->imageCacheExpiry();
+        }
+        return CachedHttpManifestFetcher::DEFAULT_TTL_SECONDS;
     }
 
     /**

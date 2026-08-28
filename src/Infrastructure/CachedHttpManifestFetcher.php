@@ -19,13 +19,23 @@ use WANObjectCache;
  */
 final class CachedHttpManifestFetcher implements ManifestFetcher
 {
-    private const CACHE_TTL_SECONDS = 3600;
+    /**
+     * Fallback TTL used when the caller does not pass one (e.g. when image
+     * caching is disabled, so the repo has no configured expiry). Manifests
+     * and info.json change rarely, but this keeps a conservative refresh.
+     */
+    public const DEFAULT_TTL_SECONDS = 3600;
+
+    private int $ttl;
 
     public function __construct(
         private WANObjectCache $cache,
         private HttpRequestFactory $httpFactory,
-        private Config $config
+        private Config $config,
+        ?int $ttl = null
     ) {
+
+        $this->ttl = $ttl !== null && $ttl > 0 ? $ttl : self::DEFAULT_TTL_SECONDS;
     }
 
     public function fetch(string $url): ?array
@@ -34,11 +44,11 @@ final class CachedHttpManifestFetcher implements ManifestFetcher
 
         $value = $this->cache->getWithSetCallback(
             $key,
-            self::CACHE_TTL_SECONDS,
+            $this->ttl,
             function () use ($url): ?array {
                 return $this->fetchAndDecode($url);
             },
-            ['pcTTL' => self::CACHE_TTL_SECONDS]
+            ['pcTTL' => $this->ttl]
         );
 
         return is_array($value) ? $value : null;

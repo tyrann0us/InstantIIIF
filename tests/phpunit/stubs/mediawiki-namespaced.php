@@ -196,6 +196,7 @@ namespace MediaWiki {
             public const ScriptPath = 'ScriptPath';
             public const Script = 'Script';
             public const UploadDirectory = 'UploadDirectory';
+            public const UploadPath = 'UploadPath';
         }
     }
 }

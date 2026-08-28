@@ -6,6 +6,8 @@ namespace MediaWiki\Extension\InstantIIIF\Tests\Unit;
 
 use MediaTransformError;
 use MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\IIIFFile;
+use MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\IIIFImageCache;
+use MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\ImageCache;
 use MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\Repo;
 use MediaWiki\Title\Title;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -668,14 +670,16 @@ class IIIFFileTest extends TestCase
     }
 
     /**
-     * The static `manifestFetcher()` factory is private and is the boundary
-     * where IIIFFile reaches into MediaWikiServices. Verify it returns a
+     * The `manifestFetcher()` factory is private and is the boundary where
+     * IIIFFile reaches into MediaWikiServices. Verify it returns a
      * CachedHttpManifestFetcher so the wiring stays correct after refactors.
+     * (Now an instance method, as the TTL is read from the repo.)
      */
     public function testManifestFetcherFactoryReturnsCachedHttpManifestFetcher(): void
     {
+        $file = $this->makeFile($this->loadFixture('manifest-fotothek-v2.json'));
         $ref = new \ReflectionMethod(IIIFFile::class, 'manifestFetcher');
-        $fetcher = $ref->invoke(null);
+        $fetcher = $ref->invoke($file);
 
         self::assertInstanceOf(
             \MediaWiki\Extension\InstantIIIF\Infrastructure\CachedHttpManifestFetcher::class,
@@ -1463,5 +1467,209 @@ class IIIFFileTest extends TestCase
         } finally {
             \MediaWiki\MediaWikiServices::$mockContentLanguageThrows = null;
         }
+    }
+
+    // ─── Local image cache wiring ──────────────────────────────────
+
+    /**
+     * Build a resolving IIIFFile whose imageCache() returns the supplied
+     * cache (or null), so the call sites in transform()/getUrl()/
+     * getUrlForPage() can be checked without a real FileBackend.
+     */
+    private function makeCachingFile(?ImageCache $cache): IIIFFile
+    {
+        $manifest = $this->loadFixture('manifest-fotothek-v2.json');
+        $title = new Title('Df_dk_0007450', NS_FILE, 'File');
+        $repo = $this->createStub(Repo::class);
+        $repo->method('iiifSources')->willReturn([
+            ['id' => 'deutsche-fotothek', 'manifestPattern' => 'https://fotothek.example/$1/manifest.json'],
+        ]);
+
+        return new class ($repo, $title, $manifest, $cache) extends IIIFFile {
+            private ?array $injectedManifest;
+            private ?ImageCache $injectedCache;
+
+            public function __construct(Repo $repo, Title $title, ?array $manifest, ?ImageCache $cache)
+            {
+                parent::__construct($repo, $title);
+                $this->injectedManifest = $manifest;
+                $this->injectedCache = $cache;
+            }
+
+            protected function ensureResolved(): ?array
+            {
+                if ($this->resolved !== null) {
+                    return $this->resolved;
+                }
+                if ($this->injectedManifest === null) {
+                    return null;
+                }
+                $this->resolved = [
+                    'provider' => 'deutsche-fotothek',
+                    'objectId' => 'df_dk_0007450',
+                    'manifestUrl' => 'https://fotothek.example/df_dk_0007450/manifest.json',
+                    'manifestRaw' => $this->injectedManifest,
+                ];
+                return $this->resolved;
+            }
+
+            protected function ensureInfoJsonFor(string $serviceId): array
+            {
+                return [];
+            }
+
+            protected function imageCache(): ?ImageCache
+            {
+                return $this->injectedCache;
+            }
+        };
+    }
+
+    private function fixedCache(string $localUrl): ImageCache
+    {
+        $cache = $this->createStub(ImageCache::class);
+        $cache->method('localUrlFor')->willReturn($localUrl);
+        return $cache;
+    }
+
+    public function testTransformReturnsCachedLocalUrlWhenCacheHits(): void
+    {
+        $local = 'https://wiki.example.org/images/iiif-cache/abc123.jpg';
+        $file = $this->makeCachingFile($this->fixedCache($local));
+
+        $thumb = $file->transform(['width' => 800]);
+
+        self::assertInstanceOf(ThumbnailImage::class, $thumb);
+        self::assertSame($local, $thumb->getUrl());
+    }
+
+    public function testTransformFullResolutionRoutesThroughCache(): void
+    {
+        $local = 'https://wiki.example.org/images/iiif-cache/full.jpg';
+        $file = $this->makeCachingFile($this->fixedCache($local));
+
+        $thumb = $file->transform([]); // no dimensions ⇒ full-res branch
+
+        self::assertInstanceOf(ThumbnailImage::class, $thumb);
+        self::assertSame($local, $thumb->getUrl());
+    }
+
+    public function testGetUrlReturnsCachedLocalUrlWhenCacheHits(): void
+    {
+        $local = 'https://wiki.example.org/images/iiif-cache/abc123.jpg';
+        $file = $this->makeCachingFile($this->fixedCache($local));
+
+        self::assertSame($local, $file->getUrl());
+        self::assertSame($local, $file->getUrlForPage(1));
+    }
+
+    public function testTransformFallsBackToRemoteWhenCacheReturnsNull(): void
+    {
+        // Cache miss/failure ⇒ localUrlFor() returns null ⇒ remote IIIF URL.
+        $cache = $this->createStub(ImageCache::class);
+        $cache->method('localUrlFor')->willReturn(null);
+        $file = $this->makeCachingFile($cache);
+
+        $thumb = $file->transform(['width' => 800]);
+
+        self::assertInstanceOf(ThumbnailImage::class, $thumb);
+        self::assertStringContainsString('800,', $thumb->getUrl());
+        self::assertStringContainsString('df_dk_0007450', $thumb->getUrl());
+    }
+
+    public function testGetUrlFallsBackToRemoteWhenNoCache(): void
+    {
+        // imageCache() returns null entirely ⇒ remote full-resolution URL.
+        $file = $this->makeCachingFile(null);
+
+        self::assertStringContainsString('/full/full/0/default.jpg', $file->getUrl());
+    }
+
+    // ─── imageCache() factory branches ─────────────────────────────
+
+    public function testImageCacheIsNullWhenRepoIsNotIiifRepo(): void
+    {
+        $title = new Title('Df_dk_0007450', NS_FILE, 'File');
+        $vanilla = new \FileRepo(['name' => 'local']);
+        $file = new class ($vanilla, $title) extends IIIFFile {
+            public function __construct(\FileRepo $repo, Title $title)
+            {
+                $this->repo = $repo;
+            }
+
+            public function exposeImageCache(): ?ImageCache
+            {
+                return $this->imageCache();
+            }
+        };
+
+        self::assertNull($file->exposeImageCache());
+    }
+
+    public function testImageCacheIsNullWhenCachingDisabled(): void
+    {
+        $repo = $this->createStub(Repo::class);
+        $repo->method('cacheImagesEnabled')->willReturn(false);
+        $file = $this->makeImageCacheProbe($repo);
+
+        self::assertNull($file->exposeImageCache());
+    }
+
+    public function testImageCacheIsBuiltWhenCachingEnabled(): void
+    {
+        $repo = $this->createStub(Repo::class);
+        $repo->method('cacheImagesEnabled')->willReturn(true);
+        $repo->method('imageCacheExpiry')->willReturn(3600);
+        $file = $this->makeImageCacheProbe($repo);
+
+        self::assertInstanceOf(IIIFImageCache::class, $file->exposeImageCache());
+    }
+
+    private function makeImageCacheProbe(Repo $repo): IIIFFile
+    {
+        $title = new Title('Df_dk_0007450', NS_FILE, 'File');
+        return new class ($repo, $title) extends IIIFFile {
+            public function exposeImageCache(): ?ImageCache
+            {
+                return $this->imageCache();
+            }
+        };
+    }
+
+    // ─── manifest fetcher TTL wiring (fetchJsonCached) ─────────────
+
+    public function testFetchJsonCachedUsesRepoExpiryAsManifestTtl(): void
+    {
+        // Caching repo ⇒ manifestCacheTtl() returns the repo's expiry. The
+        // stubbed HTTP returns an empty body, so the decoded result is null;
+        // we only assert the real fetchJsonCached → manifestFetcher path runs.
+        $repo = $this->createStub(Repo::class);
+        $repo->method('imageCacheExpiry')->willReturn(31536000);
+
+        self::assertNull($this->makeFetchProbe($repo)->exposeFetch('https://example.org/m.json'));
+    }
+
+    public function testFetchJsonCachedFallsBackToDefaultTtlWithoutIiifRepo(): void
+    {
+        // Vanilla FileRepo ⇒ manifestCacheTtl() falls back to the default TTL.
+        $probe = $this->makeFetchProbe(new \FileRepo(['name' => 'local']));
+
+        self::assertNull($probe->exposeFetch('https://example.org/m.json'));
+    }
+
+    private function makeFetchProbe(\FileRepo $repo): IIIFFile
+    {
+        $title = new Title('Df_dk_0007450', NS_FILE, 'File');
+        return new class ($repo, $title) extends IIIFFile {
+            public function __construct(\FileRepo $repo, Title $title)
+            {
+                $this->repo = $repo;
+            }
+
+            public function exposeFetch(string $url): ?array
+            {
+                return $this->fetchJsonCached($url);
+            }
+        };
     }
 }

@@ -31,9 +31,23 @@ class FileRepo {
     public function getInfo(): array {}
 
     public function getBackend(): \FileBackend {}
+
+    public function getZonePath(string $zone): ?string {}
+
+    /** @param string|null $ext @return string|false */
+    public function getZoneUrl(string $zone, $ext = null) {}
+
+    public function getHashPath(string $name): string {}
 }
 
-class FileBackend {}
+class FileBackend {
+    /** @param array<string, mixed> $params */
+    public function fileExists(array $params): bool {}
+    /** @param array<string, mixed> $params */
+    public function prepare(array $params): StatusValue {}
+    /** @param array<string, mixed> $params */
+    public function quickCreate(array $params): StatusValue {}
+}
 
 class MediaTransformOutput {
 }

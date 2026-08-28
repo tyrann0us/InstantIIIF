@@ -229,4 +229,77 @@ class RepoTest extends MediaWikiIntegrationTestCase
         // Empty title text → Title::newFromText returns null.
         $repo->newFile('');
     }
+
+    /**
+     * With caching on (the default), the repo gains a served `thumb` zone in
+     * the dedicated `iiif-cache` container — verified against the real
+     * FileRepo zone machinery (which the standalone unit stub cannot model).
+     */
+    public function testImageCacheZoneIsServedWhenCachingEnabled(): void
+    {
+        $this->overrideConfigValue(MainConfigNames::UploadPath, '/images');
+        $backend = $this->getServiceContainer()
+            ->getRepoGroup()
+            ->getLocalRepo()
+            ->getBackend();
+
+        $repo = new Repo([
+            'name' => 'iiif',
+            'class' => Repo::class,
+            'backend' => $backend,
+            'directory' => '/tmp/iiif',
+            'iiifSources' => [],
+        ]);
+
+        self::assertTrue($repo->cacheImagesEnabled());
+        self::assertSame('/images/iiif-cache', $repo->getZoneUrl('thumb'));
+        self::assertStringContainsString('iiif-cache', (string) $repo->getZonePath('thumb'));
+    }
+
+    /**
+     * With caching disabled the `thumb` zone has no public URL, so the repo
+     * cannot serve a cached copy and IIIFFile keeps hotlinking the provider.
+     */
+    public function testThumbZoneUnservedWhenCachingDisabled(): void
+    {
+        $backend = $this->getServiceContainer()
+            ->getRepoGroup()
+            ->getLocalRepo()
+            ->getBackend();
+
+        $repo = new Repo([
+            'name' => 'iiif',
+            'class' => Repo::class,
+            'backend' => $backend,
+            'directory' => '/tmp/iiif',
+            'imageCacheExpiry' => 0,
+            'iiifSources' => [],
+        ]);
+
+        self::assertFalse($repo->cacheImagesEnabled());
+        self::assertFalse($repo->getZoneUrl('thumb'));
+    }
+
+    /**
+     * An explicitly configured `thumb` zone is respected, not overridden by
+     * the cache-zone defaults.
+     */
+    public function testExplicitThumbZoneIsRespected(): void
+    {
+        $backend = $this->getServiceContainer()
+            ->getRepoGroup()
+            ->getLocalRepo()
+            ->getBackend();
+
+        $repo = new Repo([
+            'name' => 'iiif',
+            'class' => Repo::class,
+            'backend' => $backend,
+            'directory' => '/tmp/iiif',
+            'zones' => ['thumb' => ['container' => 'custom-cache', 'url' => '/custom-cache']],
+            'iiifSources' => [],
+        ]);
+
+        self::assertSame('/custom-cache', $repo->getZoneUrl('thumb'));
+    }
 }
