@@ -12,7 +12,7 @@ jobs:
   e2e-playwright:
     uses: inpsyde/reusable-workflows/.github/workflows/test-playwright.yml@main
     with:
-      NODE_VERSION: '18'
+      NODE_VERSION: '22'
       PLAYWRIGHT_SCRIPT: 'test:e2e'
       PLAYWRIGHT_ARTIFACT_PATH: 'test-results/'
       PLAYWRIGHT_ARTIFACT_RETENTION_DAYS: 7
