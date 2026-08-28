@@ -1,7 +1,7 @@
 {
     "name": "instantiiif",
     "description": "MediaWiki extension to provide a `FileRepo` for file links (`[[File:...]]`) that hotlinks images from IIIF sources (Presentation API v2/v3).",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "author": {
         "name": "Syde GmbH",
         "email": "hello@syde.com",
