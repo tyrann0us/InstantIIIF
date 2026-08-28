@@ -147,6 +147,11 @@ class OutputPage {
     public function addHTML(string $html): void {}
     /** @param string $key @param mixed ...$params */
     public function addWikiMsg(string $key, ...$params): void {}
+    public function getAuthority(): Authority {}
+}
+
+interface Authority {
+    public function isAllowed(string $right): bool;
 }
 
 class Skin {
