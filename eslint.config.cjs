@@ -14,6 +14,7 @@ module.exports = [
 			'**/build/**',
 			'**/node_modules/**',
 			'**/vendor/**',
+			'**/coverage/**',
 			'**/playwright-report/**',
 			'**/test-results/**',
 		],

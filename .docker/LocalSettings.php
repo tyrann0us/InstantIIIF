@@ -66,6 +66,13 @@ $wgForeignFileRepos[] = [
     'class' => \MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\Repo::class,
     'directory' => '/tmp/iiif-repo',
     'hashLevels' => 0,
+    # Local image caching defaults ON. It is disabled here so the e2e suite
+    # keeps asserting the provider-hotlink URLs (enabling it rewrites thumbnail
+    # and full-image URLs to local /images/iiif-cache/ copies). To exercise the
+    # cached path, set this to e.g. 31536000 and ensure the thumb zone is both
+    # writable and web-served (point `directory` at $wgUploadDirectory, or add a
+    # server alias for the cache URL).
+    'imageCacheExpiry' => 0,
     'iiifSources' => [
         [
             'id' => 'deutsche-fotothek',

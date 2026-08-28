@@ -9,4 +9,9 @@ jobs:
   wp-scripts-lint:
     uses: inpsyde/reusable-workflows/.github/workflows/wp-scripts-lint.yml@main
     with:
+      # The reusable workflow defaults to Node 18. @wordpress/eslint-plugin
+      # eagerly loads every rule, and no-unknown-ds-tokens.js require()s an
+      # ESM-only module — which needs a Node with require(ESM) support
+      # (>= 20.19 / >= 22.12). On 18 it dies with ERR_REQUIRE_ESM.
+      NODE_VERSION: '22'
       LINT_TOOLS: '["js", "md-docs"]'

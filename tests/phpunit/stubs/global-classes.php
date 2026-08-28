@@ -18,6 +18,23 @@ if (!interface_exists(Config::class)) {
 if (!class_exists(FileBackend::class)) {
     class FileBackend
     {
+        /** @param array<string, mixed> $params */
+        public function fileExists(array $params): bool
+        {
+            return false;
+        }
+
+        /** @param array<string, mixed> $params */
+        public function prepare(array $params): StatusValue
+        {
+            return new StatusValue(true);
+        }
+
+        /** @param array<string, mixed> $params */
+        public function quickCreate(array $params): StatusValue
+        {
+            return new StatusValue(true);
+        }
     }
 }
 
@@ -48,6 +65,22 @@ if (!class_exists(FileRepo::class)) {
         public function getBackend(): FileBackend
         {
             return new FileBackend();
+        }
+
+        public function getZonePath(string $zone): ?string
+        {
+            return null;
+        }
+
+        /** @return string|false */
+        public function getZoneUrl(string $zone, ?string $ext = null)
+        {
+            return false;
+        }
+
+        public function getHashPath(string $name): string
+        {
+            return '';
         }
     }
 }
@@ -377,6 +410,7 @@ if (!class_exists(GlobalVarConfig::class)) {
                 'InstantIIIFDefaultTimeout' => 5,
                 'ScriptPath' => '/w',
                 'UploadDirectory' => '/var/www/uploads',
+                'UploadPath' => '/images',
                 default => null,
             };
         }

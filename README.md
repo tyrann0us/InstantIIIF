@@ -119,12 +119,13 @@ Once the extension is loaded, IIIF identifiers also resolve in VisualEditor's "I
 
 `$wgForeignFileRepos[]` entry — top level:
 
-| Key           | Required | Description                                                    |
-|---------------|----------|----------------------------------------------------------------|
-| `name`        | yes      | The MediaWiki repo name. Conventionally `iiif`.                |
-| `class`       | yes      | Must be `\MediaWiki\Extension\InstantIIIF\Repo::class`.        |
-| `hashLevels`  | yes      | `0` — IIIF has no local storage, but FileRepo needs the field. |
-| `iiifSources` | yes      | List of provider entries (see below).                          |
+| Key                | Required | Description                                                                                                                                                                  |
+|--------------------|----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `name`             | yes      | The MediaWiki repo name. Conventionally `iiif`.                                                                                                                              |
+| `class`            | yes      | Must be `\MediaWiki\Extension\InstantIIIF\Repo::class`.                                                                                                                      |
+| `hashLevels`       | yes      | `0` — IIIF has no local storage, but FileRepo needs the field.                                                                                                               |
+| `iiifSources`      | yes      | List of provider entries (see below).                                                                                                                                        |
+| `imageCacheExpiry` | no       | Local image-cache TTL in seconds; `0` disables caching. Defaults to `31536000` (one year), so caching is **on by default**. See [Local image caching](#local-image-caching). |
 
 Each entry in `iiifSources`:
 
@@ -136,9 +137,33 @@ Each entry in `iiifSources`:
 
 Optional globals:
 
-| Variable                       | Default | Description                                                          |
-|--------------------------------|---------|----------------------------------------------------------------------|
-| `$wgInstantIIIFDefaultTimeout` | `5`     | HTTP timeout in seconds for fetching IIIF manifests and `info.json`. |
+| Variable                       | Default | Description                                                                                       |
+|--------------------------------|---------|---------------------------------------------------------------------------------------------------|
+| `$wgInstantIIIFDefaultTimeout` | `5`     | HTTP timeout in seconds for fetching IIIF manifests, `info.json`, and (when caching) image bytes. |
+
+### Local image caching
+
+By default InstantIIIF caches image bytes locally so each distinct `(image, size)` is fetched from the provider **at most once**, then served from the wiki afterwards. This applies to inline thumbnails, the full-resolution image (MultimediaViewer, the "Original file" link, the imageinfo `url` field), and — via a shared TTL — the manifest / `info.json` WAN cache. Caching is write-once: a stored copy is never revalidated against the provider, since IIIF object bytes are immutable. The net effect is to keep outbound traffic to the source institution to a minimum.
+
+Cached bytes are stored in a dedicated `thumb` zone, by default in the `iiif-cache` container under `$wgUploadDirectory` (served from `$wgUploadPath/iiif-cache`). The repo's `directory` is left untouched. The cache directory must be **writable by the web server** and the URL must be **web-served**.
+
+```php
+$wgForeignFileRepos[] = [
+    // …name, class, iiifSources…
+    'imageCacheExpiry' => 31536000, // 1 year (default). Set to 0 to disable.
+];
+```
+
+To relocate the cache (e.g. onto a separate volume), configure the `thumb` zone the native FileRepo way — an explicit `zones.thumb` is respected and not overridden:
+
+```php
+    'zones' => [ 'thumb' => [
+        'container' => 'iiif-cache',
+        'url'       => '/iiif-cache',   // must map to the served directory
+    ] ],
+```
+
+There is currently no automatic eviction — cached files accumulate until removed manually (e.g. by pruning the cache directory by modification time).
 
 ## Diagnostics: Special:InstantIIIFInspect
 

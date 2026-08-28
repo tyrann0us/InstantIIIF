@@ -137,6 +137,9 @@ class HookHandlerTest extends TestCase
         $iiifRepo = new Repo([
             'name' => 'iiif',
             'class' => Repo::class,
+            // Inject a backend so the constructor's cache-backend wiring
+            // short-circuits — the standalone suite has no FSFileBackend.
+            'backend' => new \FileBackend(),
             'directory' => '/tmp/iiif',
             'iiifSources' => [
                 ['id' => 'fotothek', 'idPattern' => '/^(df_.+)$/'],

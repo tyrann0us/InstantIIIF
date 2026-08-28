@@ -18,9 +18,11 @@ class Title {
 namespace MediaWiki;
 
 use GlobalVarConfig;
+use MediaWiki\FileBackend\LockManager\LockManagerGroupFactory;
 use MediaWiki\Http\HttpRequestFactory;
 use MediaWiki\Utils\UrlUtils;
 use WANObjectCache;
+use Wikimedia\FileBackend\FSFile\TempFSFileFactory;
 
 class MediaWikiServices {
     public static function getInstance(): self {}
@@ -30,12 +32,16 @@ class MediaWikiServices {
     public function getRepoGroup(): \RepoGroup {}
     public function getContentLanguage(): \Language {}
     public function getUrlUtils(): UrlUtils {}
+    public function getLockManagerGroupFactory(): LockManagerGroupFactory {}
+    public function getTempFSFileFactory(): TempFSFileFactory {}
 }
 
 class MainConfigNames {
     public const ScriptPath = 'ScriptPath';
     public const Script = 'Script';
     public const UploadDirectory = 'UploadDirectory';
+    public const UploadPath = 'UploadPath';
+    public const DirectoryMode = 'DirectoryMode';
 }
 
 namespace MediaWiki\Utils;
@@ -128,4 +134,46 @@ interface ImagePageFileHistoryLineHook {
 
 interface ImagePageShowTOCHook {
     public function onImagePageShowTOC($page, &$toc);
+}
+
+namespace MediaWiki\Status;
+
+class Status extends \StatusValue {
+    public static function wrap(\StatusValue $sv): self {}
+}
+
+namespace MediaWiki\Logger;
+
+use Psr\Log\LoggerInterface;
+
+class LoggerFactory {
+    public static function getInstance(string $channel): LoggerInterface {}
+}
+
+namespace MediaWiki\WikiMap;
+
+class WikiMap {
+    public static function getCurrentWikiId(): string {}
+}
+
+namespace MediaWiki\FileBackend\LockManager;
+
+class LockManagerGroupFactory {
+    public function getLockManagerGroup(string|false $domain = false): LockManagerGroup {}
+}
+
+class LockManagerGroup {
+    public function get(string $name): object {}
+}
+
+namespace Wikimedia\FileBackend\FSFile;
+
+class TempFSFileFactory {
+}
+
+namespace Wikimedia\FileBackend;
+
+class FSFileBackend extends \FileBackend {
+    /** @param array<string, mixed> $config */
+    public function __construct(array $config) {}
 }
