@@ -26,7 +26,7 @@ class HookHandler implements
     }
 
     /**
-     * Load the RL module on every page.
+     * Load the RL modules for the page.
      *
      * On File: pages with an IIIF file, also pass the provider URL as a
      * JS config variable so the client-side code can fix the shared-upload
@@ -43,7 +43,7 @@ class HookHandler implements
         $out->addModules(['ext.instantIIIF.mmvPatch']);
 
         $iiifRepos = $this->collectIIIFRepoDescriptors();
-        if ($iiifRepos !== []) {
+        if ($iiifRepos !== [] && $out->getAuthority()->isAllowed('edit')) {
             $out->addJsConfigVars('wgInstantIIIFRepos', $iiifRepos);
             $out->addModules(['ext.instantIIIF.mediaSearch']);
         }

@@ -167,6 +167,34 @@ class HookHandlerTest extends TestCase
         );
     }
 
+    public function testOnBeforePageDisplaySkipsMediaSearchModuleForUsersWithoutEditRight(): void
+    {
+        $out = new OutputPage();
+        $out->rights = [];
+        $skin = new Skin();
+
+        $iiifRepo = new Repo([
+            'name' => 'iiif',
+            'backend' => new \FileBackend(),
+            'directory' => '/tmp/iiif',
+            'iiifSources' => [
+                ['id' => 'fotothek', 'idPattern' => '/^(df_.+)$/'],
+            ],
+        ]);
+
+        $repoGroup = $this->createStub(\RepoGroup::class);
+        $repoGroup->method('forEachForeignRepo')
+            ->willReturnCallback(static function (callable $cb) use ($iiifRepo): bool {
+                $cb($iiifRepo);
+                return false;
+            });
+
+        $this->makeHandler($repoGroup)->onBeforePageDisplay($out, $skin);
+
+        self::assertNotContains('ext.instantIIIF.mediaSearch', $out->modules);
+        self::assertArrayNotHasKey('wgInstantIIIFRepos', $out->jsConfigVars);
+    }
+
     public function testOnBeforePageDisplaySkipsMediaSearchModuleWithoutIIIFRepo(): void
     {
         $out = new OutputPage();

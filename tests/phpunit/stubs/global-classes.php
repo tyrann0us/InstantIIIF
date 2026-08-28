@@ -332,10 +332,17 @@ if (!class_exists(OutputPage::class)) {
         /** @var list<array{key: string, params: array<int, mixed>}> */
         public array $wikiMessages = [];
         private ?\MediaWiki\Title\Title $title = null;
+        /** @var list<string> Rights the stub authority grants. */
+        public array $rights = ['edit'];
 
         public function setTitle(\MediaWiki\Title\Title $title): void
         {
             $this->title = $title;
+        }
+
+        public function getAuthority(): Authority
+        {
+            return new Authority($this->rights);
         }
 
         public function addModules($modules): void
@@ -378,6 +385,21 @@ if (!class_exists(OutputPage::class)) {
 if (!class_exists(Skin::class)) {
     class Skin
     {
+    }
+}
+
+if (!class_exists(Authority::class)) {
+    class Authority
+    {
+        /** @param list<string> $rights */
+        public function __construct(private array $rights = [])
+        {
+        }
+
+        public function isAllowed(string $right): bool
+        {
+            return in_array($right, $this->rights, true);
+        }
     }
 }
 
