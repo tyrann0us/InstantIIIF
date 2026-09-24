@@ -7,7 +7,6 @@ namespace MediaWiki\Extension\InstantIIIF\Tests\Unit;
 use MediaTransformError;
 use MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\IIIFFile;
 use MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\IIIFImageCache;
-use MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\ImageCache;
 use MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\Repo;
 use MediaWiki\Title\Title;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -1472,7 +1471,7 @@ class IIIFFileTest extends TestCase
      * cache (or null), so the call sites in transform()/getUrl()/
      * getUrlForPage() can be checked without a real FileBackend.
      */
-    private function makeCachingFile(?ImageCache $cache): IIIFFile
+    private function makeCachingFile(?IIIFImageCache $cache): IIIFFile
     {
         $manifest = $this->loadFixture('manifest-fotothek-v2.json');
         $title = new Title('Df_dk_0007450', NS_FILE, 'File');
@@ -1483,9 +1482,9 @@ class IIIFFileTest extends TestCase
 
         return new class ($repo, $title, $manifest, $cache) extends IIIFFile {
             private ?array $injectedManifest;
-            private ?ImageCache $injectedCache;
+            private ?IIIFImageCache $injectedCache;
 
-            public function __construct(Repo $repo, Title $title, ?array $manifest, ?ImageCache $cache)
+            public function __construct(Repo $repo, Title $title, ?array $manifest, ?IIIFImageCache $cache)
             {
                 parent::__construct($repo, $title);
                 $this->injectedManifest = $manifest;
@@ -1514,16 +1513,16 @@ class IIIFFileTest extends TestCase
                 return [];
             }
 
-            protected function imageCache(): ?ImageCache
+            protected function imageCache(): ?IIIFImageCache
             {
                 return $this->injectedCache;
             }
         };
     }
 
-    private function fixedCache(string $localUrl): ImageCache
+    private function fixedCache(string $localUrl): IIIFImageCache
     {
-        $cache = $this->createStub(ImageCache::class);
+        $cache = $this->createStub(IIIFImageCache::class);
         $cache->method('localUrlFor')->willReturn($localUrl);
         return $cache;
     }
@@ -1562,7 +1561,7 @@ class IIIFFileTest extends TestCase
     public function testTransformFallsBackToRemoteWhenCacheReturnsNull(): void
     {
         // Cache miss/failure ⇒ localUrlFor() returns null ⇒ remote IIIF URL.
-        $cache = $this->createStub(ImageCache::class);
+        $cache = $this->createStub(IIIFImageCache::class);
         $cache->method('localUrlFor')->willReturn(null);
         $file = $this->makeCachingFile($cache);
 
@@ -1593,7 +1592,7 @@ class IIIFFileTest extends TestCase
                 $this->repo = $repo;
             }
 
-            public function exposeImageCache(): ?ImageCache
+            public function exposeImageCache(): ?IIIFImageCache
             {
                 return $this->imageCache();
             }
@@ -1625,7 +1624,7 @@ class IIIFFileTest extends TestCase
     {
         $title = new Title('Df_dk_0007450', NS_FILE, 'File');
         return new class ($repo, $title) extends IIIFFile {
-            public function exposeImageCache(): ?ImageCache
+            public function exposeImageCache(): ?IIIFImageCache
             {
                 return $this->imageCache();
             }

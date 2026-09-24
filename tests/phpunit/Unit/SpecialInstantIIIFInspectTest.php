@@ -42,15 +42,6 @@ class SpecialInstantIIIFInspectTest extends TestCase
         RequestContext::reset();
     }
 
-    public function testKnownProviderIdsAreReturned(): void
-    {
-        $ids = SpecialInstantIIIFInspect::knownProviderIds();
-
-        self::assertContains('deutsche-fotothek', $ids);
-        self::assertContains('slub-dresden', $ids);
-        self::assertContains('digitale-sammlungen', $ids);
-    }
-
     public function testEmptyFormRendersOnlyIntroAndForm(): void
     {
         $special = $this->makeSpecial();

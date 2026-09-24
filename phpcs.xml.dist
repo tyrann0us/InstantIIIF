@@ -17,5 +17,4 @@
   <config name="testVersion" value="8.4-"/>
   <config name="text_domain" value="instantiiif"/>
   <file>./src</file>
-  <exclude-pattern>.phpstan/stubs/*</exclude-pattern>
 </ruleset>

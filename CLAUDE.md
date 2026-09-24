@@ -28,11 +28,11 @@ npm test                 # Jest unit tests
 npm run test:watch       # Jest in watch mode
 npm run test:coverage    # Jest with coverage
 npm run test:e2e         # Playwright end-to-end (requires Docker)
-npm run lint:js          # ESLint (requires Node ≥ 22)
+npm run lint:js          # ESLint (Node per `engines`: ^20.19, ^22.13 or ≥ 24)
 npm run lint:md          # Markdown lint
 ```
 
-`lint:js` requires Node ≥ 22 (a dependency uses `require()` of an ES module; CI runs Node 22). The nvm default may be older, so switch versions first:
+`lint:js` needs a Node version from `package.json` `engines` (a dependency uses `require()` of an ES module, which older Node 20 releases reject). The local nvm default may be older, so switch first:
 
 ```bash
 . ~/.nvm/nvm.sh && nvm use 22
@@ -64,10 +64,9 @@ src/
 │   ├── Dimensions.php             # Width/height value object with "unknown" state
 │   ├── LocalizedText.php          # Resolves IIIF language-map arrays to a string
 │   ├── LicenseClassifier.php      # Maps license URLs → short names for MMV
-│   ├── ProviderQuirks.php         # Provider-specific metadata fallbacks
-│   └── ManifestFetcher.php        # Interface: fetch + decode a manifest by URL
+│   └── ProviderQuirks.php         # Provider-specific metadata fallbacks
 ├── Infrastructure/
-│   ├── CachedHttpManifestFetcher.php  # ManifestFetcher impl: WAN cache + HTTP
+│   ├── CachedHttpManifestFetcher.php  # Fetch + decode IIIF JSON: WAN cache + HTTP
 │   └── MediaWiki/                 # MW adapter layer
 │       ├── HookHandler.php        # 5 hooks: BeforePageDisplay, ThumbnailBeforeProduceHTML,
 │       │                          #   ImagePageFileHistoryLine, ImagePageShowTOC,

@@ -5,19 +5,18 @@ declare(strict_types=1);
 namespace MediaWiki\Extension\InstantIIIF\Infrastructure;
 
 use Config;
-use MediaWiki\Extension\InstantIIIF\Domain\ManifestFetcher;
 use MediaWiki\Http\HttpRequestFactory;
 use WANObjectCache;
 
 /**
- * MediaWiki adapter for the ManifestFetcher port. Goes through the
+ * Fetches IIIF JSON documents (manifests and info.json) through the
  * main WAN cache, with an in-process pcTTL so a single request that
  * fetches a manifest and its info.json doesn't decode the JSON twice.
  *
  * Returns the decoded array directly so callers don't have to repeat
  * the json_decode and is_array checks.
  */
-final class CachedHttpManifestFetcher implements ManifestFetcher
+final class CachedHttpManifestFetcher
 {
     /**
      * Fallback TTL for callers that don't pass one (e.g. when image caching
@@ -38,6 +37,14 @@ final class CachedHttpManifestFetcher implements ManifestFetcher
         $this->ttl = $ttl !== null && $ttl > 0 ? $ttl : self::DEFAULT_TTL_SECONDS;
     }
 
+    /**
+     * Fetch and decode JSON at $url. Returns null on any failure
+     * (HTTP error, non-JSON body, decode error). Callers should treat
+     * null as "resource unavailable" and not retry within the same
+     * request.
+     *
+     * @return array<string, mixed>|null
+     */
     public function fetch(string $url): ?array
     {
         $key = $this->cache->makeKey('InstantIIIF', 'json', md5($url));
