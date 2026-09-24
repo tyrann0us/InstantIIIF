@@ -1,6 +1,6 @@
 {
   "name": "InstantIIIF",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "author": [
     "[https://github.com/tyrann0us Philipp Bammes]"
   ],
@@ -15,6 +15,7 @@
   "AutoloadNamespaces": {
     "MediaWiki\\Extension\\InstantIIIF\\": "src/"
   },
+  "callback": "MediaWiki\\Extension\\InstantIIIF\\Infrastructure\\MediaWiki\\Repo::onRegistration",
   "config": {
     "InstantIIIFDefaultTimeout": {
       "value": 5,

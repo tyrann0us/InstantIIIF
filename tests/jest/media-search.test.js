@@ -535,9 +535,7 @@ describe( 'media-search.js — branch edge cases', () => {
 		await new Promise( ( r ) => setTimeout( r, 0 ) );
 
 		const provider = makeProvider( env.mw, {
-			getUserParams: () => ( {
-				/* no gsrsearch */
-			} ),
+			getUserParams: () => ( { /* no gsrsearch */ } ),
 		} );
 		const results =
 			await env.mw.widgets.MediaSearchProvider.prototype.fetchAPIresults.call(

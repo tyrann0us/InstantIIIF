@@ -42,7 +42,7 @@ wfLoadExtension( 'InstantIIIF' );
 
 $wgForeignFileRepos[] = [
     'name'        => 'iiif',
-    'class'       => \MediaWiki\Extension\InstantIIIF\Repo::class,
+    'class'       => \MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\Repo::class,
     'hashLevels'  => 0,
     'iiifSources' => [
         [
@@ -122,7 +122,7 @@ Once the extension is loaded, IIIF identifiers also resolve in VisualEditor's "I
 | Key                | Required | Description                                                                                                                                                                  |
 |--------------------|----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `name`             | yes      | The MediaWiki repo name. Conventionally `iiif`.                                                                                                                              |
-| `class`            | yes      | Must be `\MediaWiki\Extension\InstantIIIF\Repo::class`.                                                                                                                      |
+| `class`            | yes      | Must be `\MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\Repo::class`.                                                                                             |
 | `hashLevels`       | yes      | `0` — IIIF has no local storage, but FileRepo needs the field.                                                                                                               |
 | `iiifSources`      | yes      | List of provider entries (see below).                                                                                                                                        |
 | `imageCacheExpiry` | no       | Local image-cache TTL in seconds; `0` disables caching. Defaults to `31536000` (one year), so caching is **on by default**. See [Local image caching](#local-image-caching). |
@@ -145,7 +145,7 @@ Optional globals:
 
 By default InstantIIIF caches image bytes locally so each distinct `(image, size)` is fetched from the provider **at most once**, then served from the wiki afterwards. This applies to inline thumbnails, the full-resolution image (MultimediaViewer, the "Original file" link, the imageinfo `url` field), and — via a shared TTL — the manifest / `info.json` WAN cache. Caching is write-once: a stored copy is never revalidated against the provider, since IIIF object bytes are immutable. The net effect is to keep outbound traffic to the source institution to a minimum.
 
-Cached bytes are stored in a dedicated `thumb` zone, by default in the `iiif-cache` container under `$wgUploadDirectory` (served from `$wgUploadPath/iiif-cache`). The repo's `directory` is left untouched. The cache directory must be **writable by the web server** and the URL must be **web-served**.
+Cached bytes are stored in a dedicated `thumb` zone, by default in the `iiif-cache` container under `$wgUploadDirectory` (served from `$wgUploadPath/iiif-cache`). The repo's `directory` (the cache root) defaults to `$wgUploadDirectory` and need not be set. The cache directory must be **writable by the web server** and the URL must be **web-served**.
 
 ```php
 $wgForeignFileRepos[] = [

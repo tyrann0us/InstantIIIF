@@ -4,14 +4,10 @@ declare(strict_types=1);
 
 namespace MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki;
 
-use FileBackend;
 use FileRepo;
-use MediaWiki\Logger\LoggerFactory;
 use MediaWiki\MainConfigNames;
 use MediaWiki\MediaWikiServices;
-use MediaWiki\Status\Status;
 use MediaWiki\Title\Title;
-use MediaWiki\WikiMap\WikiMap;
 use Wikimedia\FileBackend\FSFileBackend;
 
 class Repo extends FileRepo
@@ -41,10 +37,10 @@ class Repo extends FileRepo
      */
     public function __construct(array $info)
     {
-        // FileBackendGroup requires 'directory' for auto-backend creation;
-        // it is the FS root of the repo's backend. Core constructs the repo
-        // from the $info array, so there is no constructor DI here — read the
-        // upload dir from the Config service.
+        // onRegistration() defaults 'directory' in the global config; this
+        // covers repos constructed directly (tests) without that callback.
+        // Core constructs the repo from the $info array, so there is no
+        // constructor DI here — read the upload dir from the Config service.
         if (!isset($info['directory'])) {
             $info['directory'] = (string) MediaWikiServices::getInstance()
                 ->getMainConfig()
@@ -54,7 +50,6 @@ class Repo extends FileRepo
         $expiry = (int) ($info['imageCacheExpiry'] ?? self::DEFAULT_IMAGE_CACHE_EXPIRY);
         if ($expiry > 0) {
             $info = self::withCacheZone($info);
-            $info = self::withCacheBackend($info);
         }
 
         parent::__construct($info);
@@ -100,94 +95,103 @@ class Repo extends FileRepo
     }
 
     /**
-     * Give the repo a backend that can actually resolve the cache container.
+     * extension.json registration callback.
      *
      * `FileBackendGroup` builds a repo's auto-backend straight from the raw
-     * `$wgForeignFileRepos` config — it never instantiates this class, so the
-     * `iiif-cache` container added by withCacheZone() is unknown to it, and
-     * for a plain FileRepo subclass (unlike ForeignAPIRepo) it never defaults
-     * `directory` either, leaving the default-zone containers on relative
-     * paths with a null basePath. Either way every cache write fails with
-     * `backend-fail-invalidpath` / `directorycreateerror` and
-     * IIIFImageCache silently falls back to hotlinking.
+     * `$wgForeignFileRepos` config — it never instantiates this class — and
+     * reads `directory` unguarded, which core only defaults for
+     * ForeignAPIRepo. Left alone, every request logs an "Undefined array key
+     * directory" warning, and the auto-backend knows neither absolute paths
+     * nor the `iiif-cache` container, so every cache write fails.
      *
-     * So when we manage the default cache zone and no backend object was
-     * injected, build an FSFileBackend ourselves with absolute container
-     * paths — including `iiif-cache` — mirroring how core wires LocalRepo /
-     * ForeignAPIRepo backends. An explicitly supplied backend (tests,
-     * FileBackendMultiWrite, admin config) is left untouched.
-     *
-     * @param array<string, mixed> $info
-     * @return array<string, mixed>
+     * Runs after SetupDynamicConfig (upload dir resolved, backend names
+     * assigned) and before any service is built, so it may only touch
+     * globals.
      */
-    private static function withCacheBackend(array $info): array
+    public static function onRegistration(): void
     {
-        if (($info['backend'] ?? null) instanceof FileBackend) {
-            return $info;
-        }
-        if (!self::usesDefaultCacheZone($info)) {
-            return $info;
-        }
-        $info['backend'] = self::buildCacheBackend($info);
-        return $info;
+        global $wgForeignFileRepos, $wgFileBackends, $wgUploadDirectory, $wgDirectoryMode;
+
+        self::registerCacheBackends(
+            $wgForeignFileRepos,
+            $wgFileBackends,
+            (string) $wgUploadDirectory,
+            (int) $wgDirectoryMode
+        );
     }
 
     /**
-     * Whether the `thumb` zone routes to our dedicated cache container — i.e.
-     * withCacheZone() supplied it rather than the admin relocating the cache
-     * to a container they are responsible for backing themselves.
+     * Default `directory` for every InstantIIIF repo entry and, where we manage
+     * the default cache zone, register a named FSFileBackend in
+     * `$wgFileBackends` that includes the `iiif-cache` container. A registered
+     * backend makes FileBackendGroup skip its auto-backend for the repo and
+     * build ours lazily via ObjectFactory, as core does for LocalRepo.
+     *
+     * An injected backend object (tests, FileBackendMultiWrite, admin config),
+     * a relocated `zones.thumb`, disabled caching or an already registered
+     * backend name are left untouched.
+     *
+     * @param array<int|string, array<string, mixed>> $repos
+     * @param array<int|string, array<string, mixed>> $backends
+     */
+    public static function registerCacheBackends(
+        array &$repos,
+        array &$backends,
+        string $uploadDirectory,
+        int $directoryMode
+    ): void {
+
+        $registered = array_column($backends, 'name');
+        foreach ($repos as &$info) {
+            if (!is_a((string) ($info['class'] ?? ''), self::class, true)) {
+                continue;
+            }
+            $info['directory'] ??= $uploadDirectory;
+            $name = (string) $info['name'];
+            $info['backend'] ??= $name . '-backend';
+            $taken = in_array($info['backend'], $registered, true);
+            if ($taken || !self::managesCacheBackend($info)) {
+                continue;
+            }
+            $directory = rtrim((string) $info['directory'], '/');
+            // Same shape as FileBackendGroup's auto-backend, plus our container.
+            $backends[] = [
+                'name' => $info['backend'],
+                'class' => FSFileBackend::class,
+                'lockManager' => $info['lockManager'] ?? 'fsLockManager',
+                'containerPaths' => [
+                    "{$name}-public" => $directory,
+                    "{$name}-thumb" => $info['thumbDir'] ?? "{$directory}/thumb",
+                    "{$name}-transcoded" => $info['transcodedDir'] ?? "{$directory}/transcoded",
+                    "{$name}-deleted" => $info['deletedDir'] ?? false,
+                    "{$name}-temp" => "{$directory}/temp",
+                    self::CACHE_CONTAINER => "{$directory}/" . self::CACHE_CONTAINER,
+                ],
+                'fileMode' => $info['fileMode'] ?? 0644,
+                'directoryMode' => $directoryMode,
+            ];
+            $registered[] = $info['backend'];
+        }
+        unset($info);
+    }
+
+    /**
+     * Whether caching is on, no backend object was injected, and the `thumb`
+     * zone is (or will be, via withCacheZone()) our dedicated cache container
+     * rather than one the admin relocated and backs themselves.
      *
      * @param array<string, mixed> $info
      */
-    private static function usesDefaultCacheZone(array $info): bool
+    private static function managesCacheBackend(array $info): bool
     {
+        $expiry = (int) ($info['imageCacheExpiry'] ?? self::DEFAULT_IMAGE_CACHE_EXPIRY);
+        if ($expiry <= 0 || is_object($info['backend'] ?? null)) {
+            return false;
+        }
         $zones = $info['zones'] ?? [];
-        return is_array($zones)
-            && is_array($zones['thumb'] ?? null)
-            && ($zones['thumb']['container'] ?? null) === self::CACHE_CONTAINER;
-    }
-
-    /**
-     * Construct an FSFileBackend with absolute container paths rooted at the
-     * repo's `directory`, including the dedicated `iiif-cache` container. The
-     * service-level wiring (lock manager, temp-file factory, WAN cache,
-     * status wrapper, logger) mirrors what FileBackendGroup injects into an
-     * auto-created backend so the cache behaves like any other FS backend.
-     *
-     * @param array<string, mixed> $info
-     */
-    private static function buildCacheBackend(array $info): FileBackend
-    {
-        $services = MediaWikiServices::getInstance();
-
-        $name = (string) ($info['name'] ?? 'iiif');
-        $backendName = is_string($info['backend'] ?? null) && $info['backend'] !== ''
-            ? (string) $info['backend']
-            : $name . '-backend';
-        $directory = rtrim((string) $info['directory'], '/');
-
-        return new FSFileBackend([
-            'name' => $backendName,
-            'domainId' => WikiMap::getCurrentWikiId(),
-            'basePath' => $directory,
-            'containerPaths' => [
-                "{$name}-public" => $directory,
-                "{$name}-thumb" => $info['thumbDir'] ?? "{$directory}/thumb",
-                "{$name}-transcoded" => $info['transcodedDir'] ?? "{$directory}/transcoded",
-                "{$name}-deleted" => $info['deletedDir'] ?? false,
-                "{$name}-temp" => "{$directory}/temp",
-                self::CACHE_CONTAINER => "{$directory}/" . self::CACHE_CONTAINER,
-            ],
-            'fileMode' => $info['fileMode'] ?? 0644,
-            'directoryMode' => $services->getMainConfig()->get(MainConfigNames::DirectoryMode),
-            'lockManager' => $services->getLockManagerGroupFactory()
-                ->getLockManagerGroup()
-                ->get((string) ($info['lockManager'] ?? 'fsLockManager')),
-            'tmpFileFactory' => $services->getTempFSFileFactory(),
-            'wanCache' => $services->getMainWANObjectCache(),
-            'statusWrapper' => [Status::class, 'wrap'],
-            'logger' => LoggerFactory::getInstance('FileOperation'),
-        ]);
+        $thumb = is_array($zones) ? ($zones['thumb'] ?? null) : null;
+        return $thumb === null
+            || (is_array($thumb) && ($thumb['container'] ?? null) === self::CACHE_CONTAINER);
     }
 
     /**
