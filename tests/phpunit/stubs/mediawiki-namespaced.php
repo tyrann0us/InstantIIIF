@@ -170,7 +170,7 @@ namespace MediaWiki {
                 return new Utils\UrlUtils();
             }
 
-            /** Override-able stub so tests can set the wiki's content language. */
+            /** Tests override this to set the wiki's content language. */
             public static string $mockContentLanguageCode = 'en';
 
             /**

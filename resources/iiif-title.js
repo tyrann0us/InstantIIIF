@@ -1,12 +1,12 @@
 /**
- * Client-side mirror of src/IIIFTitle.php.
+ * Client-side mirror of src/Infrastructure/MediaWiki/IIIFTitle.php.
  *
  * Single source of truth for the spoofed image-extension regex and the
  * spoof/unspoof helpers consumed by mmv-patch.js (share URLs, embed
  * wikitext) and media-search.js (VE media-dialog query rewriting).
  *
  * Only ".jpg" is ever appended, so only ".jpg" needs to be recognised on
- * the way back. Keep `SPOOF_EXTENSION` in sync with src/IIIFTitle.php.
+ * the way back. Keep `SPOOF_EXTENSION` in sync with src/Infrastructure/MediaWiki/IIIFTitle.php.
  */
 ( function () {
 	'use strict';

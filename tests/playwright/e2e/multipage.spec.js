@@ -134,7 +134,7 @@ test.describe( 'Multi-page IIIF documents', () => {
 		} );
 
 		// The MMV download URL must reflect canvas 2, not the manifest's
-		// first canvas — otherwise clicking "Download original" (or the
+		// first canvas. Otherwise clicking "Download original" (or the
 		// image itself, which uses the same href) opens the wrong page.
 		// The button may be CSS-hidden (`.empty` class) but its href is
 		// still inspectable.
@@ -173,8 +173,8 @@ test.describe( 'Multi-page IIIF documents', () => {
 		await expect( moreBtn ).toHaveCount( 1, { timeout: 10_000 } );
 
 		// The href must (a) include the page param, and (b) NOT carry the
-		// spoofed `.jpg` extension that Hooks adds to data-iiif-title —
-		// otherwise the local file-page's File usage listing won't
+		// spoofed `.jpg` extension that Hooks adds to data-iiif-title.
+		// Otherwise the local file-page's File usage listing won't
 		// recognise the file as used in any article. Accept both URL
 		// forms: `/wiki/File:Foo?page=N` (short URLs) and
 		// `/index.php?title=File:Foo&page=N` (MW's fallback for query
@@ -265,8 +265,8 @@ test.describe( 'Multi-page IIIF documents', () => {
 		} );
 
 		// Wait for the MMV credit/title to populate, which signals MMV
-		// has finished wiring up its event handlers — clicking the reuse
-		// button before that is a silent no-op (the dialog never opens).
+		// has finished wiring up its event handlers. Clicking the reuse
+		// button before that does nothing (the dialog never opens).
 		await expect
 			.poll(
 				async () => await page.locator( '.mw-mmv-credit' ).innerText(),
@@ -278,9 +278,9 @@ test.describe( 'Multi-page IIIF documents', () => {
 
 		// The reuse dialog contains several cdx-text-input fields (share
 		// URL, HTML embed, wikitext). The wikitext one must (a) carry
-		// `|page=2`, and (b) NOT carry the spoofed `.jpg` extension —
+		// `|page=2`, and (b) NOT carry the spoofed `.jpg` extension:
 		// copy-pasting `[[File:Foo.jpg|…]]` would break the file link
-		// in the target article since the real file is `File:Foo`.
+		// in the target article, since the real file is `File:Foo`.
 		await expect
 			.poll(
 				async () =>
@@ -328,8 +328,8 @@ test.describe( 'Multi-page IIIF documents', () => {
 
 		// Select the "Original" size: MMV stores the canvas-1 URL it
 		// got from its iiurlparam-less initial imageinfo call and wires
-		// the download button to it — we override the download pane's
-		// local `image.url` to the canvas the user is actually viewing.
+		// the download button to it. Our patch sets the download pane's
+		// local `image.url` to the canvas the user is viewing.
 		const sizeSelect = page.locator( '.mw-mmv-download-dialog select' );
 		await expect( sizeSelect ).toBeVisible( { timeout: 10_000 } );
 		await sizeSelect.selectOption( 'original' );
@@ -432,8 +432,8 @@ test.describe( 'Multi-page IIIF documents', () => {
 			timeout: 10_000,
 		} );
 
-		// Click the displayed image — MMV's mmv-viewfile handler would
-		// otherwise navigate to the page-1 IIIF URL; our patch should
+		// Click the displayed image. MMV's mmv-viewfile handler would
+		// navigate to the page-1 IIIF URL on its own; our patch should
 		// route to canvas 2 instead.
 		await page.locator( '.mw-mmv-image' ).click( { force: true } );
 
@@ -449,7 +449,7 @@ test.describe( 'Multi-page IIIF documents', () => {
 
 		// The main image link must be tagged so MMV adds its "Open in Media
 		// Viewer" stripe button and intercepts clicks. Prev/next
-		// thumbnails should still NOT have the class –they navigate to the
+		// thumbnails must NOT have the class (they navigate to the
 		// next page instead of opening MMV).
 		const mainLink = page.locator( '#file a' ).first();
 		await expect( mainLink ).toHaveClass( /mw-file-description/, {
@@ -473,13 +473,12 @@ test.describe( 'Multi-page IIIF documents', () => {
 		await page.goto( '/wiki/File:Df_dk_multipage?page=2' );
 
 		// MMV adds `.mw-mmv-view-expanded` inside `.fullMedia` from
-		// `processFilePageThumb`. Before our fix, this was skipped
-		// because `title.getExtension()` returns "" for extension-less
-		// IIIF titles like `Df_dk_multipage`, so MMV's `isValidExtension`
-		// rejected the file and silently bailed out. Our patch makes
-		// Title.getExtension() report "jpg" for file-namespace titles
-		// when the page is an IIIF file detail page, restoring the
-		// button.
+		// `processFilePageThumb`. `title.getExtension()` returns "" for
+		// extension-less IIIF titles like `Df_dk_multipage`, which makes
+		// MMV's `isValidExtension` reject the file and skip the button.
+		// Our patch makes Title.getExtension() report "jpg" for
+		// file-namespace titles on an IIIF file detail page, so the
+		// button renders.
 		await expect(
 			page.locator( '.fullMedia .mw-mmv-view-expanded' )
 		).toBeVisible( { timeout: 10_000 } );
@@ -490,9 +489,9 @@ test.describe( 'Multi-page IIIF documents', () => {
 	} ) => {
 		await page.goto( '/wiki/File:Df_dk_multipage?page=2' );
 
-		// MediaWiki core renders "Original file" via $file->getUrl();
-		// with our fix that follows lastTransformPage,
-		// so the link must point to canvas 2 not canvas 1.
+		// MediaWiki core renders "Original file" via $file->getUrl(),
+		// which follows lastTransformPage, so the link must point to
+		// canvas 2, not canvas 1.
 		const origLink = page
 			.locator(
 				'a[href*="bsb11610364_00002"], a[href*="bsb11610364_00001"]'

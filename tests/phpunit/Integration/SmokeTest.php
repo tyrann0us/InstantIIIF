@@ -22,7 +22,7 @@ class SmokeTest extends MediaWikiIntegrationTestCase
     {
         self::assertTrue(
             ExtensionRegistry::getInstance()->isLoaded('InstantIIIF'),
-            'InstantIIIF extension is not loaded — check LocalSettings.php'
+            'InstantIIIF extension is not loaded. Check LocalSettings.php.'
         );
     }
 

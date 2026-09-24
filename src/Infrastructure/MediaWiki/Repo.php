@@ -20,10 +20,10 @@ class Repo extends FileRepo
     public const DEFAULT_IMAGE_CACHE_EXPIRY = 31536000;
 
     /**
-     * Container — and default URL leaf under $wgUploadPath — for cached IIIF
-     * image bytes. Kept in a dedicated zone so the cache is isolated from
-     * genuine local uploads (safe to prune wholesale, excludable from
-     * backups, clearly an ephemeral hot-cache rather than a republication).
+     * Container for cached IIIF image bytes, and the default URL leaf under
+     * $wgUploadPath. The cache gets its own zone to keep it apart from real
+     * local uploads: it can be pruned wholesale, excluded from backups, and
+     * is plainly a disposable cache rather than a republication.
      */
     private const CACHE_CONTAINER = 'iiif-cache';
 
@@ -40,7 +40,7 @@ class Repo extends FileRepo
         // onRegistration() defaults 'directory' in the global config; this
         // covers repos constructed directly (tests) without that callback.
         // Core constructs the repo from the $info array, so there is no
-        // constructor DI here — read the upload dir from the Config service.
+        // constructor DI here; read the upload dir from the Config service.
         if (!isset($info['directory'])) {
             $info['directory'] = (string) MediaWikiServices::getInstance()
                 ->getMainConfig()
@@ -65,9 +65,9 @@ class Repo extends FileRepo
      *
      * Leaves the repo's `directory` (the auto-backend root) untouched and
      * isolates the cache in its own container served from a dedicated URL,
-     * defaulting to `{$wgUploadPath}/iiif-cache`. Supplying the URL is the
-     * one genuinely new piece of config: FileRepo gives every repo a `thumb`
-     * zone by default but with no `url`, so it cannot be served otherwise.
+     * defaulting to `{$wgUploadPath}/iiif-cache`. The URL is the only new
+     * piece of config: FileRepo gives every repo a `thumb` zone by default,
+     * but without a `url`, so it can't be served.
      * An explicitly configured `zones.thumb` is respected and never
      * overridden, so admins can relocate the cache the native FileRepo way.
      *
@@ -98,7 +98,7 @@ class Repo extends FileRepo
      * extension.json registration callback.
      *
      * `FileBackendGroup` builds a repo's auto-backend straight from the raw
-     * `$wgForeignFileRepos` config — it never instantiates this class — and
+     * `$wgForeignFileRepos` config. It never instantiates this class, and it
      * reads `directory` unguarded, which core only defaults for
      * ForeignAPIRepo. Left alone, every request logs an "Undefined array key
      * directory" warning, and the auto-backend knows neither absolute paths
@@ -215,11 +215,11 @@ class Repo extends FileRepo
      * Every configured IIIF source must declare a non-empty `idPattern`.
      *
      * The pattern scopes which identifiers route to a source. Without one a
-     * source would match every identifier, so the resolver would fire an HTTP
-     * manifest request to it for ids that belong to another provider (or to
-     * no provider at all). Requiring it keeps `IIIFFile::tryProvider()` from
-     * making those needless calls. A single-provider setup that genuinely
-     * wants to accept anything can use a catch-all regex such as `/./`.
+     * source would match every identifier, and the resolver would send it
+     * manifest requests for ids that belong to another provider (or to no
+     * provider at all). Requiring it keeps `IIIFFile::tryProvider()` from
+     * making those calls. A single-provider setup that wants to accept
+     * anything can use a catch-all regex such as `/./`.
      *
      * @param array<int, mixed> $sources
      * @throws \InvalidArgumentException when a source omits a valid idPattern.

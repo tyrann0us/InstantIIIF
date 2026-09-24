@@ -52,7 +52,7 @@ class IIIFTitleTest extends TestCase
             'already .jpg' => ['Foo.jpg', 'Foo.jpg'],
             'already uppercase .JPG' => ['Foo.JPG', 'Foo.JPG'],
             'shelfmark with dash' => ['1741646995-18800000', '1741646995-18800000.jpg'],
-            // Only .jpg is recognised — a .png suffix gets a .jpg appended.
+            // Only .jpg is recognised, so a .png suffix gets a .jpg appended.
             'ID with unrecognised .png suffix' => ['foo.png', 'foo.png.jpg'],
         ];
     }

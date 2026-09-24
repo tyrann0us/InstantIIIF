@@ -118,10 +118,10 @@ class IIIFHandler extends ImageHandler
     }
 
     /**
-     * IIIF images are always remote — there is no local file to read
+     * IIIF images are always remote, so there is no local file to read
      * dimensions from. Return an empty array so that MediaWiki falls
      * back to File::getWidth() / File::getHeight(), which IIIFFile
-     * overrides to query the manifest / info.json.
+     * overrides to query the manifest or info.json.
      *
      * @param mixed $state
      * @param string $path
@@ -146,7 +146,7 @@ class IIIFHandler extends ImageHandler
     }
 
     /**
-     * IIIF thumbnails are free — the remote service creates them.
+     * IIIF thumbnails cost nothing locally: the remote service creates them.
      *
      * @param \File $file
      * @return bool

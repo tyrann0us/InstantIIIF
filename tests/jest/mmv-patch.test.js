@@ -1,5 +1,5 @@
 /**
- * Tests for resources/mmv-patch.js — the client-side MMV patching module.
+ * Tests for resources/mmv-patch.js, the client-side MMV patching module.
  */
 
 'use strict';
@@ -120,7 +120,7 @@ describe( 'shared-upload notice link fix', () => {
 			</div>
 		` );
 
-		// wgIIIFProviderUrl not set → mw.config.get returns null
+		// wgIIIFProviderUrl not set, so mw.config.get returns null
 		loadMmvPatch( window );
 		env.mw.hook( 'wikipage.content' ).fire();
 
@@ -354,7 +354,7 @@ describe( 'MMV image link fix via mmv-metadata', () => {
 	test( 'does not touch MMV link when data-iiif-full-url is absent', async () => {
 		const thumbnailEl = document.createElement( 'img' );
 		thumbnailEl.setAttribute( 'data-iiif-title', 'File:Test.jpg' );
-		// No data-iiif-full-url — page 1 scenario.
+		// No data-iiif-full-url: the page 1 case.
 
 		const originalHref =
 			'https://iiif.example/page1/full/full/0/default.jpg';
@@ -391,7 +391,7 @@ describe( 'MMV image link fix via mmv-metadata', () => {
 describe( 'non-IIIF image passthrough', () => {
 	test( 'mmv-metadata handler returns early for non-IIIF images', async () => {
 		const thumbnailEl = document.createElement( 'img' );
-		// No data-iiif-title → not an IIIF image.
+		// No data-iiif-title, so not an IIIF image.
 
 		const originalHref =
 			'https://upload.wikimedia.org/wikipedia/commons/test.jpg';
@@ -420,8 +420,8 @@ describe( 'click capture: invalid page numbers fall back to page 1', () => {
 		'data-iiif-page=%j is treated as page 1 (no fragment / no |page=)',
 		async ( badPage ) => {
 			// If `data-iiif-page` parses to <= 0 or NaN, our share URL
-			// must NOT carry a `?page=` / `|page=` argument — otherwise
-			// a misconfigured wikitext entry would persistently send
+			// must not carry a `?page=` / `|page=` argument. Otherwise
+			// a misconfigured wikitext entry would keep sending
 			// readers to a non-existent canvas.
 			buildDom(
 				'<img data-iiif-title="File:Bsb11610364.jpg" data-iiif-page="' +
@@ -469,7 +469,7 @@ describe( 'click capture: invalid page numbers fall back to page 1', () => {
 
 describe( 'Wikitext embed: strip spoofed .jpg from title', () => {
 	test( 'EmbedFileFormatter.getThumbnailWikitext drops the spoofed .jpg', async () => {
-		// Hooks appends `.jpg` to the data-iiif-title that MMV picks up
+		// HookHandler appends `.jpg` to the data-iiif-title that MMV picks up
 		// for imageInfo.title. When MMV builds a `[[File:Foo.jpg|…]]`
 		// snippet from that title, copy-pasting it into another article
 		// would yield a broken file link, because the real wiki file
@@ -895,7 +895,7 @@ describe( 'iiifPageByUrl rebuild on wikipage.content', () => {
 		` );
 		env.hookRegistry[ 'wikipage.content' ].fire( $( document.body ) );
 
-		// Calling ThumbnailInfo.get with the NEW page-7 sampleUrl should
+		// Calling ThumbnailInfo.get with the new page-7 sampleUrl should
 		// see it in the rebuilt map and append the page marker.
 		const instance = new FakeThumbnailInfo();
 		instance.get(
@@ -915,7 +915,7 @@ describe( 'iiifPageByUrl rebuild on wikipage.content', () => {
 describe( 'mw.Title.getExtension override on IIIF file detail pages', () => {
 	test( 'returns the spoofed extension for NS_FILE titles when an IIIF img sits in #file', async () => {
 		// The override only kicks in when `#file img[data-iiif-title]`
-		// exists in the DOM — otherwise it's a no-op so non-IIIF pages
+		// exists in the DOM. Otherwise it's a no-op, so non-IIIF pages
 		// stay untouched.
 		buildDom( `
 			<div id="file">
@@ -930,7 +930,7 @@ describe( 'mw.Title.getExtension override on IIIF file detail pages', () => {
 		await new Promise( ( r ) => setTimeout( r, 10 ) );
 
 		const fileTitle = new env.mw.Title( 'File:Df_dk_0007450' );
-		// Bare dbkey has no extension — the override should inject the
+		// Bare dbkey has no extension, so the override should inject the
 		// spoof so MMV's processFilePageThumb doesn't bail out.
 		expect( fileTitle.getExtension() ).toBe( 'jpg' );
 	} );
@@ -946,8 +946,8 @@ describe( 'mw.Title.getExtension override on IIIF file detail pages', () => {
 		loadMmvPatch( window );
 		await new Promise( ( r ) => setTimeout( r, 10 ) );
 
-		// "File:Foo.jpg" already has an extension — return as-is, not
-		// the spoof constant.
+		// "File:Foo.jpg" already has an extension, which is returned
+		// as-is instead of the spoof constant.
 		const t = new env.mw.Title( 'File:Foo.jpg' );
 		expect( t.getExtension() ).toBe( 'jpg' );
 	} );
@@ -964,9 +964,9 @@ describe( 'mw.Title.getExtension override on IIIF file detail pages', () => {
 	} );
 
 	test( 'returns the original (empty) extension for non-NS_FILE titles', async () => {
-		// Override IS installed (IIIF img in #file), but the title
-		// passed in is not in the File namespace — the spoof must
-		// NOT leak onto unrelated titles.
+		// The override is installed (IIIF img in #file), but the title
+		// passed in is not in the File namespace, and the spoof must
+		// not leak onto unrelated titles.
 		buildDom( `
 			<div id="file"><img data-iiif-title="File:Foo.jpg" /></div>
 		` );
@@ -974,7 +974,7 @@ describe( 'mw.Title.getExtension override on IIIF file detail pages', () => {
 		loadMmvPatch( window );
 		await new Promise( ( r ) => setTimeout( r, 10 ) );
 
-		// "Bar" → namespace 0 in our stub, no real extension either.
+		// "Bar" is namespace 0 in our stub and has no real extension either.
 		const t = new env.mw.Title( 'Bar' );
 		expect( t.getExtension() ).toBe( '' );
 	} );
@@ -991,8 +991,8 @@ describe( 'mmv-viewfile redirects to data-iiif-full-url', () => {
 		//
 		// jsdom can't actually navigate: `document.location =` triggers
 		// a "Not implemented" error. We suppress it and only assert
-		// that the handler took the IIIF branch — proven by
-		// stopImmediatePropagation being invoked, which only happens
+		// that the handler took the IIIF branch. The proof is that
+		// stopImmediatePropagation was invoked, which only happens
 		// when both isCurrentImageIiif and currentIiifFullUrl are set.
 		jest.spyOn( console, 'error' ).mockImplementation( () => {} );
 		buildDom( `
@@ -1028,7 +1028,7 @@ describe( 'mmv-viewfile redirects to data-iiif-full-url', () => {
 			stopImmediatePropagation: stopFn,
 		} );
 
-		// No IIIF context → handler bails before stopping propagation.
+		// No IIIF context, so the handler bails before stopping propagation.
 		expect( stopFn ).not.toHaveBeenCalled();
 	} );
 } );
@@ -1069,15 +1069,15 @@ describe( 'click capture resets IIIF state for non-IIIF MediaViewer thumbs', () 
 			.getElementById( 'iiif' )
 			.dispatchEvent( new Event( 'click', { bubbles: true } ) );
 
-		// Then click a Commons thumbnail — the click capture must
+		// Then click a Commons thumbnail. The click capture must
 		// reset isCurrentImageIiif so subsequent Share/Embed patches
 		// no longer rewrite URLs.
 		document
 			.getElementById( 'commons' )
 			.dispatchEvent( new Event( 'click', { bubbles: true } ) );
 
-		// Fire mmv-metadata WITHOUT an IIIF thumbnail to take the
-		// non-IIIF branch — patches should not run.
+		// Fire mmv-metadata without an IIIF thumbnail to take the
+		// non-IIIF branch, where the patches should not run.
 		env.triggerJqEvent( 'mmv-metadata', {
 			image: {
 				thumbnail: document.getElementById( 'commons' ),
@@ -1087,14 +1087,14 @@ describe( 'click capture resets IIIF state for non-IIIF MediaViewer thumbs', () 
 
 		// FakeShare.set hasn't been called by the handler because
 		// the eager patches are bound on prototype, not invoked here.
-		// The point is just that the click-reset code path ran without
-		// throwing.
+		// The test only checks that the click-reset code path ran
+		// without throwing.
 		expect( document.getElementById( 'commons' ) ).not.toBeNull();
 	} );
 
 	test( 'click on an element nested deep under an img walks up to find it', async () => {
 		// Click target is the inner <span>; the handler must walk
-		// parentElement chain until it finds the IMG (line 256).
+		// parentElement chain until it finds the IMG.
 		buildDom( `
 			<a class="mw-file-description" href="#">
 				<img data-iiif-title="File:X.jpg" data-iiif-page="3"><span id="caption">caption</span></img>
@@ -1104,8 +1104,8 @@ describe( 'click capture resets IIIF state for non-IIIF MediaViewer thumbs', () 
 		loadMmvPatch( window );
 		await new Promise( ( r ) => setTimeout( r, 10 ) );
 
-		// Clicking on a non-IMG element (the <a>) walks up; no
-		// exception is enough — the handler must not crash.
+		// Clicking on a non-IMG element (the <a>) walks up. Passing
+		// means no exception: the handler must not crash.
 		document
 			.querySelector( 'a.mw-file-description' )
 			.dispatchEvent( new Event( 'click', { bubbles: true } ) );
@@ -1122,7 +1122,7 @@ describe( 'click capture resets IIIF state for non-IIIF MediaViewer thumbs', () 
 describe( 'Share.set / Download.set / EmbedFileFormatter.getThumbnailHtml', () => {
 	test( 'Share.set leaves URL alone when isCurrentImageIiif is false', async () => {
 		// IIIF image present so the eager patches install on
-		// Share.prototype.set — but no click happens, so
+		// Share.prototype.set, but no click happens, so
 		// isCurrentImageIiif is still false when set() runs. The
 		// patched set runs origShareSet (which seeds the val) and
 		// then hits the `if (! isCurrentImageIiif) return` guard.
@@ -1150,7 +1150,7 @@ describe( 'Share.set / Download.set / EmbedFileFormatter.getThumbnailHtml', () =
 		loadMmvPatch( window );
 		await new Promise( ( r ) => setTimeout( r, 10 ) );
 
-		// No click on the IIIF image → isCurrentImageIiif stays false.
+		// No click on the IIIF image, so isCurrentImageIiif stays false.
 		new FakeShare().set( {} );
 
 		expect( captured ).toBe( initial ); // untouched
@@ -1163,7 +1163,7 @@ describe( 'Share.set / Download.set / EmbedFileFormatter.getThumbnailHtml', () =
 
 		function FakeShare() {
 			this.$pageInput = {
-				val: () => '', // empty value → patch early-returns
+				val: () => '', // empty value, so the patch returns early
 			};
 		}
 		const setSpy = jest.fn();
@@ -1291,9 +1291,9 @@ describe( 'Share.set / Download.set / EmbedFileFormatter.getThumbnailHtml', () =
 
 	test( 'EmbedFileFormatter.getThumbnailWikitext passes through unchanged for non-IIIF', async () => {
 		// IIIF image in DOM so the eager patch installs on the
-		// prototype, but no click → isCurrentImageIiif is false →
-		// patched getThumbnailWikitext runs orig + hits the early
-		// `return out` guard.
+		// prototype, but there is no click, so isCurrentImageIiif is
+		// false. The patched getThumbnailWikitext runs orig and hits the
+		// early `return out` guard.
 		buildDom( '<img id="x" data-iiif-title="File:Foo.jpg" />' );
 
 		function FakeEFF() {}
@@ -1325,7 +1325,7 @@ describe( 'Share.set / Download.set / EmbedFileFormatter.getThumbnailHtml', () =
 	test( 'EmbedFileFormatter.getThumbnailHtml: rewriteIiifShareUrl bails on empty href', async () => {
 		// Some MMV layouts emit `<a href="">` placeholders. The replace
 		// callback in the html-rewriter passes whatever the capture
-		// matched to rewriteIiifShareUrl — an empty string must
+		// matched to rewriteIiifShareUrl. An empty string must
 		// short-circuit instead of being treated as a URL.
 		buildDom(
 			'<img id="thumb" data-iiif-title="File:Foo.jpg" data-iiif-page="2" />'
@@ -1368,7 +1368,7 @@ describe( 'buildLocalFileUrl: defensive null returns', () => {
 	test( 'empty data-iiif-title means no localUrl is set on the stripe button', async () => {
 		// mmv-metadata with `data-iiif-title=""` sets currentIiifTitle
 		// to the empty string. buildLocalFileUrl's `!currentIiifTitle`
-		// guard then bails — the stripe button keeps its native href.
+		// guard then bails and the stripe button keeps its native href.
 		buildDom( `
 			<a id="stripe" class="mw-mmv-description-page-button"
 			   href="https://wiki.example/original">More details</a>
@@ -1387,7 +1387,7 @@ describe( 'buildLocalFileUrl: defensive null returns', () => {
 			image: { thumbnail: thumb, src: 'x.jpg' },
 		} );
 
-		// buildLocalFileUrl returned null → href untouched.
+		// buildLocalFileUrl returned null, so the href is untouched.
 		expect(
 			document.getElementById( 'stripe' ).getAttribute( 'href' )
 		).toBe( 'https://wiki.example/original' );
@@ -1395,8 +1395,8 @@ describe( 'buildLocalFileUrl: defensive null returns', () => {
 
 	test( 'data-iiif-navigate img with no .mw-file-description parent is left alone', async () => {
 		// The class-removal handler must not throw when an img carries
-		// the navigate marker but lives outside an `<a.mw-file-description>` —
-		// e.g. an extension config sets the attribute but the surrounding
+		// the navigate marker but lives outside an `<a.mw-file-description>`,
+		// e.g. when an extension config sets the attribute but the surrounding
 		// markup isn't MediaViewer-eligible.
 		buildDom( '<img data-iiif-navigate="1" />' );
 
@@ -1465,7 +1465,7 @@ describe( 'buildLocalFileUrl: defensive null returns', () => {
 			.querySelector( '#file img' )
 			.dispatchEvent( new Event( 'click', { bubbles: true } ) );
 
-		// LoadImage with stale state — the patch should NOT overwrite
+		// LoadImage with stale state. The patch should not overwrite
 		// originalWidth/originalHeight since the DOM has none.
 		const staleImage = {
 			src: 'https://iiif.example/stale.jpg',
@@ -1480,8 +1480,8 @@ describe( 'buildLocalFileUrl: defensive null returns', () => {
 
 	test( 'click on plain non-IIIF img (no mw-file-element, no mw-file-description ancestor) is a no-op', async () => {
 		// The click handler's third branch path: the img matches no
-		// IIIF marker AND isn't a MediaViewer-eligible thumbnail —
-		// state must be untouched (no reset).
+		// IIIF marker and isn't a MediaViewer-eligible thumbnail, so
+		// state must stay untouched (no reset).
 		buildDom( `
 			<img id="iiif" data-iiif-title="File:X.jpg" />
 			<img id="plain" src="https://example/x.jpg" />
@@ -1502,13 +1502,13 @@ describe( 'buildLocalFileUrl: defensive null returns', () => {
 			.getElementById( 'iiif' )
 			.dispatchEvent( new Event( 'click', { bubbles: true } ) );
 
-		// Then click a plain non-IIIF img — the handler returns at the
+		// Then click a plain non-IIIF img. The handler returns at the
 		// outer IMG check without entering the if/else-if. State stays.
 		document
 			.getElementById( 'plain' )
 			.dispatchEvent( new Event( 'click', { bubbles: true } ) );
 
-		// No throw means the path completed.
+		// Not throwing means the path completed.
 		expect( document.getElementById( 'plain' ) ).not.toBeNull();
 	} );
 
@@ -1536,13 +1536,13 @@ describe( 'buildLocalFileUrl: defensive null returns', () => {
 	} );
 
 	test( 'Download.set is a no-op when no IIIF context is set', async () => {
-		// Download.set must NOT rewrite image.url unless
-		// isCurrentImageIiif AND currentIiifFullUrl AND this.image
+		// Download.set must not rewrite image.url unless
+		// isCurrentImageIiif, currentIiifFullUrl and this.image
 		// are all truthy.
 		buildDom( '<img id="x" data-iiif-title="File:X.jpg" />' );
 
 		function FakeDownload() {
-			// No `this.image` → the multi-condition guard fails.
+			// No `this.image`, so the multi-condition guard fails.
 		}
 		FakeDownload.prototype.set = jest.fn();
 		env.registerModule( 'mmv', { ThumbnailInfo: class {} } );
@@ -1558,8 +1558,8 @@ describe( 'buildLocalFileUrl: defensive null returns', () => {
 		loadMmvPatch( window );
 		await new Promise( ( r ) => setTimeout( r, 10 ) );
 
-		// No prior click → isCurrentImageIiif=false → patched set
-		// runs orig and returns without trying to rewrite anything.
+		// No prior click, so isCurrentImageIiif is false and the patched
+		// set runs orig and returns without rewriting anything.
 		expect( () => new FakeDownload().set( {} ) ).not.toThrow();
 	} );
 
@@ -1598,7 +1598,7 @@ describe( 'buildLocalFileUrl: defensive null returns', () => {
 	} );
 
 	test( 'EmbedFileFormatter.getThumbnailHtml passes through unchanged for non-IIIF', async () => {
-		// Mirrors the Wikitext test but for the HTML formatter — when
+		// Mirrors the Wikitext test for the HTML formatter: when
 		// isCurrentImageIiif is false the replace pipeline is skipped.
 		buildDom( '<img id="x" data-iiif-title="File:X.jpg" />' );
 
@@ -1619,7 +1619,7 @@ describe( 'buildLocalFileUrl: defensive null returns', () => {
 		loadMmvPatch( window );
 		await new Promise( ( r ) => setTimeout( r, 10 ) );
 
-		// No click → isCurrentImageIiif stays false.
+		// No click, so isCurrentImageIiif stays false.
 		expect( new FakeEFF().getThumbnailHtml() ).toBe( original );
 	} );
 
@@ -1677,7 +1677,7 @@ describe( 'buildLocalFileUrl: defensive null returns', () => {
 		loadMmvPatch( window );
 		await new Promise( ( r ) => setTimeout( r, 10 ) );
 
-		// No throw on the click — the handler took the no-titleAttr
+		// No throw on the click: the handler took the no-titleAttr
 		// path through the IMG branch.
 		document
 			.getElementById( 'x' )
@@ -1727,7 +1727,7 @@ describe( 'buildLocalFileUrl: defensive null returns', () => {
 
 		new FakeShare().set( {} );
 
-		// Note the `&page=6` separator — the existing `?lang=de` was
+		// Note the `&page=6` separator. The existing `?lang=de` was
 		// the first parameter, so the page join must use `&`.
 		expect( captured ).toBe(
 			'https://wiki.example/wiki/File:Bsb11610364.jpg?lang=de&page=6#/media/File:Bsb11610364'
@@ -1736,7 +1736,7 @@ describe( 'buildLocalFileUrl: defensive null returns', () => {
 
 	test( 'patchMmvOverlayLinks skips download elements that are neither <a> nor have href', async () => {
 		// A `<button class="mw-mmv-download-button">` matches the
-		// selector but isn't a link and has no href — the patch must
+		// selector but isn't a link and has no href. The patch must
 		// not invent one (which would change its semantics).
 		buildDom( `
 			<img id="thumb"
@@ -1764,7 +1764,7 @@ describe( 'buildLocalFileUrl: defensive null returns', () => {
 
 	test( 'mmv-metadata with non-numeric data-iiif-page falls back to page 1', async () => {
 		// `parseInt(pageAttr, 10) || 1` falsy-branch: a non-numeric
-		// attribute value (or "0") yields NaN/0 → fall back to 1.
+		// attribute value (or "0") yields NaN/0, which falls back to 1.
 		buildDom( `
 			<a id="stripe" class="mw-mmv-description-page-button"
 			   href="https://wiki.example/orig">More details</a>
@@ -1792,7 +1792,7 @@ describe( 'buildLocalFileUrl: defensive null returns', () => {
 
 	test( 'mmv-metadata with no data-iiif-page defaults currentIiifPage to 1', async () => {
 		// `pageAttr ? ... : 1` false-branch: thumbnail has data-iiif-title
-		// but no data-iiif-page → page defaults to 1, stripe-button
+		// but no data-iiif-page, so page defaults to 1 and the stripe-button
 		// rewrite skips the `?page=` insertion.
 		buildDom( `
 			<a id="stripe" class="mw-mmv-description-page-button"
@@ -1821,8 +1821,8 @@ describe( 'buildLocalFileUrl: defensive null returns', () => {
 
 	test( 'invalid title (mw.Title throws after unspoof) yields null localUrl', async () => {
 		// data-iiif-title is just the spoofed extension (".jpg"); after
-		// iiifTitle.unspoof it's empty and `new mw.Title('')` throws —
-		// the catch in buildLocalFileUrl maps that to null so the
+		// iiifTitle.unspoof it's empty and `new mw.Title('')` throws.
+		// The catch in buildLocalFileUrl maps that to null so the
 		// stripe-button href stays whatever MMV emitted.
 		buildDom( `
 			<a id="stripe" class="mw-mmv-description-page-button"
@@ -1880,7 +1880,7 @@ describe( 'MultimediaViewer.loadImage refresh from current #file img', () => {
 		loadMmvPatch( window );
 		await new Promise( ( r ) => setTimeout( r, 10 ) );
 
-		// Caller passes a STALE LightboxImage (e.g. the click handler
+		// Caller passes a stale LightboxImage (e.g. the click handler
 		// closure captured at initial load before AJAX pagination swap).
 		const staleImage = {
 			src: 'https://iiif.example/STALE.jpg',

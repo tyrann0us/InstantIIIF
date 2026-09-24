@@ -1,8 +1,8 @@
 /**
- * Tests for resources/iiif-title.js — the shared spoof/unspoof helpers
- * (mirror of src/IIIFTitle.php) consumed by mmv-patch.js and
- * media-search.js. Only ".jpg" is recognised on the way back, matching
- * the only extension we ever append on the way out.
+ * Tests for resources/iiif-title.js, the shared spoof/unspoof helpers
+ * (mirror of src/Infrastructure/MediaWiki/IIIFTitle.php) used by mmv-patch.js and media-search.js.
+ * Only ".jpg" is recognised on the way back, because it is the only
+ * extension we append on the way out.
  */
 
 'use strict';
@@ -32,12 +32,12 @@ describe( 'iiif-title.js', () => {
 	test.each( [
 		[ 'Bsb11610364', 'Bsb11610364.jpg' ],
 		[ 'Df_dk_0007450', 'Df_dk_0007450.jpg' ],
-		// already .jpg — idempotent
+		// already .jpg, so unchanged
 		[ 'Foo.jpg', 'Foo.jpg' ],
 		[ 'Foo.JPG', 'Foo.JPG' ],
 		// shelfmark with dash
 		[ '1741646995-18800000', '1741646995-18800000.jpg' ],
-		// only .jpg is recognised — a .png suffix is treated as part of the id
+		// only .jpg is recognised; a .png suffix is treated as part of the id
 		[ 'foo.png', 'foo.png.jpg' ],
 	] )( 'spoof(%j) === %j', ( input, expected ) => {
 		expect( window.iiifTitle.spoof( input ) ).toBe( expected );
@@ -46,7 +46,7 @@ describe( 'iiif-title.js', () => {
 	test.each( [
 		[ 'Foo.jpg', 'Foo' ],
 		[ 'Foo.JPG', 'Foo' ],
-		// no extension — idempotent
+		// no extension, so unchanged
 		[ 'Bsb11610364', 'Bsb11610364' ],
 		// only strips one trailing .jpg
 		[ 'Foo.tif.jpg', 'Foo.tif' ],
@@ -79,7 +79,7 @@ describe( 'iiif-title.js', () => {
 		const pat = window.iiifTitle.IMAGE_EXTENSION_PATTERN;
 		expect( pat.test( '.jpg' ) ).toBe( true );
 		expect( pat.test( '.JPG' ) ).toBe( true );
-		// Anchored at end-of-string — interior matches don't count.
+		// Anchored at end of string; interior matches don't count.
 		expect( pat.test( '.jpg.' ) ).toBe( false );
 		// Other extensions don't match.
 		expect( pat.test( '.png' ) ).toBe( false );

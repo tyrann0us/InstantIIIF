@@ -32,7 +32,7 @@ test.describe( 'File detail page (single-page IIIF)', () => {
 		const notice = page.locator( '.sharedUploadNotice' );
 		if ( ( await notice.count() ) > 0 ) {
 			// The JS module replaces this link asynchronously via
-			// mw.hook('wikipage.content') — use a polling assertion.
+			// mw.hook('wikipage.content'), so use a polling assertion.
 			const link = notice.locator( 'a' ).first();
 			await expect( link ).toHaveAttribute(
 				'href',

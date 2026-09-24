@@ -15,9 +15,9 @@ use PHPUnit\Framework\Attributes\CoversClass;
  * Integration tests for Repo: idPatterns() and getInfo()'s apiurl field
  * (matched by the JS-side media-search patch to recognise IIIF repos).
  *
- * Exercises Repo against the real FileRepo / MediaWikiServices machinery
- * — the apiurl assertion is anchored against $wgServer + $wgScriptPath
- * the same way client-side MediaResourceProvider builds it.
+ * Runs Repo against the real FileRepo / MediaWikiServices machinery. The
+ * apiurl assertion is built from $wgServer + $wgScriptPath, the same way
+ * the client-side MediaResourceProvider builds it.
  */
 #[CoversClass(Repo::class)]
 class RepoTest extends MediaWikiIntegrationTestCase
@@ -27,7 +27,7 @@ class RepoTest extends MediaWikiIntegrationTestCase
      */
     private function makeRepo(array $iiifSources): Repo
     {
-        // FileRepo requires a `backend` — borrow the local repo's so we
+        // FileRepo requires a `backend`. Borrow the local repo's so we
         // don't depend on a backend being pre-registered. SetupDynamicConfig
         // handles this for entries declared via $wgForeignFileRepos, but
         // ad-hoc construction (this test, SpecialInstantIIIFInspect) has
@@ -128,9 +128,8 @@ class RepoTest extends MediaWikiIntegrationTestCase
     }
 
     /**
-     * Repo defaults `directory` from $wgUploadDirectory when omitted —
-     * exercises the only piece of constructor logic we add on top of
-     * FileRepo.
+     * Repo defaults `directory` from $wgUploadDirectory when it is omitted.
+     * This is the only constructor logic we add on top of FileRepo.
      */
     public function testConstructWithoutDirectoryDefaultsFromUploadDirectoryConfig(): void
     {
@@ -152,7 +151,7 @@ class RepoTest extends MediaWikiIntegrationTestCase
 
     /**
      * `iiifSources()` is the accessor IIIFFile uses to look up the
-     * provider patterns at resolve time — verify the constructor stored
+     * provider patterns at resolve time. Checks that the constructor stored
      * what we passed in.
      */
     public function testIiifSourcesReturnsConfiguredArray(): void
@@ -172,8 +171,8 @@ class RepoTest extends MediaWikiIntegrationTestCase
 
     /**
      * `newFile()` is the FileRepo override that makes wikitext
-     * `[[File:…]]` resolve to an IIIFFile rather than a missing-file
-     * placeholder. Pass a Title object directly.
+     * `[[File:…]]` resolve to an IIIFFile instead of a missing-file
+     * placeholder. This test passes a Title object directly.
      */
     public function testNewFileFromTitleObjectReturnsIiifFile(): void
     {
@@ -193,8 +192,8 @@ class RepoTest extends MediaWikiIntegrationTestCase
     }
 
     /**
-     * `newFile()` also accepts a plain string — Repo runs it through
-     * Title::newFromText. Verifies the string-coercion path.
+     * `newFile()` also accepts a plain string, which Repo runs through
+     * Title::newFromText.
      */
     public function testNewFileFromStringReturnsIiifFile(): void
     {
@@ -232,8 +231,8 @@ class RepoTest extends MediaWikiIntegrationTestCase
 
     /**
      * With caching on (the default), the repo gains a served `thumb` zone in
-     * the dedicated `iiif-cache` container — verified against the real
-     * FileRepo zone machinery (which the standalone unit stub cannot model).
+     * the dedicated `iiif-cache` container. Checked against the real FileRepo
+     * zone machinery, which the standalone unit stub cannot model.
      */
     public function testImageCacheZoneIsServedWhenCachingEnabled(): void
     {
@@ -281,8 +280,8 @@ class RepoTest extends MediaWikiIntegrationTestCase
     }
 
     /**
-     * An explicitly configured `thumb` zone is respected, not overridden by
-     * the cache-zone defaults.
+     * The cache-zone defaults do not override an explicitly configured
+     * `thumb` zone.
      */
     public function testExplicitThumbZoneIsRespected(): void
     {

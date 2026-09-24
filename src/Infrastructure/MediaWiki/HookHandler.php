@@ -30,8 +30,8 @@ class HookHandler implements
      *
      * On File: pages with an IIIF file, also pass the provider URL as a
      * JS config variable so the client-side code can fix the shared-upload
-     * description link (which would otherwise point to the local URL
-     * because getDescriptionUrl() now returns the wiki page URL) and load
+     * description link (which would otherwise point to the local URL,
+     * because getDescriptionUrl() returns the wiki page URL) and load
      * the style module that hides the meaningless file-history section.
      *
      * @param \OutputPage $out
@@ -58,7 +58,7 @@ class HookHandler implements
             return;
         }
 
-        // Hide the meaningless file-history section / file-size info for
+        // Hide the meaningless file-history section and file-size info for
         // hotlinked IIIF files (see onImagePageFileHistoryLine).
         $out->addModuleStyles(['ext.instantIIIF.filePage']);
 
@@ -123,7 +123,7 @@ class HookHandler implements
         // Localized namespace text for NS_FILE (e.g., "File").
         $nsText = $title->getNsText();
         if ($nsText === '') {
-            // Fallback, but should not happen here
+            // Fallback; should not happen here.
             $nsText = $this->namespaceInfo->getCanonicalName(NS_FILE) ?: 'File';
         }
 
@@ -131,16 +131,16 @@ class HookHandler implements
         $dbKey = $title->getDBkey();
 
         // MultimediaViewer requires the file to have a valid image file
-        // extension, so we spoof one via IIIFTitle::spoof (idempotent —
-        // titles that already end in an image extension are not doubled).
+        // extension, so we spoof one via IIIFTitle::spoof. It is idempotent:
+        // titles that already end in the extension are not doubled.
         $attribs['data-iiif-title'] = sprintf('%s:%s', $nsText, IIIFTitle::spoof($dbKey));
 
         $page = $file->lastTransformPage();
 
         // Report the file's actual dimensions, not the rendered thumbnail's.
         // MMV reads data-file-width as originalWidth in mmv.lightboximage.js
-        // and caps the requested lightbox thumb at that value — using the
-        // thumb's clamped width here would cap the lightbox at 300/600 px.
+        // and caps the requested lightbox thumb at that value. The thumb's
+        // clamped width here would cap the lightbox at 300/600 px.
         $attribs['data-file-width'] = $file->getWidth($page);
         $attribs['data-file-height'] = $file->getHeight($page);
 
@@ -200,11 +200,10 @@ class HookHandler implements
 
         // Add `mw-file-description` to the main image link so MMV
         // recognises it (its bootstrap collects via the same selector),
-        // which both intercepts the click into the overlay and surfaces
-        // the "Open in Media Viewer" stripe button. Prev/next
-        // thumbs are tagged with data-iiif-navigate above and stripped
-        // back by mmv-patch.js, so navigation behaviour does not
-        // regress.
+        // which makes it open the overlay on click and show the
+        // "Open in Media Viewer" stripe button. Prev/next thumbs are
+        // tagged with data-iiif-navigate above and have the class
+        // removed again by mmv-patch.js, so navigation keeps working.
         if ($isFileLink && is_array($linkAttribs)) {
             $existing = $linkAttribs['class'] ?? '';
             $linkAttribs['class'] = trim($existing . ' mw-file-description');
@@ -214,9 +213,9 @@ class HookHandler implements
     }
 
     /**
-     * Hide the file history section for IIIF files — version history is meaningless
-     * for hotlinked remote resources, and the single auto-generated row shows
-     * misleading data (no user, today's date).
+     * Hide the file history section for IIIF files. Version history means
+     * nothing for hotlinked remote resources, and the single auto-generated
+     * row shows misleading data (no user, today's date).
      *
      * Suppressing the row alone still leaves the section heading rendered by
      * ImageHistoryPseudoPager::getBody(), so the file-page style module

@@ -19,8 +19,8 @@ use ThumbnailImage;
  * (OutputPage, RepoGroup, NamespaceInfo, RequestContext) instead of
  * the hand-stubbed versions in the standalone Unit suite.
  *
- * Standalone HookHandlerTest covers the full matrix of hook branches;
- * this suite focuses on the seams where real-MW behaviour matters:
+ * The standalone HookHandlerTest covers every hook branch. This suite
+ * covers the places where real MW behaviour matters:
  *  - OutputPage actually receives our module additions.
  *  - ImagePageFileHistoryLine clears the line (mutated-by-reference).
  *  - GetExtendedMetadata sets the DateTime sentinel for IIIFFiles.

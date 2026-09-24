@@ -5,9 +5,9 @@ set -e
 # so the Integration suite can run inside the container. The official
 # mediawiki:1.44 image ships production deps only.
 #
-# Opt-in via INSTALL_DEV_DEPS=1 — the dev-deps install rewrites
-# /var/www/html/vendor and busts Apache's already-warm opcache, which
-# manifests as "Class GuzzleHttp\Psr7\Rfc3986 not found" on the next
+# Opt in with INSTALL_DEV_DEPS=1. The dev-deps install rewrites
+# /var/www/html/vendor and invalidates Apache's warm opcache, which
+# shows up as "Class GuzzleHttp\Psr7\Rfc3986 not found" on the next
 # request. Only the integration-tests workflow (and `npm run docker:up`)
 # need this; e2e and ad-hoc shells skip it.
 if [ "${INSTALL_DEV_DEPS:-0}" = "1" ] && [ ! -d /var/www/html/vendor/phpunit ]; then
@@ -22,8 +22,8 @@ if [ "${INSTALL_DEV_DEPS:-0}" = "1" ] && [ ! -d /var/www/html/vendor/phpunit ]; 
         --no-progress 2>&1 | tail -3)
 
     # Install pcov so the Integration suite can produce a Clover XML
-    # for Codecov. Xdebug would also work, but pcov is far lighter —
-    # negligible overhead even when active. PHP_PCOV_DIRECTORY is read
+    # for Codecov. Xdebug would also work, but pcov is much lighter,
+    # with negligible overhead even when active. PHP_PCOV_DIRECTORY is read
     # at runtime via the `-d` flag in the workflow, not baked in here.
     if ! php -m | grep -qi '^pcov$'; then
         apt-get install -y -qq --no-install-recommends ${PHPIZE_DEPS:-autoconf gcc g++ make pkg-config}
@@ -85,12 +85,12 @@ echo "Creating test pages..."
 
 # Single-page image (Deutsche Fotothek). IIIF object IDs in the wild
 # are extension-less ("Bsb11610364", "df_dk_0007450"); wikitext mirrors
-# that so the spoofed `.jpg` Hooks appends never leaks into the rendered
+# that so the spoofed `.jpg` suffix never leaks into the rendered
 # file-page URLs.
 php maintenance/run.php edit "Meißen Rathaus" <<'WIKITEXT'
 == Test: Single-page IIIF image ==
 
-[[File:Df_dk_0007450|thumb|300px|Meißen Rathaus — single-page IIIF]]
+[[File:Df_dk_0007450|thumb|300px|Meißen Rathaus, single-page IIIF]]
 
 This page tests a single-page IIIF image from Deutsche Fotothek.
 WIKITEXT
