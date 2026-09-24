@@ -13,11 +13,10 @@ use MediaWiki\Extension\InstantIIIF\Domain\Manifest;
  * Builds the extmetadata field map MMV (and the inspector Special page)
  * consume from a resolved IIIF manifest.
  *
- * Extracted from the old static Hooks class so the GetExtendedMetadata
- * hook handler and SpecialInstantIIIFInspect share one implementation.
- * Delegates manifest parsing to Domain\Manifest, locale resolution to
- * Domain\LocalizedText, and license short-name derivation to
- * Domain\LicenseClassifier.
+ * The GetExtendedMetadata hook handler and SpecialInstantIIIFInspect
+ * share this one implementation. Manifest parsing is delegated to
+ * Domain\Manifest, locale resolution to Domain\LocalizedText, and license
+ * short names to Domain\LicenseClassifier.
  */
 class MetadataExtractor
 {
@@ -35,8 +34,8 @@ class MetadataExtractor
      * (wfTimestamp returns false for non-date strings) and is stripped to
      * '' by MMV's parseExtmeta, which then skips the label for falsy
      * values. The same sentinel is returned by IIIFFile::getTimestamp()
-     * for the ApiQueryImageInfo `timestamp` field (consumed by
-     * VisualEditor's media dialog) — see IIIFFile::NO_TIMESTAMP_SENTINEL.
+     * for the ApiQueryImageInfo `timestamp` field, which VisualEditor's
+     * media dialog reads. See IIIFFile::NO_TIMESTAMP_SENTINEL.
      *
      * @return array<string, array{value: string, source: string}>
      */
@@ -66,9 +65,9 @@ class MetadataExtractor
         if ($attribution !== '') {
             // Trim trailing colons/commas/semicolons. MMV concatenates
             // attribution with the license name and URL using a comma
-            // separator ("{credit}, {license}, {url}") — a manifest whose
-            // attribution naturally ends with ":" then renders as
-            // "Partner-Institution:, …" which reads as a stray comma.
+            // separator ("{credit}, {license}, {url}"). An attribution that
+            // ends with ":" would then render as "Partner-Institution:, …",
+            // which reads like a stray comma.
             $meta['Credit'] = [
                 'value' => $this->trimTrailingPunctuationHtml($attribution),
                 'source' => 'extension',
@@ -103,7 +102,7 @@ class MetadataExtractor
     }
 
     /**
-     * v2 `license`, v3 `rights` — usually a URL or list of URLs. Providers
+     * v2 `license`, v3 `rights`: usually a URL or list of URLs. Providers
      * vary: BSB returns `["https://…"]`, SLUB returns nothing (link is
      * in metadata under "Rechteinformationen"), Fotothek returns nothing
      * either. Fall back through metadata, then the provider landing page.
@@ -164,7 +163,7 @@ class MetadataExtractor
                 $langs[] = $userLang;
             }
         } catch (\Throwable $unused) {
-            // No language on this context — fall through.
+            // No language on this context; fall through.
             unset($unused);
         }
         $contentLang = $this->contentLanguage->getCode();
@@ -178,9 +177,9 @@ class MetadataExtractor
     }
 
     /**
-     * Strip trailing colons / commas / semicolons from a plain-text string.
-     * Whitespace and any of `:`, `;`, `,` are removed from the very end —
-     * other punctuation (e.g. trailing `.`) is preserved.
+     * Strip trailing colons, commas and semicolons from a plain-text string.
+     * Whitespace and any of `:`, `;`, `,` are removed from the very end.
+     * Other punctuation (e.g. a trailing `.`) is kept.
      */
     private function trimTrailingPunctuationPlain(string $text): string
     {
@@ -188,7 +187,7 @@ class MetadataExtractor
     }
 
     /**
-     * Like trimTrailingPunctuationPlain, but for HTML fragments — the
+     * Like trimTrailingPunctuationPlain, but for HTML fragments, where the
      * punctuation may sit just before trailing closing tags (e.g.
      * `<p>Foo:</p>`). Strips it while preserving the closing tags.
      */

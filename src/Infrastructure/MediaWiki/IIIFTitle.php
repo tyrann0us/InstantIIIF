@@ -22,12 +22,12 @@ namespace MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki;
  */
 final class IIIFTitle
 {
-    /** Single source of truth: the only extension we ever spoof. */
+    /** The only extension we ever spoof. Everything else reads this constant. */
     public const SPOOF_EXTENSION = 'jpg';
 
     /**
      * Append the spoofed extension when the dbkey doesn't already end with
-     * it. Idempotent — spoof("Foo.jpg") returns "Foo.jpg" unchanged so the
+     * it. Idempotent: spoof("Foo.jpg") returns "Foo.jpg" unchanged, so the
      * imageinfo API call from MMV doesn't see a doubled "Foo.jpg.jpg" that
      * unspoof() can't undo.
      */
@@ -39,7 +39,7 @@ final class IIIFTitle
     }
 
     /**
-     * Strip a trailing ".jpg" (case-insensitive). Idempotent — unspoof("Foo")
+     * Strip a trailing ".jpg" (case-insensitive). Idempotent: unspoof("Foo")
      * returns "Foo".
      */
     public static function unspoof(string $dbKey): string

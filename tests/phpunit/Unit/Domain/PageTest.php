@@ -31,8 +31,8 @@ class PageTest extends TestCase
     }
 
     /**
-     * Page::normalize underpins every page-aware code path; junky inputs
-     * from wikitext / URL params all settle on page 1.
+     * Every page-aware code path goes through Page::normalize. Junk input
+     * from wikitext or URL params always ends up as page 1.
      *
      * @param mixed $input
      */

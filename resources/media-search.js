@@ -13,7 +13,7 @@
 // This module replaces `fetchAPIresults` on the MediaSearchProvider tied
 // to the IIIF repo with a direct title lookup. The repo is identified by
 // matching `provider.apiurl` against the apiurls advertised in the
-// `wgInstantIIIFRepos` config var (set by Hooks::onBeforePageDisplay).
+// `wgInstantIIIFRepos` config var (set by HookHandler::onBeforePageDisplay).
 ( function () {
 	const repos = mw.config.get( 'wgInstantIIIFRepos' );
 	if ( ! Array.isArray( repos ) || ! repos.length ) {
@@ -21,7 +21,7 @@
 	}
 
 	// Shared spoof/unspoof helpers (also used by mmv-patch.js, mirrored in
-	// src/IIIFTitle.php). Loaded via the ext.instantIIIF.title dependency.
+	// src/Infrastructure/MediaWiki/IIIFTitle.php). Loaded via the ext.instantIIIF.title dependency.
 	const iiifTitle = window.iiifTitle;
 
 	const repoByApiUrl = {};
@@ -62,8 +62,8 @@
 	// IIIF identifier. Returns the same shape as the upstream
 	// `fetchAPIresults` so MediaSearchProvider's queue can consume it.
 	function iiifTitleLookup( descriptor ) {
-		// IIIF has no fulltext search — every result fits in the first
-		// page, so the second call must report depletion.
+		// IIIF has no fulltext search, so every result fits on the first
+		// page and the second call must report depletion.
 		if ( this.getOffset() > 0 ) {
 			this.toggleDepleted( true );
 			return emptyPromise();
@@ -140,7 +140,7 @@
 			info.index = 0;
 			// Flag the result as ours so ve-media-insert.js can strip the
 			// spoofed `.jpg` when VE turns it into the inserted node. The
-			// spoofed title must stay on `info.title` here — VE filters the
+			// spoofed title must stay on `info.title` here: VE filters the
 			// media-search grid by file extension, so dropping it would hide
 			// the result entirely.
 			info.isInstantIIIF = true;
@@ -167,8 +167,8 @@
 			try {
 				compiled.push( new RegExp( body, flags ) );
 			} catch {
-				// Skip patterns we can't parse — better than throwing
-				// during widget setup and blocking the whole search.
+				// Skip patterns we can't parse. Throwing during widget
+				// setup would block the whole search.
 			}
 		} );
 		return compiled;

@@ -19,8 +19,8 @@ use PHPUnit\Framework\TestCase;
  * IIIFImageCacheTest; here the standalone FileRepo stub only stores the
  * $info. Each repo is given a stub `backend` object so FileRepo never
  * reaches for MW's backend service wiring (absent from the standalone suite).
- * registerCacheBackends() — the extension.json callback's worker — is pure
- * array juggling and covered directly.
+ * registerCacheBackends(), which does the work for the extension.json
+ * callback, only transforms arrays and is tested directly.
  */
 #[CoversClass(Repo::class)]
 class RepoCacheConfigTest extends TestCase
@@ -97,8 +97,8 @@ class RepoCacheConfigTest extends TestCase
 
     public function testNonArrayZonesConfigIsCoercedBeforeAddingCacheZone(): void
     {
-        // A malformed (non-array) `zones` value must be replaced rather than
-        // crashing when the cache zone is assembled.
+        // A malformed (non-array) `zones` value must be replaced when the
+        // cache zone is assembled, without crashing.
         $repo = $this->makeRepo(['zones' => 'not-an-array']);
 
         self::assertTrue($repo->cacheImagesEnabled());

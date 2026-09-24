@@ -91,7 +91,7 @@ class IIIFFileTest extends TestCase
 
             protected function ensureInfoJsonFor(string $serviceId): array
             {
-                // Return empty — canvas dimensions are used instead in tests.
+                // Return empty. Tests use the canvas dimensions instead.
                 return [];
             }
         };
@@ -121,8 +121,8 @@ class IIIFFileTest extends TestCase
 
         // Must be a full URL (with protocol), not a relative path.
         self::assertStringStartsWith('https://', $url);
-        // Must contain the local file page path (with the spoofed `.jpg`
-        // stripped — see testGetDescriptionUrlStripsSpoofedJpgExtension).
+        // Must contain the local file page path, with the spoofed `.jpg`
+        // stripped (see testGetDescriptionUrlStripsSpoofedJpgExtension).
         self::assertStringContainsString('File:Df_dk_0007450', $url);
         self::assertStringNotContainsString('fotothek.slub-dresden.de', $url);
     }
@@ -196,7 +196,7 @@ class IIIFFileTest extends TestCase
         $file = new class ($repo) extends IIIFFile {
             public function __construct(Repo $repo)
             {
-                // Intentionally skip parent constructor to keep title null
+                // Skip the parent constructor on purpose to keep title null
                 $this->repo = $repo;
             }
 
@@ -303,12 +303,11 @@ class IIIFFileTest extends TestCase
 
     /**
      * MediaWiki core's File::getWidth($page = 1) / getHeight($page = 1)
-     * signatures are untyped — MW calls them with `false` to mean
+     * signatures are untyped, and MW calls them with `false` to mean
      * "no page specified" (seen in production: ImagePage rendering for
-     * an IIIFFile triggers File::getWidth(false)). Internal coercion
-     * via Page::normalize must absorb that or strict_types fires a
-     * TypeError. Regression guard for the bug that surfaced on first
-     * deploy of the DDD refactor.
+     * an IIIFFile triggers File::getWidth(false)). Page::normalize must
+     * absorb that, or strict_types throws a TypeError. Regression guard
+     * for a bug that surfaced on the first deploy of the DDD refactor.
      */
     public function testGetWidthAcceptsFalseAsNoPage(): void
     {
@@ -410,11 +409,11 @@ class IIIFFileTest extends TestCase
 
     /**
      * On a file description page at ?page=6, MediaWiki renders prev/next
-     * thumbnails AFTER the main image — each transform() call overwrites
+     * thumbnails AFTER the main image. Each transform() call overwrites
      * lastTransformPage, so by the time the "Original file" link is rendered
-     * it would point at canvas 7 (or 5). getUrl() must honour the request's
-     * `?page=` parameter instead so it stays anchored to the page the user
-     * is actually looking at.
+     * it would point at canvas 7 (or 5). getUrl() must use the request's
+     * `?page=` parameter instead, so it stays on the page the user is
+     * looking at.
      */
     public function testGetUrlHonoursRequestPageOverMultipleTransforms(): void
     {
@@ -447,7 +446,7 @@ class IIIFFileTest extends TestCase
         $manifest = $this->loadFixture('manifest-multipage-v2.json');
         $file = $this->makeFile($manifest, 'digitale-sammlungen', 'bsb11610364', 'Bsb11610364');
 
-        // Page 1 is the default — no query string needed.
+        // Page 1 is the default and needs no query string.
         $file->transform(['width' => 600, 'page' => 1]);
         self::assertStringNotContainsString('page=', $file->getDescriptionUrl());
 
@@ -673,7 +672,7 @@ class IIIFFileTest extends TestCase
      * The `manifestFetcher()` factory is private and is the boundary where
      * IIIFFile reaches into MediaWikiServices. Verify it returns a
      * CachedHttpManifestFetcher so the wiring stays correct after refactors.
-     * (Now an instance method, as the TTL is read from the repo.)
+     * It is an instance method because the TTL is read from the repo.
      */
     public function testManifestFetcherFactoryReturnsCachedHttpManifestFetcher(): void
     {
@@ -689,9 +688,9 @@ class IIIFFileTest extends TestCase
 
     /**
      * `fetchJsonCached()` is the seam between IIIFFile and the
-     * Infrastructure HTTP layer. Production code goes through it but the
-     * other tests mock it out — exercise the real body once so the
-     * one-line delegation to manifestFetcher() is covered. Returns null
+     * Infrastructure HTTP layer. Production code goes through it, but the
+     * other tests mock it out, so this runs the real body once to cover
+     * the one-line delegation to manifestFetcher(). It returns null
      * because the standalone HTTP stub responds with an empty body.
      */
     public function testFetchJsonCachedDelegatesToManifestFetcher(): void
@@ -708,9 +707,9 @@ class IIIFFileTest extends TestCase
     }
 
     /**
-     * Public helper used by SpecialInstantIIIFInspect — exposes the service
-     * @id for a given canvas as a plain string, with the input page run
-     * through Page::normalize so callers can pass junk.
+     * Public helper used by SpecialInstantIIIFInspect. Returns the service
+     * @id for a given canvas as a plain string. The input page goes
+     * through Page::normalize, so callers can pass junk.
      */
     public function testGetServiceIdForPageReturnsServiceUrl(): void
     {
@@ -724,8 +723,8 @@ class IIIFFileTest extends TestCase
     }
 
     /**
-     * Public helper used by SpecialInstantIIIFInspect's canvas table —
-     * returns a `[width, height]` tuple.
+     * Public helper used by SpecialInstantIIIFInspect's canvas table.
+     * Returns a `[width, height]` tuple.
      */
     public function testGetCanvasDimensionsReturnsTuple(): void
     {
@@ -741,8 +740,8 @@ class IIIFFileTest extends TestCase
     /**
      * When the canvas has no width/height but info.json does, getWidth /
      * getHeight should fall through to info.json. The standard makeFile()
-     * stub returns `[]` for info.json so this branch is otherwise
-     * unreachable — we override it inline.
+     * stub returns `[]` for info.json, so this test overrides it inline
+     * to reach the branch.
      */
     public function testGetWidthFallsBackToInfoJsonWhenCanvasDimsMissing(): void
     {
@@ -862,10 +861,10 @@ class IIIFFileTest extends TestCase
     }
 
     /**
-     * `ensureResolved()` memoises its result on `$this->resolved` — a
+     * `ensureResolved()` memoises its result on `$this->resolved`, so a
      * second call must short-circuit at the cache check (line 1) instead
-     * of re-running the provider loop. Use the real-resolve harness and
-     * count fetchJsonCached invocations to prove it.
+     * of re-running the provider loop. The test uses the real-resolve
+     * harness and counts fetchJsonCached invocations.
      */
     public function testEnsureResolvedMemoisesResultAcrossCalls(): void
     {
@@ -913,9 +912,9 @@ class IIIFFileTest extends TestCase
     /**
      * Out-of-range page requested via wikitext (`[[File:Foo|page=99999]]`)
      * or URL (`?page=99999`): transform must surface a MediaTransformError
-     * rather than silently rendering a broken canvas — MediaWiki's image
-     * pipeline catches the error and shows the "could not be resolved"
-     * fallback to the reader.
+     * rather than silently rendering a broken canvas. MediaWiki's image
+     * pipeline catches the error and shows the reader the "could not be
+     * resolved" fallback.
      */
     public function testTransformReturnsErrorForPageBeyondCanvasCount(): void
     {
@@ -937,9 +936,9 @@ class IIIFFileTest extends TestCase
 
     /**
      * After a successful transform a second, out-of-range transform
-     * updates lastTransformPage but `getUrl()` should *not* return a
-     * malformed URL — it must report empty so callers (e.g. the
-     * "Original file" link) don't render a broken `<a href>`.
+     * updates lastTransformPage, but `getUrl()` must return an empty
+     * string instead of a malformed URL, so callers (e.g. the "Original
+     * file" link) don't render a broken `<a href>`.
      */
     public function testGetUrlReturnsEmptyAfterOutOfRangeTransform(): void
     {
@@ -1060,7 +1059,7 @@ class IIIFFileTest extends TestCase
         );
 
         self::assertNull($file->getResolvedManifest());
-        // No fetch must occur — the empty-objectId guard short-circuits.
+        // No fetch must occur: the empty-objectId guard short-circuits.
         self::assertSame(0, $file->fetchCalls);
     }
 
@@ -1120,8 +1119,8 @@ class IIIFFileTest extends TestCase
         $title = new Title('Df_dk_0007450', NS_FILE, 'File');
         $file = $this->makeFileWithRealResolve(
             [
-                // idPattern matches, but there's no manifestPattern to build
-                // a URL from — the manifestPattern guard returns before any
+                // idPattern matches, but there is no manifestPattern to build
+                // a URL from, so the manifestPattern guard returns before any
                 // fetch.
                 ['id' => 'no-manifest', 'idPattern' => '/^df_/'],
             ],
@@ -1197,8 +1196,8 @@ class IIIFFileTest extends TestCase
 
     public function testEnsureInfoJsonForFetchesInfoJsonAndMemoises(): void
     {
-        // We exercise ensureInfoJsonFor via getWidth() — which falls back
-        // through dimensionsForPage to info.json when canvas dims are unknown.
+        // getWidth() reaches ensureInfoJsonFor: it falls back through
+        // dimensionsForPage to info.json when canvas dims are unknown.
         // The canvas in this synthetic manifest has no width/height, so the
         // fallback runs and info.json provides them.
         $manifest = [
@@ -1259,7 +1258,7 @@ class IIIFFileTest extends TestCase
         // First call: triggers the info.json fetch and the dims fallback.
         self::assertSame(4321, $file->getWidth(1));
         self::assertSame(1234, $file->getHeight(1));
-        // Second call must reuse the memoised entry — fetchCalls stays at 1.
+        // Second call must reuse the memoised entry, so fetchCalls stays at 1.
         self::assertSame(4321, $file->getWidth(1));
         self::assertSame(1, $file->fetchCalls);
     }
@@ -1343,7 +1342,7 @@ class IIIFFileTest extends TestCase
         $file = new class ($vanilla, $title) extends IIIFFile {
             public function __construct(\FileRepo $repo, Title $title)
             {
-                // Bypass our constructor's type hint (Repo) — assign repo directly.
+                // Bypass our constructor's type hint (Repo) and assign repo directly.
                 $this->repo = $repo;
                 $this->title = $title;
             }
@@ -1374,14 +1373,11 @@ class IIIFFileTest extends TestCase
 
     public function testGetDescriptionUrlFallsBackToOriginalTitleWhenMakeTitleSafeFails(): void
     {
-        // makeTitleSafe() returns null for an empty stripped string. A dbKey
-        // of just `.jpg` strips to `''`, which is normally caught by the
-        // early `stripped===''` return — so we hit the fallback branch with
-        // a dbKey whose unspoofed form is non-empty but a stubbed Title
-        // that overrides makeTitleSafe to fail. The standalone Title stub
-        // already returns null for empty strings, so we exercise the
-        // empty-stripped early-return path here (which keeps the original
-        // title unchanged).
+        // A dbKey of just `.jpg` strips to `''`, which the early
+        // `stripped===''` return catches before makeTitleSafe() runs. The
+        // standalone Title stub gives no way to make makeTitleSafe() fail
+        // for a non-empty string, so this covers the empty-stripped
+        // early return, which keeps the original title unchanged.
         $manifest = $this->loadFixture('manifest-fotothek-v2.json');
         // dbKey ".jpg" → stripped to '' → early-return original title.
         $file = $this->makeFile($manifest, 'deutsche-fotothek', 'df_dk_0007450', '.jpg');
@@ -1393,7 +1389,7 @@ class IIIFFileTest extends TestCase
         self::assertStringContainsString('.jpg', $url);
     }
 
-    // ─── preferredLanguages — indirectly via getProviderUrl ───
+    // ─── preferredLanguages, indirectly via getProviderUrl ───
 
     public function testPreferredLanguagesPrependsContentLanguageThenEn(): void
     {
@@ -1419,8 +1415,8 @@ class IIIFFileTest extends TestCase
 
     /**
      * preferredLanguages() must still yield at least 'en' when the content
-     * language code is empty (not pre-pended) — the appended 'en' keeps the
-     * downstream metadata lookups working.
+     * language code is empty (and so not prepended). The appended 'en'
+     * keeps the downstream metadata lookups working.
      */
     public function testPreferredLanguagesAppendsEnWhenContentLanguageIsEmpty(): void
     {
@@ -1457,7 +1453,7 @@ class IIIFFileTest extends TestCase
             $manifest = $this->loadFixture('manifest-slub-v2.json');
             $file = $this->makeFile($manifest, 'slub-dresden', '384671365-19500000', '384671365-19500000.jpg');
 
-            // No throw — the catch block absorbs it. The 'en' fallback
+            // No throw: the catch block absorbs it. The 'en' fallback
             // still finds the PURL metadata label (which is 'PURL' in the
             // fixture, not language-keyed).
             self::assertSame(

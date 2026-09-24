@@ -16,14 +16,14 @@ use SpecialPage;
  * Diagnostic Special page that previews what InstantIIIF extracts from
  * a given IIIF manifest URL.
  *
- * Intended for admins adding a new provider, debugging missing metadata
- * (a blank credit, wrong license link, missing landing page), or
- * sanity-checking that a manifest is reachable from the wiki. The page
- * deliberately reuses the production IIIFFile + HookHandler code path — what
- * you see here is what the parser, MMV, and the VE search will see.
+ * Meant for admins adding a new provider, debugging missing metadata
+ * (a blank credit, wrong license link, missing landing page), or checking
+ * that a manifest is reachable from the wiki. The page uses the same
+ * IIIFFile and HookHandler code as production, so it shows what the
+ * parser, MMV, and the VE search will see.
  *
- * Read-only and side-effect-free aside from the manifest fetch (which
- * goes through the same WAN cache as normal lookups).
+ * Read-only. The only side effect is the manifest fetch, which goes
+ * through the same WAN cache as normal lookups.
  */
 class SpecialInstantIIIFInspect extends SpecialPage
 {
@@ -107,9 +107,8 @@ class SpecialInstantIIIFInspect extends SpecialPage
         $form->setMethod('get');
         $form->setSubmitTextMsg('instantiiif-inspect-submit');
         $form->setWrapperLegendMsg('instantiiif-inspect-title');
-        // No-op callback — the inspection is driven directly from the
-        // GET parameters in execute() so admins can bookmark/share the
-        // results URL.
+        // No-op callback. execute() runs the inspection straight from the
+        // GET parameters, so admins can bookmark or share the results URL.
         $form->setSubmitCallback(static fn () => true);
 
         return $form;
@@ -145,7 +144,7 @@ class SpecialInstantIIIFInspect extends SpecialPage
     {
         // Reuse the wiki's local-repo backend so FileRepo's required
         // 'backend' field is satisfied. The IIIF file is virtual and
-        // never reads from the backend — we only need it for the
+        // never reads from the backend; it is only needed for the
         // parent ::__construct() assertion.
         $localBackend = $this->repoGroup
             ->getLocalRepo()
@@ -237,9 +236,9 @@ class SpecialInstantIIIFInspect extends SpecialPage
         $html .= Html::element('th', [], $this->msg('instantiiif-inspect-col-service-id')->text());
         $html .= Html::closeElement('tr');
 
-        // Cap at a sensible upper bound so a 5000-page manifest doesn't
-        // turn the page into a memory hog. Admins debugging deeper than
-        // 100 pages can re-target with a different file URL.
+        // Cap the page count so a 5000-page manifest doesn't eat memory.
+        // Admins debugging past page 100 can re-target with a different
+        // file URL.
         $limit = min($count, 100);
         for ($page = 1; $page <= $limit; $page++) {
             [$width, $height] = $file->getCanvasDimensions($page);

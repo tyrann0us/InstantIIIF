@@ -171,12 +171,11 @@ class MetadataExtractorTest extends TestCase
 
     /**
      * MMV concatenates "{credit}, {license name}, {url}" with comma
-     * separators. A manifest whose attribution naturally ends with `:` —
-     * e.g. Fotothek's "© Es gelten die Nutzungsbedingungen … Partner-Institution:"
-     * — would render as "Partner-Institution:, Nutzungsbedingungen, …",
-     * the stray `:,` sequence the user flagged. Verify trailing
-     * `:` / `;` / `,` are stripped from both Credit (HTML) and
-     * Attribution (plain), including punctuation sitting inside a
+     * separators. A manifest whose attribution ends with `:` (e.g.
+     * Fotothek's "© Es gelten die Nutzungsbedingungen … Partner-Institution:")
+     * would render as "Partner-Institution:, Nutzungsbedingungen, …" with a
+     * stray `:,`. Trailing `:` / `;` / `,` must be stripped from both Credit
+     * (HTML) and Attribution (plain), including punctuation inside a
      * trailing closing tag.
      *
      * @return array<string, array{string, string, string}>
@@ -277,10 +276,9 @@ class MetadataExtractorTest extends TestCase
     }
 
     /**
-     * The language priority must come from the wiki / user (not a
-     * hard-coded list), so the same extension running on a French
-     * wiki picks French where available and falls back to English
-     * otherwise.
+     * The language priority comes from the wiki and the user, not from a
+     * hard-coded list. On a French wiki the extension picks French where
+     * available and falls back to English otherwise.
      */
     #[DataProvider('languagePreferenceProvider')]
     public function testLocalisedLabelHonoursUserAndContentLanguage(
@@ -299,11 +297,11 @@ class MetadataExtractorTest extends TestCase
     }
 
     /**
-     * `rights` / `license` is an IIIF v2 list — when none of its entries
-     * is an HTTP URL string, urlFromLicenseField must fall through to ''.
-     * Then MetadataExtractor walks the rest of its license-resolution
-     * chain (provider metadata, provider landing) — both empty here too,
-     * so no LicenseUrl/LicenseShortName appear at all.
+     * `rights` / `license` is an IIIF v2 list. When none of its entries is
+     * an HTTP URL string, urlFromLicenseField must fall through to ''.
+     * MetadataExtractor then tries the rest of its license chain (provider
+     * metadata, provider landing). Both are empty here too, so no
+     * LicenseUrl/LicenseShortName appear at all.
      */
     public function testLicenseFieldWithListOfNonHttpStringsFallsThrough(): void
     {
@@ -328,7 +326,7 @@ class MetadataExtractorTest extends TestCase
      * `preferredLanguages()` swallows any Throwable from
      * $context->getLanguage() (a malformed context, MW bootstrap
      * failure) and falls through to the content-language → 'en' chain.
-     * Verify the catch-block contract: extraction still succeeds.
+     * Extraction must still succeed.
      */
     public function testPreferredLanguagesFallsThroughWhenContextLanguageThrows(): void
     {

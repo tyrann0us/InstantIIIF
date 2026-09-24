@@ -12,7 +12,7 @@ composer phpcs:fix       # auto-fix style issues
 composer phpstan         # static analysis
 composer tests           # PHPUnit unit tests
 composer tests:coverage  # unit tests + coverage report
-composer tests:integration  # integration tests (requires Docker — see below)
+composer tests:integration  # integration tests (requires Docker, see below)
 ```
 
 Run a single test class:
@@ -28,14 +28,14 @@ npm test                 # Jest unit tests
 npm run test:watch       # Jest in watch mode
 npm run test:coverage    # Jest with coverage
 npm run test:e2e         # Playwright end-to-end (requires Docker)
-npm run lint:js          # ESLint (requires Node ≥ 16.9)
+npm run lint:js          # ESLint (requires Node ≥ 22)
 npm run lint:md          # Markdown lint
 ```
 
-`lint:js` requires Node ≥ 16.9. The nvm default may be 14 — activate a suitable version first:
+`lint:js` requires Node ≥ 22 (a dependency uses `require()` of an ES module; CI runs Node 22). The nvm default may be older, so switch versions first:
 
 ```bash
-. ~/.nvm/nvm.sh && nvm use 20
+. ~/.nvm/nvm.sh && nvm use 22
 ```
 
 ### Docker (local wiki + mock IIIF server)
@@ -57,7 +57,7 @@ The extension registers a virtual `FileRepo` so `[[File:…]]` wikitext hotlinks
 
 ```text
 src/
-├── Domain/                        # Pure business logic — no MediaWiki dependencies
+├── Domain/                        # Pure business logic, no MediaWiki dependencies
 │   ├── Manifest.php               # Parses IIIF v2/v3 manifests; central value object
 │   ├── Page.php                   # Value object: 1-based page/canvas index
 │   ├── ImageService.php           # IIIF Image API wrapper; builds sized URLs
@@ -72,11 +72,11 @@ src/
 │       ├── HookHandler.php        # 5 hooks: BeforePageDisplay, ThumbnailBeforeProduceHTML,
 │       │                          #   ImagePageFileHistoryLine, ImagePageShowTOC,
 │       │                          #   GetExtendedMetadata
-│       ├── IIIFFile.php           # extends File — virtual file backed by a manifest
-│       ├── IIIFHandler.php        # extends ImageHandler — adds page= param support
+│       ├── IIIFFile.php           # extends File; virtual file backed by a manifest
+│       ├── IIIFHandler.php        # extends ImageHandler; adds page= param support
 │       ├── IIIFTitle.php          # Static utility for the .jpg spoofing mechanism
 │       ├── MetadataExtractor.php  # Builds extmetadata for MMV and the inspector page
-│       ├── Repo.php               # extends FileRepo — newFile() returns IIIFFile
+│       ├── Repo.php               # extends FileRepo; newFile() returns IIIFFile
 │       └── SpecialInstantIIIFInspect.php  # Admin diagnostic special page
 └── ServiceWiring.php              # Registers InstantIIIF.MetadataExtractor service
 ```
@@ -114,14 +114,14 @@ extmetadata array
 
 ## Key invariants
 
-**`.jpg` spoofing** — `IIIFTitle::SPOOF_EXTENSION = 'jpg'` appends `.jpg` to all IIIF object IDs so MMV's `isValidExtension()` accepts them. Any code that round-trips a title back to the database must strip it with `IIIFTitle::unspoof()`.
+**`.jpg` spoofing.** `IIIFTitle::SPOOF_EXTENSION = 'jpg'` appends `.jpg` to all IIIF object IDs so MMV's `isValidExtension()` accepts them. Any code that round-trips a title back to the database must strip it with `IIIFTitle::unspoof()`.
 
-**No-timestamp sentinel** — `IIIFFile::NO_TIMESTAMP_SENTINEL = '<>'` is returned by `getTimestamp()` to blank the API `timestamp` field. Do not return a falsy value — `wfTimestamp(TS_*, false)` silently returns "now".
+**No-timestamp sentinel.** `IIIFFile::NO_TIMESTAMP_SENTINEL = '<>'` is returned by `getTimestamp()` to blank the API `timestamp` field. Do not return a falsy value: `wfTimestamp(TS_*, false)` silently returns "now".
 
-**MMV `originalWidth`** — MMV reads `data-file-width` as `originalWidth` and caps lightbox thumbnails at that value. `IIIFFile::getWidth($page)` must return the canvas's full pixel width, not the rendered thumbnail's clamped width.
+**MMV `originalWidth`.** MMV reads `data-file-width` as `originalWidth` and caps lightbox thumbnails at that value. `IIIFFile::getWidth($page)` must return the canvas's full pixel width, not the rendered thumbnail's clamped width.
 
-**Hook parameter types** — Hook interface method parameters must be left untyped (PHP LSP constraint). Suppress `Syde.Functions.ArgumentTypeDeclaration.NoArgumentType` via `// phpcs:ignore` on those methods. Return types can be added (covariant).
+**Hook parameter types.** Hook interface method parameters must be left untyped (PHP LSP constraint). Suppress `Syde.Functions.ArgumentTypeDeclaration.NoArgumentType` via `// phpcs:ignore` on those methods. Return types can be added (covariant).
 
-**PHPUnit suite is standalone** — bootstrapped from `tests/phpunit/bootstrap.php` with hand-written stubs under `tests/phpunit/stubs/`. It does not extend `MediaWikiIntegrationTestCase`. The `wfTimestamp()` stub always returns `false`. Use `createStub()` instead of `createMock()` — PHPUnit 13 emits "no expectations configured" notices for the latter.
+**PHPUnit suite is standalone.** It is bootstrapped from `tests/phpunit/bootstrap.php` with hand-written stubs under `tests/phpunit/stubs/`. It does not extend `MediaWikiIntegrationTestCase`. The `wfTimestamp()` stub always returns `false`. Use `createStub()`, not `createMock()`: PHPUnit 13 emits "no expectations configured" notices for mocks without expectations.
 
-**Multi-page AJAX pagination** — MW's `mediawiki.page.image.pagination` does an AJAX content swap and fires `mw.hook('wikipage.content')` with `$content = .mw-filepage-multipage` (not `#mw-content-text`). JS that reads DOM state must re-initialise on that hook.
+**Multi-page AJAX pagination.** MW's `mediawiki.page.image.pagination` does an AJAX content swap and fires `mw.hook('wikipage.content')` with `$content = .mw-filepage-multipage` (not `#mw-content-text`). JS that reads DOM state must re-initialise on that hook.

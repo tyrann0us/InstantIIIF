@@ -11,18 +11,18 @@ use WANObjectCache;
 
 /**
  * MediaWiki adapter for the ManifestFetcher port. Goes through the
- * main WAN cache (with an in-process pcTTL so a single request that
- * fetches a manifest and its info.json doesn't re-decode JSON).
+ * main WAN cache, with an in-process pcTTL so a single request that
+ * fetches a manifest and its info.json doesn't decode the JSON twice.
  *
- * Returns the decoded array directly so callers don't repeat the
- * json_decode + is_array dance.
+ * Returns the decoded array directly so callers don't have to repeat
+ * the json_decode and is_array checks.
  */
 final class CachedHttpManifestFetcher implements ManifestFetcher
 {
     /**
-     * Fallback TTL used when the caller does not pass one (e.g. when image
-     * caching is disabled, so the repo has no configured expiry). Manifests
-     * and info.json change rarely, but this keeps a conservative refresh.
+     * Fallback TTL for callers that don't pass one (e.g. when image caching
+     * is disabled, so the repo has no configured expiry). Manifests and
+     * info.json change rarely; one hour is a conservative refresh interval.
      */
     public const DEFAULT_TTL_SECONDS = 3600;
 

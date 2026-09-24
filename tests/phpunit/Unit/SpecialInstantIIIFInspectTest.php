@@ -23,7 +23,7 @@ use WebRequest;
  * methods (getOutput, getRequest, getContext, msg). The test stubs in
  * tests/phpunit/stubs/global-classes.php provide an injectable surface
  * for the first three, while msg() returns a trivial Message that
- * round-trips the key plus parameters as text — enough to assert on.
+ * returns the key plus parameters as text, which is enough to assert on.
  */
 #[CoversClass(SpecialInstantIIIFInspect::class)]
 class SpecialInstantIIIFInspectTest extends TestCase
@@ -156,14 +156,10 @@ class SpecialInstantIIIFInspectTest extends TestCase
      * Build a SpecialInstantIIIFInspect whose synthetic IIIFFile returns
      * the given manifest array (or simulates a failed fetch when null).
      *
-     * We can't override IIIFFile construction inside the subject under
-     * test without subclassing, so this variant subclasses
-     * SpecialInstantIIIFInspect, overriding the protected
-     * buildInspectorFile() hook — except… that method is private.
-     * Instead we lean on Hooks + a stub fetchTextCached on a subclass of
-     * IIIFFile reflected back via an anonymous class. The simplest path
-     * is to patch IIIFFile's HTTP fetch globally for the test session by
-     * shadowing $services->getHttpRequestFactory().
+     * buildInspectorFile() is private, so the IIIFFile it constructs can't
+     * be swapped out by subclassing. Instead this patches IIIFFile's HTTP
+     * fetch for the test session by shadowing
+     * $services->getHttpRequestFactory().
      */
     private function makeSpecialWithCannedManifest(?array $manifest): SpecialInstantIIIFInspect
     {
@@ -226,10 +222,9 @@ class SpecialInstantIIIFInspectTest extends TestCase
     }
 
     /**
-     * `metaValue()` is a private helper that surfaces the
-     * NO_TIMESTAMP_SENTINEL as the human-readable "(suppressed)" string
-     * and skips non-array entries. Exercise both via reflection so the
-     * private logic stays guarded.
+     * `metaValue()` is a private helper that shows the NO_TIMESTAMP_SENTINEL
+     * as the human-readable "(suppressed)" string and skips non-array
+     * entries. Both behaviours are tested through reflection.
      */
     public function testMetaValueRendersSuppressedForNoTimestampSentinel(): void
     {
@@ -255,8 +250,8 @@ class SpecialInstantIIIFInspectTest extends TestCase
     }
 
     /**
-     * `formatValue()` is the inspector's per-cell rendering hook. Each
-     * shape — empty, URL, plain text — picks a different HTML element.
+     * `formatValue()` renders each inspector cell. Empty values, URLs and
+     * plain text each get a different HTML element.
      */
     public function testFormatValueRendersPlaceholderForEmptyString(): void
     {
@@ -272,9 +267,8 @@ class SpecialInstantIIIFInspectTest extends TestCase
     /**
      * `renderCanvasTable()` short-circuits to an empty string when the
      * resolved manifest has no canvases (the v2 fallback for malformed
-     * manifests). Exercise the branch so a regression there doesn't
-     * silently leave the inspector emitting a bare `<h3>` followed by an
-     * empty `<table>`.
+     * manifests). Without this branch the inspector would emit a bare
+     * `<h3>` followed by an empty `<table>`.
      */
     public function testRenderCanvasTableReturnsEmptyWhenPageCountIsZero(): void
     {
@@ -290,8 +284,8 @@ class SpecialInstantIIIFInspectTest extends TestCase
     /**
      * `buildInspectorFile()` throws if `Title::makeTitleSafe(NS_FILE,
      * INSPECT_DBKEY)` returns null. In real MediaWiki this can't happen
-     * for a fixed valid dbkey, but the guard exists as belt-and-braces —
-     * defend the contract so we'd hear about it if MW ever changes.
+     * for a fixed valid dbkey. The guard is a safety net, and this test
+     * makes sure we notice if MW ever changes.
      */
     public function testBuildInspectorFileThrowsWhenTitleConstructionFails(): void
     {

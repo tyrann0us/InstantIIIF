@@ -1,5 +1,5 @@
-// Spoof/unspoof helpers and EXTENSIONS character class shared with
-// media-search.js and (server-side) src/IIIFTitle.php. Loaded as a
+// Spoof/unspoof helpers and the extension pattern shared with
+// media-search.js and (server-side) src/Infrastructure/MediaWiki/IIIFTitle.php. Loaded as a
 // dependency via the ext.instantIIIF.title ResourceLoader module.
 const iiifTitle = window.iiifTitle;
 
@@ -10,8 +10,8 @@ const iiifTitle = window.iiifTitle;
 // makes MMV's bootstrap skip them (it collects via
 // '.mw-file-description img').
 //
-// This runs via mw.hook('wikipage.content') which fires in
-// registration order — our module loads with position:top, so
+// This runs via mw.hook('wikipage.content'), which fires in
+// registration order. Our module loads with position:top, so
 // our handler is registered (and runs) before MMV's bootstrap.
 mw.hook( 'wikipage.content' ).add( function () {
 	document
@@ -24,9 +24,9 @@ mw.hook( 'wikipage.content' ).add( function () {
 		} );
 
 	// On file detail pages the shared-upload description text contains a
-	// link to getDescriptionUrl(). Since that now returns the local wiki
-	// URL (for MMV), the link would point back to the same page. Replace
-	// it with the external provider URL passed via JS config.
+	// link to getDescriptionUrl(). That returns the local wiki URL (for
+	// MMV), so the link would point back to the same page. Replace it
+	// with the external provider URL passed via JS config.
 	const providerUrl = mw.config.get( 'wgIIIFProviderUrl' );
 	if ( providerUrl ) {
 		document
@@ -64,18 +64,18 @@ mw.loader.using( 'mediawiki.Title' ).then( function () {
 	// Enforce "Open in Media Viewer" button on file detail pages.
 	//
 	// On a file detail page, MMV's processFilePageThumb resolves the
-	// title via `mw.Title.newFromText(wgTitle, wgNamespaceNumber)` —
-	// i.e. ignoring our `data-iiif-title` data attribute — and bails
-	// out early if `title.getExtension()` is empty. IIIF object IDs
+	// title via `mw.Title.newFromText(wgTitle, wgNamespaceNumber)`,
+	// ignoring our `data-iiif-title` data attribute, and bails out
+	// early if `title.getExtension()` is empty. IIIF object IDs
 	// are extension-less (Bsb11610364, df_dk_*, …), so MMV silently
 	// skips the file and never adds the `.mw-mmv-view-expanded`
 	// "Open in Media Viewer" button.
 	//
 	// Patch `getExtension` to return "jpg" for file-namespace titles
-	// *on IIIF file detail pages*; this gates only on a marker we
-	// ourselves placed (`#file img[data-iiif-title]`), so other pages
-	// are unaffected. MMV happily processes the thumb after this and
-	// surfaces its usual button.
+	// *on IIIF file detail pages*. The check depends only on a marker we
+	// placed ourselves (`#file img[data-iiif-title]`), so other pages
+	// are unaffected. MMV then processes the thumb and shows its usual
+	// button.
 	if ( document.querySelector( '#file img[data-iiif-title]' ) ) {
 		const origGetExt = mw.Title.prototype.getExtension;
 		mw.Title.prototype.getExtension = function () {
@@ -129,7 +129,7 @@ mw.loader.using( 'mediawiki.Title' ).then( function () {
 	// fragment "#pageN-Wpx" that the regex picks up. ThumbnailInfo then
 	// sends iiurlparam=pageN-{width}px to the API, which
 	// IIIFHandler::parseParamString() parses into {page: N, width: W}.
-	// The "#" fragment is harmless — it never reaches the HTTP request.
+	// The "#" fragment is harmless because it never reaches the HTTP request.
 	//
 	// Patched unconditionally on pages that load this module: the
 	// iiifPageByUrl map is rebuilt on every `wikipage.content` fire (see
@@ -180,13 +180,13 @@ mw.loader.using( 'mediawiki.Title' ).then( function () {
 	// Clicking the displayed image in MMV fires the `mmv-viewfile`
 	// jQuery event, whose MMV handler calls
 	// `imageInfoProvider.get(filePageTitle)` *without* iiurlparam and
-	// navigates to `imageInfo.url` — which is always canvas 1 for
+	// navigates to `imageInfo.url`, which is always canvas 1 for
 	// multi-page IIIF docs. Intercept the event before MMV's handler
-	// gets a chance to fire and navigate to the canvas the user is
-	// actually looking at instead. Our handler is registered here
-	// (inside mw.loader.using('mediawiki.Title')) which runs *before*
-	// MMV is lazy-loaded by the user's first thumbnail click, so jQuery
-	// calls ours first — stopImmediatePropagation suppresses MMV's.
+	// fires and navigate to the canvas the user is looking at instead.
+	// Our handler is registered here (inside
+	// mw.loader.using('mediawiki.Title')), which runs *before* MMV is
+	// lazy-loaded by the user's first thumbnail click. jQuery therefore
+	// calls ours first, and stopImmediatePropagation suppresses MMV's.
 	$( document ).on( 'mmv-viewfile.iiifpatch', function ( e ) {
 		if ( isCurrentImageIiif && currentIiifFullUrl ) {
 			e.stopImmediatePropagation();
@@ -199,16 +199,15 @@ mw.loader.using( 'mediawiki.Title' ).then( function () {
 	// off a separate `.then()` chain that can run *before* the event
 	// handler does. The result: when MMV first opens, our reuse-dialog
 	// patches see stale state (page = 1) and the share/embed URLs come
-	// out without `?page=N`. Capture the page on the *click* that
-	// opened MMV — by then the user has already chosen which canvas
-	// they care about, and the value will be in place no matter which
-	// promise wins the race.
+	// out without `?page=N`. So capture the page on the *click* that
+	// opened MMV instead. By then the user has chosen the canvas, and
+	// the value is in place whichever promise wins the race.
 	/**
 	 * Parse `data-iiif-page` strictly: only accept a non-empty string of
 	 * digits with a positive value. parseInt() is lenient ("3.5" → 3,
-	 * "abc" → NaN) — clamp every other shape to 1 so a malformed
-	 * attribute can't quietly send users to a different canvas than
-	 * the rendered thumbnail.
+	 * "abc" → NaN), so every other shape is clamped to 1. A malformed
+	 * attribute then can't send users to a different canvas than the
+	 * rendered thumbnail.
 	 * @param {string} raw
 	 */
 	function parseIiifPage( raw ) {
@@ -267,7 +266,7 @@ mw.loader.using( 'mediawiki.Title' ).then( function () {
 	// module runner executes them. `mmv.ui.reuse` does *not* declare
 	// `mmv` as a ResourceLoader dependency, so requesting them
 	// together with `mw.loader.using(['mmv', 'mmv.ui.reuse'])` lets
-	// them load in parallel — `mmv.ui.reuse`'s runScript wins the race
+	// them load in parallel, and `mmv.ui.reuse`'s runScript wins the race
 	// ~9× out of 10 and throws "Error: Module 'mmv' is not loaded".
 	// Chain the loads so `mmv` is fully ready before we ask for
 	// `mmv.ui.reuse`.
@@ -284,9 +283,9 @@ mw.loader.using( 'mediawiki.Title' ).then( function () {
 				// when wikipage.content fires (after the core
 				// `mediawiki.page.image.pagination` AJAX swap), but in
 				// practice the button's click handler keeps firing with
-				// the LightboxImage from initial page load — so MMV ends
-				// up displaying the original page rather than the page
-				// the user is now on. Refresh the LightboxImage from the
+				// the LightboxImage from the initial page load, so MMV
+				// ends up displaying the original page rather than the
+				// page the user is now on. Refresh the LightboxImage from the
 				// current `#file img[data-iiif-title]` DOM state every
 				// time MMV loads an image; the post-swap thumb's src,
 				// data-file-width and data-file-height reflect the
@@ -333,14 +332,14 @@ mw.loader.using( 'mediawiki.Title' ).then( function () {
 				// returns the URL with `?page=N` when the descriptionUrl is
 				// looked up during a transform that carries the page (e.g.
 				// the `iiurlparam=pageN-Wpx` flow), but MMV's *initial*
-				// imageinfo request doesn't always pass iiurlparam — so
+				// imageinfo request doesn't always pass iiurlparam, so
 				// descriptionUrl sometimes arrives without the query string
 				// and the share input ends up like
 				// `…/wiki/File:Foo.jpg#/media/File:Foo.jpg`. Re-insert
 				// `?page=N` between the URL and the `#/media/` fragment so
 				// the share link always lands on the correct canvas. We
 				// only touch the value when MMV already produced a share URL
-				// *without* a page parameter — we never strip the fragment.
+				// *without* a page parameter, and never strip the fragment.
 				if (
 					reuse.Share &&
 					reuse.Share.prototype &&
@@ -367,19 +366,19 @@ mw.loader.using( 'mediawiki.Title' ).then( function () {
 				}
 
 				// Download dialog "Original" size:
-				// MMV's`Download.prototype.set` stores`image.url`
+				// MMV's `Download.prototype.set` stores `image.url`
 				// (= File::getUrl()) and later wires the download button
 				// to it whenever the user picks the "Original" option.
 				// MMV's *initial* imageinfo API call for the lightbox
 				// has no iiurlparam, so the server resolves getUrl() to
-				// canvas 1 — making "Original" always point at page 1 of
-				// a multi-page IIIF document.
+				// canvas 1, and "Original" always points at page 1 of a
+				// multi-page IIIF document.
 				//
 				// Override `image.url` on the download pane's local copy
 				// with the canvas the user opened (`currentIiifFullUrl`,
-				// set from `data-iiif-full-url` at click time). Mutating
-				// the local field — not the shared ImageModel — keeps the
-				// rest of MMV's state untouched.
+				// set from `data-iiif-full-url` at click time). Only the
+				// local field changes; the shared ImageModel and the rest
+				// of MMV's state stay untouched.
 				if (
 					reuse.Download &&
 					reuse.Download.prototype &&
@@ -413,7 +412,7 @@ mw.loader.using( 'mediawiki.Title' ).then( function () {
 				}
 
 				// HTML embed code: MMV builds the wrapping `<a href>` from
-				// `descriptionUrl + Config.getMediaHash(image.title)` — the
+				// `descriptionUrl + Config.getMediaHash(image.title)`. The
 				// hash carries the spoofed `.jpg` title from MMV's internal
 				// model, which 404s the file-page lookup when the snippet
 				// is pasted elsewhere. Patch the formatter so the embed
@@ -562,8 +561,8 @@ mw.loader.using( 'mediawiki.Title' ).then( function () {
 	 *
 	 * `data-iiif-title` carries the spoofed `.jpg` extension Hooks
 	 * appends to extension-less IDs so MMV accepts the file. The
-	 * real wiki page sits at the un-spoofed title — link there or the
-	 * file-page's File usage listing loses every wikitext usage.
+	 * real wiki page sits at the un-spoofed title. Linking anywhere else
+	 * makes the file page's "File usage" listing miss every wikitext usage.
 	 */
 	function buildLocalFileUrl() {
 		if ( ! currentIiifTitle ) {
@@ -589,9 +588,9 @@ mw.loader.using( 'mediawiki.Title' ).then( function () {
 	 */
 	function patchMmvOverlayLinks() {
 		// The full-resolution / "download original" button uses imageInfo.url
-		// (= File::getUrl()). With our PHP fix this normally already points
-		// to the current canvas, but we patch defensively in case the API
-		// response was cached when the page was first visited.
+		// (= File::getUrl()). This normally already points to the current
+		// canvas, but we patch defensively in case the API response was
+		// cached when the page was first visited.
 		if ( currentIiifFullUrl ) {
 			document
 				.querySelectorAll(
@@ -628,7 +627,7 @@ mw.loader.using( 'mediawiki.Title' ).then( function () {
 		}
 	}
 
-	// mmv-metadata is a jQuery event — native addEventListener cannot catch it.
+	// mmv-metadata is a jQuery event; native addEventListener cannot catch it.
 	$( document ).on( 'mmv-metadata', function ( e ) {
 		const image = e.image;
 		isCurrentImageIiif = !! (

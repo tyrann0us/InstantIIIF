@@ -7,10 +7,10 @@ namespace MediaWiki\Extension\InstantIIIF\Domain;
 /**
  * Derives a human-readable short name from a license URL.
  *
- * MMV only renders its License object when LicenseShortName is set;
- * without it the license link falls back to filePageUrl with a
- * meaningless `?uselang=…#…` fragment. Empty string means the URL
- * isn't a recognised license — callers fall back to a generic
+ * MMV only renders its License object when LicenseShortName is set.
+ * Without it, the license link falls back to filePageUrl with a
+ * meaningless `?uselang=…#…` fragment. An empty string means the URL
+ * isn't a recognised license, and callers fall back to a generic
  * "(Lizenz)" message.
  */
 final class LicenseClassifier

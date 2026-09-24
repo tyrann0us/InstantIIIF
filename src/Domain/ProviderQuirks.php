@@ -9,11 +9,11 @@ namespace MediaWiki\Extension\InstantIIIF\Domain;
  *
  * Most IIIF providers expose the canonical landing URL via v2 `related`
  * or v3 `homepage`, and the license URL via v2 `license` / v3 `rights`.
- * A handful (Deutsche Fotothek, SLUB Dresden) instead bury these inside
- * the `metadata` array keyed by provider-specific labels — this class
- * centralises the label → meaning mapping.
+ * A few (Deutsche Fotothek, SLUB Dresden) put them inside the
+ * `metadata` array under provider-specific labels instead. This class
+ * holds the mapping from those labels to what they mean.
  *
- * Pure data + lookup; no side effects.
+ * Pure data and lookup, no side effects.
  */
 final class ProviderQuirks
 {
@@ -41,8 +41,8 @@ final class ProviderQuirks
 
     /**
      * Metadata-label needles for finding a landing URL inside the
-     * manifest's `metadata` array. Empty list means: no provider-specific
-     * fallback — the caller should not bother searching metadata.
+     * manifest's `metadata` array. An empty list means the provider has no
+     * such fallback, so the caller can skip searching metadata.
      *
      * @return list<string>
      */

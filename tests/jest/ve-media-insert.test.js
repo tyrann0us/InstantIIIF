@@ -1,5 +1,5 @@
 /**
- * Tests for resources/ve-media-insert.js — the patch that strips the spoofed
+ * Tests for resources/ve-media-insert.js, the patch that strips the spoofed
  * `.jpg` from IIIF files when VisualEditor's media dialog turns a chosen
  * search result into the inserted node (ve.ui.MWMediaDialog#confirmSelectedImage).
  *
@@ -47,7 +47,7 @@ afterEach( () => {
 	delete window.ve;
 } );
 
-describe( 've-media-insert.js — confirmSelectedImage patch', () => {
+describe( 've-media-insert.js: confirmSelectedImage patch', () => {
 	test( 'un-spoofs title + canonicaltitle for IIIF results, then restores them', async () => {
 		const { MWMediaDialog, seen } = installFakeVe( window );
 
@@ -167,7 +167,7 @@ describe( 've-media-insert.js — confirmSelectedImage patch', () => {
 	} );
 
 	test( 'does nothing when ve is absent entirely', async () => {
-		// No window.ve at all — patch guard returns without throwing.
+		// No window.ve at all: the patch guard returns without throwing.
 		loadVeMediaInsert( window );
 		await flush();
 

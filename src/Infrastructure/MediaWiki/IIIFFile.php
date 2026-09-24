@@ -24,8 +24,8 @@ use ThumbnailImage;
  * the IIIF Presentation API (v2/v3) manifest.
  *
  * Thin MediaWiki adapter: this class implements the File interface MW core
- * expects (transform, getWidth, getUrl, …) and delegates the actual IIIF
- * parsing to the Domain layer (Manifest, ImageService, Page).
+ * expects (transform, getWidth, getUrl, …) and delegates IIIF parsing to
+ * the Domain layer (Manifest, ImageService, Page).
  */
 class IIIFFile extends File
 {
@@ -98,11 +98,11 @@ class IIIFFile extends File
     }
 
     /**
-     * IIIF files have no upload timestamp. Returning a falsy value would
-     * make wfTimestamp() fall back to the current time — ConvertibleTimestamp
-     * treats 0/''/false as "now" — which surfaces a misleading
-     * "uploaded a few seconds ago" in ApiQueryImageInfo (the `timestamp`
-     * field consumed by VisualEditor's media dialog).
+     * IIIF files have no upload timestamp. A falsy return value would make
+     * wfTimestamp() fall back to the current time (ConvertibleTimestamp
+     * treats 0/''/false as "now"), and ApiQueryImageInfo would then report a
+     * misleading "uploaded a few seconds ago" in the `timestamp` field that
+     * VisualEditor's media dialog reads.
      *
      * Returning a non-date sentinel instead makes wfTimestamp() return false,
      * so the API emits an empty timestamp and clients skip the upload line.
@@ -176,20 +176,19 @@ class IIIFFile extends File
      * Return the IIIF Image API URL for the currently selected page.
      *
      * Resolution order:
-     *  1. `?page=N` on the current request — set when the user is viewing
+     *  1. `?page=N` on the current request, set when the user is viewing
      *     a file detail page at `/wiki/File:Foo?page=6`. Anchored to the
      *     request URL so it isn't overwritten by subsequent transform()
      *     calls (e.g. for the prev/next thumbnails, whose transforms
      *     update `lastTransformPage` after the main image was rendered).
-     *  2. `lastTransformPage` — used in the imageinfo API flow, where the
+     *  2. `lastTransformPage`, used in the imageinfo API flow, where the
      *     request URL has no `?page=` parameter but MediaWiki calls
      *     transform() with `iiurlparam=pageN-Wpx` before reading `url`.
      *  3. Page 1 as the safe default.
      *
-     * This way both the "Original file" link on a file description page
-     * (rendered after several transforms) and the imageinfo `url` field
-     * (a single transform per API request) resolve to the canvas the
-     * caller actually meant.
+     * The "Original file" link on a file description page (rendered after
+     * several transforms) and the imageinfo `url` field (one transform per
+     * API request) therefore both resolve to the canvas the caller meant.
      */
     // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound -- MediaWiki File override
     public function getUrl(): string
@@ -217,9 +216,9 @@ class IIIFFile extends File
     /**
      * Build the full-resolution IIIF Image API URL for a specific page.
      *
-     * Unlike getUrl() (always page 1), this returns the URL for any page.
-     * Used by the ThumbnailBeforeProduceHTML hook to fix the main-image
-     * link on file detail pages for multi-page documents.
+     * Unlike getUrl(), the page is passed in explicitly rather than taken
+     * from the request. Used by the ThumbnailBeforeProduceHTML hook to fix
+     * the main-image link on file detail pages for multi-page documents.
      */
     // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound -- public API for hooks
     public function getUrlForPage(int $page): string
@@ -237,10 +236,9 @@ class IIIFFile extends File
      * Exposed by the API as `descriptionurl`; consumed by MMV for the
      * "More details" button, share link, and embed credit link.
      *
-     * Returning the local URL (instead of the provider URL) ensures that
-     * all MMV-generated links point to the wiki. The external provider
-     * URL is available via getProviderUrl() and used for license fallback
-     * and the shared-upload description text.
+     * Returning the local URL keeps every MMV-generated link on the wiki.
+     * The external provider URL comes from getProviderUrl() and is used for
+     * the license fallback and the shared-upload description text.
      */
     // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound -- MediaWiki File override
     public function getDescriptionUrl(): string
@@ -255,17 +253,17 @@ class IIIFFile extends File
     }
 
     /**
-     * Return the Title pointing at the *real* wiki file page for this
-     * IIIF file — i.e. with the spoofed `.jpg` extension stripped off.
+     * Return the Title of the real wiki file page for this IIIF file, with
+     * the spoofed `.jpg` extension stripped off.
      *
      * MMV requires file titles to carry a recognised image extension,
      * which HookHandler::onThumbnailBeforeProduceHTML provides by appending
      * ".jpg" to extension-less DB keys. When MMV later round-trips
      * that spoofed title back through the imageinfo API, the IIIFFile
      * here carries the doctored title (e.g. "Bsb11610364.jpg"), but
-     * the wiki page that actually catalogues the file's usage lives
-     * at the un-spoofed dbkey ("Bsb11610364"). Linking back to the
-     * spoofed title would 404 the "File usage" listing.
+     * the wiki page that lists the file's usage lives at the un-spoofed
+     * dbkey ("Bsb11610364"). Linking back to the spoofed title would 404
+     * the "File usage" listing.
      *
      * IIIF object IDs in the wild are extension-less (BSB IDs, SLUB
      * shelfmarks, Fotothek `df_*` codes), so dropping `.jpg` always
@@ -300,11 +298,11 @@ class IIIFFile extends File
      * outside the wiki).
      *
      * Falls back to the local file-page URL when no provider URL is
-     * available — the base File class returns null, which causes the
-     * API to omit the field and MMV to crash in HtmlUtils.
+     * available. The base File class would return null, which makes the
+     * API omit the field and MMV crash in HtmlUtils.
      *
-     * Called by ApiQueryImageInfo — not referenced directly in this
-     * extension.
+     * Called by ApiQueryImageInfo; nothing in this extension calls it
+     * directly.
      *
      * @noinspection PhpUnused
      */
@@ -451,12 +449,12 @@ class IIIFFile extends File
     /* -------------------- Local image cache -------------------- */
 
     /**
-     * Route a remote IIIF Image API URL through the local cache, returning a
-     * local wiki URL when the bytes are cached (or could be fetched + stored)
-     * and falling back to the remote URL otherwise. Applied to both thumbnail
-     * transforms and the full-resolution URL methods so that — once warmed —
-     * neither the inline thumbnails nor MMV's full-size image nor the
-     * imageinfo `url` field send traffic to the provider.
+     * Route a remote IIIF Image API URL through the local cache. Returns a
+     * local wiki URL when the bytes are cached (or could be fetched and
+     * stored), otherwise the remote URL. Thumbnail transforms and the
+     * full-resolution URL methods both go through here, so once the cache is
+     * warm, inline thumbnails, MMV's full-size image and the imageinfo `url`
+     * field no longer send traffic to the provider.
      */
     private function cachedImageUrl(string $remoteUrl): string
     {
@@ -523,9 +521,9 @@ class IIIFFile extends File
      * info.json. Returns (0, 0) when neither is available.
      *
      * Accepts `mixed` because MediaWiki's File::getWidth($page = 1) /
-     * File::getHeight($page = 1) signatures are untyped — MW core calls
-     * them with `false` to mean "no page specified" — so anything callers
-     * forward to here must go through Page::normalize for coercion.
+     * File::getHeight($page = 1) signatures are untyped. MW core calls them
+     * with `false` to mean "no page specified", so whatever callers forward
+     * here goes through Page::normalize for coercion.
      */
     private function dimensionsForPage(mixed $page): Dimensions
     {
@@ -724,7 +722,7 @@ class IIIFFile extends File
                 $langs[] = $contentLang;
             }
         } catch (\Throwable $unused) {
-            // Services unavailable (extreme bootstrap failure) — fall
+            // Services unavailable (extreme bootstrap failure): fall
             // through to English.
             unset($unused);
         }

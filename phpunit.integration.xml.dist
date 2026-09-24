@@ -3,7 +3,7 @@
   PHPUnit config for tests that run inside a real MediaWiki environment
   (MediaWikiIntegrationTestCase). Invoked from inside the docker MW
   container by `composer test:integration`. Do not invoke directly with
-  our local PHPUnit — these tests need MW core's autoloader and
+  our local PHPUnit: these tests need MW core's autoloader and
   bootstrap.integration.php to be loaded first.
 -->
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"

@@ -7,11 +7,10 @@ namespace MediaWiki\Extension\InstantIIIF\Domain;
 /**
  * Read-only wrapper around a decoded IIIF Presentation manifest (v2 or v3).
  *
- * Centralises the v2/v3 dispatch and the metadata-label search that was
- * previously duplicated across IIIFFile and MetadataExtractor. Returns
- * raw values for fields that need locale-aware resolution (label,
- * attribution); callers should pipe those through LocalizedText with the
- * appropriate language preference.
+ * Holds the v2/v3 dispatch and the metadata-label search that IIIFFile
+ * and MetadataExtractor both use. Fields that need locale-aware
+ * resolution (label, attribution) come back raw; callers pass them
+ * through LocalizedText with the right language preference.
  */
 final class Manifest
 {
@@ -105,8 +104,8 @@ final class Manifest
     /**
      * Locate a label-matching metadata entry and return any HTTP(S) URL it
      * contains. Values may be plain URL strings, HTML fragments
-     * (`<a href="…">…</a>`), language maps, or arrays thereof — providers
-     * differ a lot here, especially SLUB which embeds links inside HTML.
+     * (`<a href="…">…</a>`), language maps, or arrays of these. Providers
+     * differ a lot here; SLUB, for example, embeds links inside HTML.
      *
      * @param list<string> $labels Labels to match (case-insensitive)
      * @param list<string> $preferredLanguages Used to resolve multi-lingual
@@ -308,7 +307,7 @@ final class Manifest
         if (!is_array($value)) {
             return '';
         }
-        // Language map / object — resolve to string first, then re-parse.
+        // Language map or object: resolve to a string first, then re-parse.
         $resolved = LocalizedText::resolve($value, $preferredLanguages);
         if ($resolved !== '') {
             $url = self::extractUrlFromValue($resolved, $preferredLanguages);

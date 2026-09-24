@@ -163,8 +163,8 @@ class IIIFHandlerTest extends TestCase
     /**
      * `getScriptParams` is the MediaHandler hook the parser uses to
      * shape the thumb URL's query string. Multi-page IIIF files need
-     * the page index to ride along — without it, `?width=800` would
-     * always render canvas 1.
+     * the page index in it. Without it, `?width=800` would always render
+     * canvas 1.
      */
     public function testGetScriptParamsCarriesPageAlongsideWidth(): void
     {
@@ -194,11 +194,10 @@ class IIIFHandlerTest extends TestCase
 
     /**
      * `doTransform` exists only to satisfy MediaHandler's abstract
-     * contract — IIIFFile::transform() short-circuits it in production
-     * by overriding File::transform() directly. Still, MW's media
-     * pipeline can reach doTransform via the lower-level handler API,
-     * so it must produce a syntactically valid ThumbnailImage with
-     * the requested dimensions.
+     * contract. In production IIIFFile::transform() skips it by overriding
+     * File::transform() directly. MW's media pipeline can still reach
+     * doTransform through the lower-level handler API, so it must produce
+     * a valid ThumbnailImage with the requested dimensions.
      */
     public function testDoTransformProducesThumbnailWithRequestedDimensions(): void
     {
@@ -218,8 +217,8 @@ class IIIFHandlerTest extends TestCase
     }
 
     /**
-     * Missing width/height params coerce to 0 — the thumbnail still
-     * builds (no exceptions) but reports unknown dimensions.
+     * Missing width/height params coerce to 0. The thumbnail still builds
+     * without exceptions but reports unknown dimensions.
      */
     public function testDoTransformCoercesMissingDimensionsToZero(): void
     {
