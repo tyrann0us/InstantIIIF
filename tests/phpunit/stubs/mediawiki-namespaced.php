@@ -439,3 +439,11 @@ namespace MediaWiki\Page {
         }
     }
 }
+
+namespace Wikimedia\FileBackend {
+    if (!class_exists(FSFileBackend::class)) {
+        class FSFileBackend extends \FileBackend
+        {
+        }
+    }
+}

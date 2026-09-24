@@ -40,6 +40,16 @@ final class ProviderQuirks
     ];
 
     /**
+     * Provider IDs that have at least one metadata fallback.
+     *
+     * @return list<string>
+     */
+    public static function providerIds(): array
+    {
+        return array_keys(self::LANDING_META_KEYS + self::LICENSE_META_KEYS);
+    }
+
+    /**
      * Metadata-label needles for finding a landing URL inside the
      * manifest's `metadata` array. An empty list means the provider has no
      * such fallback, so the caller can skip searching metadata.

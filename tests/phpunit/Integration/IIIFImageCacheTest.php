@@ -143,6 +143,8 @@ class IIIFImageCacheTest extends MediaWikiIntegrationTestCase
         $repos = [array_merge([
             'name' => 'iiif',
             'class' => Repo::class,
+            // SetupDynamicConfig sets this before Repo::onRegistration() runs.
+            'backend' => 'iiif-backend',
             'directory' => $this->tmpDir,
             'iiifSources' => [],
         ], $extra)];

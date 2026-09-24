@@ -13,6 +13,7 @@
   "instantiiif-inspect-url-help": "An absolute HTTP(S) URL to a IIIF Presentation API v2 or v3 manifest (e.g. <code>https://iiif.arthistoricum.net/proxy/fotothek/df_dk_0007450/manifest.json</code>).",
   "instantiiif-inspect-provider": "Provider ID",
   "instantiiif-inspect-provider-help": "Optional. Pick the provider this manifest belongs to, so InstantIIIF applies that provider's metadata fallbacks (landing URL and license URL extraction).",
+  "instantiiif-inspect-provider-none": "None (generic)",
   "instantiiif-inspect-submit": "Inspect manifest",
   "instantiiif-inspect-results-title": "Inspection results",
   "instantiiif-inspect-fetch-failed": "Could not fetch a usable IIIF manifest from <code>$1</code>. Check that the URL is reachable from this server, returns JSON, and doesn't carry an error envelope.",

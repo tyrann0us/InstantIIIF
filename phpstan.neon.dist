@@ -4,5 +4,6 @@ parameters:
     - src/
   treatPhpDocTypesAsCertain: false
   scanFiles:
-    - .phpstan/stubs/MediaWiki.stub.php
-    - .phpstan/stubs/MediaWikiNamespaced.stub.php
+    - tests/phpunit/bootstrap.php
+    - tests/phpunit/stubs/global-classes.php
+    - tests/phpunit/stubs/mediawiki-namespaced.php

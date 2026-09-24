@@ -6,6 +6,7 @@ namespace MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki;
 
 use Config;
 use HTMLForm;
+use MediaWiki\Extension\InstantIIIF\Domain\ProviderQuirks;
 use MediaWiki\Html\Html;
 use MediaWiki\MainConfigNames;
 use MediaWiki\Title\Title;
@@ -29,13 +30,6 @@ class SpecialInstantIIIFInspect extends SpecialPage
 {
     /** Synthetic title used to spin up an IIIFFile for inspection. */
     private const INSPECT_DBKEY = 'InstantIIIFInspect';
-
-    /** Provider IDs that have provider-specific metadata fallbacks. */
-    private const KNOWN_PROVIDER_IDS = [
-        'deutsche-fotothek',
-        'slub-dresden',
-        'digitale-sammlungen',
-    ];
 
     public function __construct(
         private RepoGroup $repoGroup,
@@ -82,10 +76,9 @@ class SpecialInstantIIIFInspect extends SpecialPage
 
     private function buildForm(): HTMLForm
     {
-        $providerOptions = ['(none / generic)' => ''];
-        foreach (self::KNOWN_PROVIDER_IDS as $id) {
-            $providerOptions[$id] = $id;
-        }
+        $ids = ProviderQuirks::providerIds();
+        $providerOptions = [$this->msg('instantiiif-inspect-provider-none')->text() => '']
+            + array_combine($ids, $ids);
 
         $form = HTMLForm::factory('ooui', [
             'ManifestUrl' => [
@@ -309,11 +302,5 @@ class SpecialInstantIIIFInspect extends SpecialPage
     private function isPlausibleHttpUrl(string $url): bool
     {
         return (bool) preg_match('~^https?://[^\s]+$~i', $url);
-    }
-
-    /** @return list<string> */
-    public static function knownProviderIds(): array
-    {
-        return self::KNOWN_PROVIDER_IDS;
     }
 }

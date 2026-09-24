@@ -25,7 +25,7 @@ use MediaWiki\Http\HttpRequestFactory;
  * basename won't do: every IIIF URL ends in `default.jpg`, so it would
  * collide across every page, region and size.
  */
-final class IIIFImageCache implements ImageCache
+class IIIFImageCache
 {
     /** Spoofed extension so the stored object looks like the JPEG it is. */
     private const FILE_EXTENSION = '.jpg';
@@ -38,6 +38,11 @@ final class IIIFImageCache implements ImageCache
     ) {
     }
 
+    /**
+     * Local URL for a cached copy of $remoteUrl, or null when caching is
+     * disabled or the fetch or store fails. Callers then hotlink the
+     * remote URL.
+     */
     public function localUrlFor(string $remoteUrl): ?string
     {
         if ($this->expiry <= 0) {

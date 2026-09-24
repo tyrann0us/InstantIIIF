@@ -11,7 +11,6 @@ use MediaWiki\Context\RequestContext;
 use MediaWiki\Extension\InstantIIIF\Domain\Dimensions;
 use MediaWiki\Extension\InstantIIIF\Domain\ImageService;
 use MediaWiki\Extension\InstantIIIF\Domain\Manifest;
-use MediaWiki\Extension\InstantIIIF\Domain\ManifestFetcher;
 use MediaWiki\Extension\InstantIIIF\Domain\Page;
 use MediaWiki\Extension\InstantIIIF\Domain\ProviderQuirks;
 use MediaWiki\Extension\InstantIIIF\Infrastructure\CachedHttpManifestFetcher;
@@ -466,7 +465,7 @@ class IIIFFile extends File
      * not an InstantIIIF Repo or has caching disabled. Protected so tests can
      * override it without a real FileBackend (mirrors manifestFetcher()).
      */
-    protected function imageCache(): ?ImageCache
+    protected function imageCache(): ?IIIFImageCache
     {
         $repo = $this->repo;
         if (!$repo instanceof Repo || !$repo->cacheImagesEnabled()) {
@@ -678,7 +677,7 @@ class IIIFFile extends File
         return $info;
     }
 
-    private function manifestFetcher(): ManifestFetcher
+    private function manifestFetcher(): CachedHttpManifestFetcher
     {
         $services = MediaWikiServices::getInstance();
         return new CachedHttpManifestFetcher(

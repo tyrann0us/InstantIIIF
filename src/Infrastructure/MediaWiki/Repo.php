@@ -148,7 +148,6 @@ class Repo extends FileRepo
             }
             $info['directory'] ??= $uploadDirectory;
             $name = (string) $info['name'];
-            $info['backend'] ??= $name . '-backend';
             $taken = in_array($info['backend'], $registered, true);
             if ($taken || !self::managesCacheBackend($info)) {
                 continue;

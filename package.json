@@ -7,15 +7,12 @@
         "email": "hello@syde.com",
         "url": "https://syde.com/"
     },
-    "dependencies": {
-        "@wordpress/eslint-plugin": "^25.6.0"
-    },
     "devDependencies": {
         "@playwright/test": "^1.63.0",
+        "@wordpress/eslint-plugin": "^25.6.0",
         "@wordpress/scripts": "^36.0.0",
         "jest": "^30.5.2",
-        "jest-environment-jsdom": "^30.5.2",
-        "jest-mock": "^30.4.1"
+        "jest-environment-jsdom": "^30.5.2"
     },
     "engines": {
         "node": "^20.19.0 || ^22.13.0 || >=24.0.0"

@@ -53,4 +53,9 @@ class ProviderQuirksTest extends TestCase
         // Fotothek has no license metadata fallback. Only SLUB does.
         self::assertSame([], ProviderQuirks::licenseLabelsFor('deutsche-fotothek'));
     }
+
+    public function testProviderIdsListsEveryProviderWithAFallback(): void
+    {
+        self::assertSame(['deutsche-fotothek', 'slub-dresden'], ProviderQuirks::providerIds());
+    }
 }

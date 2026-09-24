@@ -19,15 +19,6 @@ use PHPUnit\Framework\Attributes\CoversClass;
 #[CoversClass(SpecialInstantIIIFInspect::class)]
 class SpecialInstantIIIFInspectTest extends MediaWikiIntegrationTestCase
 {
-    public function testKnownProviderIds(): void
-    {
-        $ids = SpecialInstantIIIFInspect::knownProviderIds();
-
-        self::assertContains('deutsche-fotothek', $ids);
-        self::assertContains('slub-dresden', $ids);
-        self::assertContains('digitale-sammlungen', $ids);
-    }
-
     public function testSpecialPageRegistered(): void
     {
         $factory = $this->getServiceContainer()->getSpecialPageFactory();
