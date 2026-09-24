@@ -127,7 +127,10 @@ class RepoCacheConfigTest extends TestCase
     {
         $repos = [
             ['name' => 'shared', 'class' => 'ForeignAPIRepo', 'backend' => 'shared-backend'],
-            array_merge(['name' => 'iiif', 'class' => Repo::class, 'backend' => 'iiif-backend'], $repo),
+            array_merge(
+                ['name' => 'iiif', 'class' => Repo::class, 'backend' => 'iiif-backend'],
+                $repo
+            ),
         ];
         Repo::registerCacheBackends($repos, $backends, '/srv/images', 0755);
         return [$repos, $backends];
@@ -148,7 +151,8 @@ class RepoCacheConfigTest extends TestCase
 
     public function testRegistrationRecognisesSubclasses(): void
     {
-        $subclass = get_class(new class (['name' => 'iiif', 'backend' => new \FileBackend()]) extends Repo {
+        $info = ['name' => 'iiif', 'backend' => new \FileBackend()];
+        $subclass = get_class(new class ($info) extends Repo {
         });
 
         [$repos, $backends] = $this->register(['class' => $subclass, 'directory' => '/data/']);
@@ -179,5 +183,32 @@ class RepoCacheConfigTest extends TestCase
         self::assertSame($backends, $after);
         // 'directory' is still defaulted: FileBackendGroup's auto-backend reads it.
         self::assertSame('/srv/images', $repos[1]['directory']);
+    }
+
+    public function testOnRegistrationRewritesTheGlobals(): void
+    {
+        $names = ['wgForeignFileRepos', 'wgFileBackends', 'wgUploadDirectory', 'wgDirectoryMode'];
+        $saved = [];
+        foreach ($names as $name) {
+            $saved[$name] = $GLOBALS[$name] ?? null;
+        }
+        $GLOBALS['wgForeignFileRepos'] = [
+            ['name' => 'iiif', 'class' => Repo::class, 'backend' => 'iiif-backend'],
+        ];
+        $GLOBALS['wgFileBackends'] = [];
+        $GLOBALS['wgUploadDirectory'] = '/srv/images';
+        $GLOBALS['wgDirectoryMode'] = 0755;
+
+        try {
+            Repo::onRegistration();
+
+            self::assertSame('/srv/images', $GLOBALS['wgForeignFileRepos'][0]['directory']);
+            self::assertSame('iiif-backend', $GLOBALS['wgFileBackends'][0]['name']);
+            self::assertSame(0755, $GLOBALS['wgFileBackends'][0]['directoryMode']);
+        } finally {
+            foreach ($saved as $name => $value) {
+                $GLOBALS[$name] = $value;
+            }
+        }
     }
 }

@@ -10,6 +10,7 @@
     <properties>
       <property name="rootNamespaces" type="array">
         <element key="src" value="MediaWiki\Extension\InstantIIIF"/>
+        <element key="tests/phpunit" value="MediaWiki\Extension\InstantIIIF\Tests"/>
       </property>
     </properties>
   </rule>
