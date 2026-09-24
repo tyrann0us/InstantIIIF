@@ -40,7 +40,7 @@ class IIIFImageCache
 
     /**
      * Local URL for a cached copy of $remoteUrl, or null when caching is
-     * disabled or fetching or storing fails. Callers then hotlink the
+     * disabled or the fetch or store fails. Callers then hotlink the
      * remote URL.
      */
     public function localUrlFor(string $remoteUrl): ?string

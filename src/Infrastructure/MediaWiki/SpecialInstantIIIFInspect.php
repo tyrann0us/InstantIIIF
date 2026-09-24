@@ -76,10 +76,9 @@ class SpecialInstantIIIFInspect extends SpecialPage
 
     private function buildForm(): HTMLForm
     {
-        $providerOptions = [$this->msg('instantiiif-inspect-provider-none')->text() => ''];
-        foreach (ProviderQuirks::providerIds() as $id) {
-            $providerOptions[$id] = $id;
-        }
+        $ids = ProviderQuirks::providerIds();
+        $providerOptions = [$this->msg('instantiiif-inspect-provider-none')->text() => '']
+            + array_combine($ids, $ids);
 
         $form = HTMLForm::factory('ooui', [
             'ManifestUrl' => [
