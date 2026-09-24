@@ -40,11 +40,11 @@ class IIIFImageCacheTest extends MediaWikiIntegrationTestCase
     }
 
     /**
-     * A repo with caching on (the default) and no injected backend builds its
-     * own FSFileBackend that knows the dedicated `iiif-cache` container and
-     * roots it at an absolute path under `directory`.
+     * A repo with caching on (the default) and no injected backend gets a
+     * registered FSFileBackend that knows the dedicated `iiif-cache` container
+     * and roots it at an absolute path under `directory`.
      */
-    public function testRepoBuildsFsBackendWithAbsoluteCacheContainer(): void
+    public function testRepoGetsFsBackendWithAbsoluteCacheContainer(): void
     {
         $repo = $this->makeRepo();
 
@@ -62,7 +62,7 @@ class IIIFImageCacheTest extends MediaWikiIntegrationTestCase
 
     /**
      * `backend` given as a *string* is a backend name, not an injected object,
-     * so we still build the FSFileBackend ourselves — but under the admin's
+     * so we still register the FSFileBackend ourselves — but under the admin's
      * name rather than the derived `<repo>-backend` default.
      */
     public function testNamedBackendKeepsItsConfiguredName(): void
@@ -138,12 +138,19 @@ class IIIFImageCacheTest extends MediaWikiIntegrationTestCase
      */
     private function makeRepo(array $extra = []): Repo
     {
-        return new Repo(array_merge([
+        // Mirror the extension.json callback, then let FileBackendGroup build
+        // the backend from $wgFileBackends.
+        $repos = [array_merge([
             'name' => 'iiif',
             'class' => Repo::class,
             'directory' => $this->tmpDir,
             'iiifSources' => [],
-        ], $extra));
+        ], $extra)];
+        $backends = [];
+        Repo::registerCacheBackends($repos, $backends, $this->tmpDir, 0777);
+        $this->overrideConfigValue(MainConfigNames::FileBackends, $backends);
+
+        return new Repo($repos[0]);
     }
 
     private function httpFactoryReturning(bool $ok, string $body): HttpRequestFactory
