@@ -50,7 +50,7 @@ class ProviderQuirksTest extends TestCase
 
     public function testFotothekHasNoLicenseLabels(): void
     {
-        // Fotothek has no license metadata fallback — only SLUB does.
+        // Fotothek has no license metadata fallback. Only SLUB does.
         self::assertSame([], ProviderQuirks::licenseLabelsFor('deutsche-fotothek'));
     }
 }

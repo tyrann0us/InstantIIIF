@@ -80,7 +80,7 @@ class CachedHttpManifestFetcherTest extends TestCase
 
     public function testFetchReturnsNullOnScalarJson(): void
     {
-        // Decodable but not an array — IIIF docs are always objects.
+        // Decodable but not an array. IIIF docs are always objects.
         $request = $this->createStub(MWHttpRequest::class);
         $request->method('execute')->willReturn(new StatusValue(true));
         $request->method('getContent')->willReturn('"just a string"');

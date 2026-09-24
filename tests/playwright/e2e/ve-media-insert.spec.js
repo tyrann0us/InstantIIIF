@@ -9,7 +9,7 @@ const { expect } = require( '@playwright/test' );
  * `[[File:<id>]]` wikitext.
  *
  * The dialog still needs the spoofed title to *display* the search result
- * (VE filters media results by file extension — see media-search.js), so the
+ * (VE filters media results by file extension; see media-search.js), so the
  * fix strips `.jpg` only when the chosen result is turned into the inserted
  * node (ve.ui.MWMediaDialog#confirmSelectedImage). This drives the real
  * search → choose → confirm → insert → serialize path and asserts the
@@ -38,10 +38,10 @@ test( 'VE media dialog inserts IIIF files without the spoofed .jpg', async ( {
 		const surface = ve.init.target.getSurface();
 		const surfaceModel = surface.getModel();
 
-		// Dismiss any dialog already open — e.g. VE's beta-welcome dialog,
-		// which a freshly-configured wiki shows on first edit and which would
-		// otherwise sit in front of the media dialog. Harmless when none is
-		// open (getCurrentWindow() is null).
+		// Dismiss any dialog already open, e.g. VE's beta-welcome dialog,
+		// which a freshly configured wiki shows on first edit and which would
+		// otherwise sit in front of the media dialog. Does nothing when none
+		// is open (getCurrentWindow() is null).
 		await new Promise( ( r ) => setTimeout( r, 500 ) );
 		const dialogs = surface.getDialogs();
 		const existing = dialogs.getCurrentWindow();
@@ -111,7 +111,7 @@ test( 'VE media dialog inserts IIIF files without the spoofed .jpg', async ( {
 	}, 'df_dk_0007450' );
 
 	// The search result VE displayed kept its spoofed `.jpg` (required for VE
-	// to show it at all) — confirms we exercised the real, working search.
+	// to show it at all), which confirms the test ran the real search.
 	expect( outcome.resultTitle ).toMatch( /\.jpg$/i );
 	// And the patch restored that spoofed title afterwards, leaving VE's
 	// cached search-result object untouched for re-rendering the grid.

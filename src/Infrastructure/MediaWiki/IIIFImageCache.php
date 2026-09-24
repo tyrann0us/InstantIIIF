@@ -16,14 +16,14 @@ use MediaWiki\Http\HttpRequestFactory;
  * than MediaWiki's ForeignAPIRepo caching, which is welded to the MediaWiki
  * API path InstantIIIF doesn't use.
  *
- * Deliberately write-once: unlike ForeignAPIRepo's cache it never revalidates
- * against the provider on a hit. IIIF object bytes are immutable, and the
- * point of caching here is to minimise outbound requests to the provider —
- * revalidation would defeat that.
+ * The cache is write-once. Unlike ForeignAPIRepo's cache, it never
+ * revalidates against the provider on a hit: IIIF object bytes are
+ * immutable, and caching here exists to minimise outbound requests to the
+ * provider, which revalidation would undo.
  *
- * The local path/URL is derived from sha1 of the *full* remote URL (not its
- * basename — every IIIF URL ends in `default.jpg`, which would collide across
- * every page, region and size).
+ * The local path and URL come from the sha1 of the *full* remote URL. The
+ * basename won't do: every IIIF URL ends in `default.jpg`, so it would
+ * collide across every page, region and size.
  */
 final class IIIFImageCache implements ImageCache
 {
@@ -47,7 +47,7 @@ final class IIIFImageCache implements ImageCache
         $zonePath = $this->repo->getZonePath('thumb');
         $zoneUrl = $this->repo->getZoneUrl('thumb');
         if (!is_string($zonePath) || $zonePath === '' || !is_string($zoneUrl) || $zoneUrl === '') {
-            // No writable/served cache zone configured — fall back to remote.
+            // No writable, served cache zone configured: fall back to remote.
             return null;
         }
 
@@ -58,7 +58,7 @@ final class IIIFImageCache implements ImageCache
 
         $backend = $this->repo->getBackend();
         if ($backend->fileExists(['src' => $localFile])) {
-            // Hit: serve the stored copy, zero provider traffic.
+            // Hit: serve the stored copy without contacting the provider.
             return $localUrl;
         }
 
@@ -76,7 +76,7 @@ final class IIIFImageCache implements ImageCache
     }
 
     /**
-     * Download the image bytes, or null on transport failure / empty body.
+     * Download the image bytes. Null on transport failure or an empty body.
      */
     private function fetch(string $url): ?string
     {

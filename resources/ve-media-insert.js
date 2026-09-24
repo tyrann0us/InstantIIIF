@@ -1,25 +1,25 @@
 // Strip the spoofed `.jpg` from IIIF files when VisualEditor's "Insert media"
 // dialog turns a chosen search result into the inserted node.
 //
-// VE needs the spoofed `.jpg` to *display* the result in the media-search grid
-// (it filters results by file extension — see media-search.js, which flags
-// each IIIF result with `isInstantIIIF`). The inserted wikitext, however, must
-// be extension-less so VE-inserted embeds match hand-written `[[File:<id>]]`
-// wikitext. ve.ui.MWMediaDialog#confirmSelectedImage builds the node's
-// `resource`/`href` from `info.title`, so we un-spoof that title there — only
-// for flagged IIIF results, leaving Commons/local `.jpg` files untouched.
+// VE needs the spoofed `.jpg` to display the result in the media-search grid,
+// because it filters results by file extension (see media-search.js, which
+// flags each IIIF result with `isInstantIIIF`). The inserted wikitext must be
+// extension-less, though, so VE-inserted embeds match hand-written
+// `[[File:<id>]]` wikitext. ve.ui.MWMediaDialog#confirmSelectedImage builds the
+// node's `resource`/`href` from `info.title`, so we un-spoof that title there.
+// Only flagged IIIF results are touched; Commons/local `.jpg` files are not.
 //
 // The `.jpg` the MMV overlay needs on rendered thumbnails is re-added
 // independently by the ThumbnailBeforeProduceHTML hook (data-iiif-title).
 //
 // Registered as a VisualEditorPluginModules attribute (extension.json), so VE
-// loads and runs this only while the editor is initialising — before the user
+// loads and runs this only while the editor is initialising, before the user
 // can open the media dialog. We still wait on ext.visualEditor.mwimage (which
 // defines ve.ui.MWMediaDialog) since plugin-module load order isn't guaranteed.
 ( function () {
 	'use strict';
 
-	// Shared spoof/unspoof helpers (mirrored in src/IIIFTitle.php). Loaded via
+	// Shared spoof/unspoof helpers (mirrored in src/Infrastructure/MediaWiki/IIIFTitle.php). Loaded via
 	// the ext.instantIIIF.title dependency.
 	const iiifTitle = window.iiifTitle;
 

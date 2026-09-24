@@ -273,7 +273,7 @@ class ManifestTest extends TestCase
 
     public function testImageServiceIdV2FallbackFromResourceIdRegex(): void
     {
-        // v2 canvas where resource has NO service object — derive base from @id.
+        // v2 canvas where resource has NO service object: derive base from @id.
         $raw = [
             'sequences' => [['canvases' => [[
                 'width' => 100,
@@ -409,7 +409,7 @@ class ManifestTest extends TestCase
 
     public function testFindUrlInMetadataFallsBackToListRecursion(): void
     {
-        // Value is a plain list (not a language map) — the foreach-recursion
+        // Value is a plain list, not a language map. The foreach-recursion
         // branch must dig into entries until it finds an http(s) URL.
         $manifest = Manifest::from([
             'metadata' => [[
@@ -454,7 +454,7 @@ class ManifestTest extends TestCase
 
     /**
      * v2 canvas where `images[0].resource` is not an array (scalar or
-     * missing) — extractServiceFromV2Canvas must bail out cleanly.
+     * missing). extractServiceFromV2Canvas must bail out cleanly.
      */
     public function testImageServiceIdReturnsNullWhenV2ResourceIsNotArray(): void
     {
@@ -467,8 +467,8 @@ class ManifestTest extends TestCase
     }
 
     /**
-     * Service field is present but not an array (e.g. a stray scalar) —
-     * extractServiceIdFromField guards and returns null.
+     * Service field is present but not an array (e.g. a stray scalar).
+     * extractServiceIdFromField guards against it and returns null.
      */
     public function testImageServiceIdReturnsNullWhenServiceFieldIsScalar(): void
     {
@@ -482,7 +482,7 @@ class ManifestTest extends TestCase
 
     /**
      * Service field is an array but has no `@id`/`id` and no usable
-     * first-element fallback — every branch falls through to `return null`.
+     * first-element fallback, so every branch falls through to `return null`.
      */
     public function testImageServiceIdReturnsNullWhenServiceArrayHasNoUsableId(): void
     {
@@ -496,9 +496,9 @@ class ManifestTest extends TestCase
 
     /**
      * `homepage` is present but not a usable URL (no string, no @id/id,
-     * no array-with-@id) — extractHttpUrl exhausts every branch and
-     * returns null, then landingUrl falls through to `related` (which is
-     * also absent here), then returns null overall.
+     * no array-with-@id). extractHttpUrl exhausts every branch and returns
+     * null, landingUrl falls through to `related` (also absent here), and
+     * the overall result is null.
      */
     public function testLandingUrlReturnsNullWhenHomepageIsArrayWithoutUsableUrl(): void
     {
@@ -510,8 +510,8 @@ class ManifestTest extends TestCase
 
     /**
      * Metadata `value` is a plain string that is neither a URL nor an
-     * HTML link — extractUrlFromValue falls out of the string branch
-     * with `''` and the search ultimately reports nothing.
+     * HTML link. extractUrlFromValue leaves the string branch with `''`
+     * and the search reports nothing.
      */
     public function testFindUrlInMetadataReturnsEmptyWhenValueIsPlainNonUrlText(): void
     {
@@ -525,13 +525,13 @@ class ManifestTest extends TestCase
 
     /**
      * `extractUrlFromValue` recursion can land on a non-string non-array
-     * leaf (e.g. an int) — must short-circuit cleanly instead of throwing.
+     * leaf (e.g. an int) and must return cleanly instead of throwing.
      */
     public function testFindUrlInMetadataReturnsEmptyWhenValueIsNonScalar(): void
     {
         $raw = [
             'metadata' => [
-                // value is an int — falls into the `!is_array` guard branch.
+                // value is an int, so it hits the `!is_array` guard branch.
                 ['label' => 'Bogus', 'value' => 42],
             ],
         ];
@@ -539,9 +539,8 @@ class ManifestTest extends TestCase
     }
 
     /**
-     * `extractUrlFromValue` array-recursion exhaustion: every entry visits
-     * the function, none yield a URL, the foreach completes and the final
-     * `return ''` fires.
+     * `extractUrlFromValue` array recursion runs out: each entry is visited,
+     * none yields a URL, and the final `return ''` fires.
      */
     public function testFindUrlInMetadataReturnsEmptyWhenArrayHasNoUrls(): void
     {

@@ -9,12 +9,12 @@ use MediaWikiIntegrationTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
 
 /**
- * Integration tests for SpecialInstantIIIFInspect: smoke-tests that the
- * special page is registered, instantiable, and renders its form against
- * real MediaWiki infrastructure (SpecialPageFactory, HTMLForm, OutputPage,
- * Message). Standalone SpecialInstantIIIFInspectTest covers the body-flow
- * (error rendering / canvas table) via stubs; this suite covers the seams
- * standalone can't reach.
+ * Integration tests for SpecialInstantIIIFInspect. They check that the
+ * special page is registered, can be instantiated, and renders its form
+ * against real MediaWiki infrastructure (SpecialPageFactory, HTMLForm,
+ * OutputPage, Message). The standalone SpecialInstantIIIFInspectTest
+ * covers the page body (error rendering, canvas table) with stubs; this
+ * suite covers what the stubs can't reach.
  */
 #[CoversClass(SpecialInstantIIIFInspect::class)]
 class SpecialInstantIIIFInspectTest extends MediaWikiIntegrationTestCase

@@ -161,8 +161,8 @@ final class ImageService
     }
 
     /**
-     * Only called from sizedUrl(), which short-circuits to fullUrl()
-     * when both axes are zero — so we never reach this with (0, 0).
+     * Only called from sizedUrl(), which returns fullUrl() early when
+     * both axes are zero, so this never sees (0, 0).
      */
     private static function sizeParam(int $width, int $height): string
     {

@@ -7,8 +7,8 @@ namespace MediaWiki\Extension\InstantIIIF\Domain;
 /**
  * Width × height pair.
  *
- * Zero means "unknown" — manifests may omit canvas dimensions and the
- * fallback info.json lookup may not have run yet. Use isKnown() before
+ * Zero means "unknown": manifests may omit canvas dimensions, and the
+ * fallback info.json lookup may not have run yet. Check isKnown() before
  * relying on the values.
  */
 final class Dimensions

@@ -100,8 +100,8 @@ class LocalizedTextTest extends TestCase
 
     public function testV2ListDetectionRequiresArrayFirstEntry(): void
     {
-        // A numerically indexed list of scalars is not a v2 list — falls through
-        // to the v3-map branch; numeric keys do not match any preferred code and
+        // A numerically indexed list of scalars is not a v2 list. It falls
+        // through to the v3-map branch; numeric keys do not match any preferred code and
         // string values fail the `is_array($langValues)` fallback guard.
         $value = ['Hello', 'Hallo'];
         self::assertSame('', LocalizedText::resolve($value, ['en']));
@@ -121,7 +121,7 @@ class LocalizedTextTest extends TestCase
     public function testV2ListReturnsEmptyWhenNoEntryHasStringValue(): void
     {
         // Preferred miss, and the fallback loop finds no entry with a string
-        // `@value` — final `return ''`.
+        // `@value`, so the final `return ''` fires.
         $value = [
             ['@value' => 123],
             ['@value' => null],
@@ -142,7 +142,7 @@ class LocalizedTextTest extends TestCase
 
     public function testV3MapPreferredCandidateWithNonStringFirstElement(): void
     {
-        // `[0]` is not a string — guard skips it; fallback finds the next valid entry.
+        // `[0]` is not a string, so the guard skips it and the fallback finds the next entry.
         $value = [
             'en' => [123],
             'de' => ['Hallo'],
@@ -152,7 +152,7 @@ class LocalizedTextTest extends TestCase
 
     public function testV3MapReturnsEmptyWhenNoEntryHasStringFirstElement(): void
     {
-        // Neither preferred nor fallback finds a `string` at `[0]` — final `return ''`.
+        // Neither preferred nor fallback finds a `string` at `[0]`: final `return ''`.
         $value = [
             'en' => 'Hello',
             'de' => [123],

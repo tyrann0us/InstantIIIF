@@ -13,12 +13,12 @@ const { expect } = require( '@playwright/test' );
  *
  * Suppression lives in PHP (IIIFFile::getTimestamp returns a non-date
  * sentinel so wfTimestamp() yields false and the API emits an empty
- * timestamp). This is the exact data VisualEditor consumes, so asserting
- * on the API response is a robust, UI-independent regression guard — and
- * the only layer that exercises the real wfTimestamp() conversion (the
- * standalone PHPUnit suite stubs wfTimestamp).
+ * timestamp). VisualEditor consumes exactly this data, so asserting on
+ * the API response guards against regressions without depending on the
+ * UI. It is also the only layer that runs the real wfTimestamp()
+ * conversion, since the standalone PHPUnit suite stubs wfTimestamp.
  */
-test.describe( 'imageinfo API — IIIF upload timestamp', () => {
+test.describe( 'imageinfo API: IIIF upload timestamp', () => {
 	/**
 	 * @param {import('@playwright/test').APIRequestContext} request
 	 * @param {string}                                       title

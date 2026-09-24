@@ -116,9 +116,9 @@ const server = http.createServer( ( req, res ) => {
 
 	const parts = url.pathname.split( '/' ).filter( Boolean );
 
-	// Strip optional path prefixes from real-world IIIF endpoints —
-	// they may show up after rewriteManifest() rewrites only the host
-	// portion of canvas URLs. Examples:
+	// Strip optional path prefixes from real-world IIIF endpoints.
+	// They can remain because rewriteManifest() rewrites only the host
+	// part of canvas URLs. Examples:
 	//   /iiif/2/{id}/...                (manifest fetcher pattern)
 	//   /iiif/image/v2/{id}/full/...    (BSB Image API canvas service)
 	//   /iiif/3/{id}/...                (Presentation v3)

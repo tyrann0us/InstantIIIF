@@ -13,8 +13,8 @@ use PHPUnit\Framework\TestCase;
 /**
  * Tests for IIIFImageCache: the disabled / no-zone short-circuits, the
  * cache-hit path (no provider traffic), the miss path (fetch + store), and
- * the failure fall-backs (fetch failure, empty body, store failure) — all of
- * which must return null so IIIFFile falls back to hotlinking the remote URL.
+ * the failure cases (fetch failure, empty body, store failure). Each failure
+ * must return null so IIIFFile falls back to hotlinking the remote URL.
  */
 #[CoversClass(IIIFImageCache::class)]
 class IIIFImageCacheTest extends TestCase
@@ -99,7 +99,7 @@ class IIIFImageCacheTest extends TestCase
 
     public function testReturnsLocalUrlOnCacheHitWithoutFetching(): void
     {
-        // execute() would fail if called — proves a hit never hits the network.
+        // execute() would fail if called, so a hit provably skips the network.
         $cache = new IIIFImageCache(
             $this->repoStub(backend: $this->backend(exists: true)),
             $this->httpFactoryReturning(false, ''),

@@ -54,16 +54,16 @@ class IIIFImageCacheTest extends MediaWikiIntegrationTestCase
         $zonePath = $repo->getZonePath('thumb');
         self::assertIsString($zonePath);
         self::assertStringContainsString('iiif-cache', $zonePath);
-        // The thumb zone must resolve to a real, preparable filesystem
-        // location — the bug was that it resolved to nowhere.
+        // The thumb zone must resolve to a real filesystem location that
+        // can be prepared. The original bug left it resolving to nowhere.
         self::assertTrue($backend->prepare(['dir' => $zonePath])->isOK());
         self::assertSame('/images/iiif-cache', $repo->getZoneUrl('thumb'));
     }
 
     /**
      * `backend` given as a *string* is a backend name, not an injected object,
-     * so we still register the FSFileBackend ourselves — but under the admin's
-     * name rather than the derived `<repo>-backend` default.
+     * so we still register the FSFileBackend ourselves, under the admin's name
+     * instead of the derived `<repo>-backend` default.
      */
     public function testNamedBackendKeepsItsConfiguredName(): void
     {
@@ -73,7 +73,7 @@ class IIIFImageCacheTest extends MediaWikiIntegrationTestCase
         self::assertInstanceOf(FSFileBackend::class, $backend);
         self::assertSame('admin-named-backend', $backend->getName());
 
-        // Still a working cache zone — naming it must not cost the wiring.
+        // The cache zone must still work with a custom backend name.
         $zonePath = $repo->getZonePath('thumb');
         self::assertIsString($zonePath);
         self::assertStringContainsString('iiif-cache', $zonePath);
@@ -107,7 +107,7 @@ class IIIFImageCacheTest extends MediaWikiIntegrationTestCase
 
     /**
      * A second lookup is served from the stored copy without any provider
-     * traffic — proven by wiring an HTTP factory that would fail if called.
+     * traffic. The HTTP factory here would fail if it were called.
      */
     public function testSecondLookupServesFromDiskWithoutFetching(): void
     {
@@ -122,7 +122,7 @@ class IIIFImageCacheTest extends MediaWikiIntegrationTestCase
         $first = $miss->localUrlFor(self::REMOTE);
         self::assertIsString($first);
 
-        // execute() would report failure if reached — a hit must not fetch.
+        // execute() would report failure if reached. A hit must not fetch.
         $hit = new IIIFImageCache(
             $repo,
             $this->httpFactoryReturning(false, ''),

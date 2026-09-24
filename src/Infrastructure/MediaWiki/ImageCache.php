@@ -9,9 +9,9 @@ namespace MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki;
  *
  * Implementations take a remote IIIF Image API URL and return a local wiki
  * URL serving a cached copy of those bytes, fetching and storing them on
- * first use. Returning null signals "not cached / caching unavailable", so
- * callers fall back to hotlinking the remote URL — the cache is always an
- * optimisation, never a hard dependency.
+ * first use. Null means "not cached or caching unavailable", and callers
+ * then hotlink the remote URL. The cache is an optimisation that callers
+ * can always do without.
  */
 interface ImageCache
 {

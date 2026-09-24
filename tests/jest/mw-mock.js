@@ -10,7 +10,7 @@
 
 /**
  * Build a fresh mw mock and attach it (plus jQuery) to the given window.
- * Returns helper handles so tests can inspect and trigger behaviour.
+ * Returns helpers that tests use to inspect and trigger behaviour.
  * @param {Window} win
  */
 function createMwEnv( win ) {
@@ -59,7 +59,7 @@ function createMwEnv( win ) {
 
 	// Minimal jQuery Deferred stand-in. Production code uses jQuery's
 	// Deferred to make promises that also expose `.abort()`. Tests don't
-	// care about chaining semantics — just that the patch can wrap an
+	// care about chaining semantics, only that the patch can wrap an
 	// eventually-resolved value into a thenable carrying `.abort`.
 	jQueryFactory.Deferred = function () {
 		let resolveFn;

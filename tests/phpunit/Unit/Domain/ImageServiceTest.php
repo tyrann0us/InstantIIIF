@@ -122,7 +122,7 @@ class ImageServiceTest extends TestCase
             'maxWidth' => 1000,
             'maxHeight' => 1000,
         ]);
-        // Asking for 2000×1600 — scale down to fit maxWidth, height scales too.
+        // Asking for 2000×1600 scales down to fit maxWidth; height scales too.
         [$w, $h] = $service->clamp(2000, 1600);
         self::assertSame(1000, $w);
         self::assertSame(800, $h);
@@ -135,7 +135,7 @@ class ImageServiceTest extends TestCase
             'height' => 10000,
             'maxArea' => 1_000_000, // 1MP cap
         ]);
-        [$w, $h] = $service->clamp(2000, 2000); // 4MP — must scale down.
+        [$w, $h] = $service->clamp(2000, 2000); // 4MP, must scale down.
         self::assertLessThanOrEqual(1_000_000, $w * $h);
         self::assertGreaterThan(0, $w);
         self::assertGreaterThan(0, $h);
@@ -234,7 +234,7 @@ class ImageServiceTest extends TestCase
             'maxWidth' => 2000,
             'maxHeight' => 500,
         ]);
-        // 1000x2000 — maxHeight/height = 0.25 is tighter than maxWidth/width = 2.0.
+        // 1000x2000: maxHeight/height = 0.25 is tighter than maxWidth/width = 2.0.
         [$w, $h] = $service->clamp(1000, 2000);
         self::assertSame(250, $w);
         self::assertSame(500, $h);

@@ -122,7 +122,7 @@ class HookHandlerTest extends TestCase
     {
         $out = new OutputPage();
         $skin = new Skin();
-        // No title set — not a file page.
+        // No title set, so not a file page.
 
         $this->makeHandler()->onBeforePageDisplay($out, $skin);
 
@@ -137,8 +137,8 @@ class HookHandlerTest extends TestCase
         $iiifRepo = new Repo([
             'name' => 'iiif',
             'class' => Repo::class,
-            // Inject a backend so the constructor's cache-backend wiring
-            // short-circuits — the standalone suite has no FSFileBackend.
+            // Inject a backend object so FileRepo never looks one up; the
+            // standalone suite has no FSFileBackend.
             'backend' => new \FileBackend(),
             'directory' => '/tmp/iiif',
             'iiifSources' => [
@@ -285,15 +285,15 @@ class HookHandlerTest extends TestCase
         self::assertArrayNotHasKey('wgIIIFProviderUrl', $out->jsConfigVars);
     }
 
-    // ─── onThumbnailBeforeProduceHTML — data attributes ─────
+    // ─── onThumbnailBeforeProduceHTML: data attributes ─────
 
     public function testThumbnailHookAddsIiifTitle(): void
     {
         // File reports 1600x1324 (its full dimensions); the rendered thumb is
         // only 800x550 (a clamped article preview). data-file-width must be
-        // the FILE's value — MMV's lightboximage.js caps the requested
-        // lightbox thumb at data-file-width, so using the thumb's clamped
-        // width would make MMV show a tiny image.
+        // the FILE's value: MMV's lightboximage.js caps the requested
+        // lightbox thumb at data-file-width, so the thumb's clamped width
+        // would make MMV show a tiny image.
         $file = $this->makeIiifFileMock(
             'manifest-fotothek-v2.json',
             fileWidth: 1600,
@@ -346,9 +346,8 @@ class HookHandlerTest extends TestCase
 
     /**
      * Defensive guard at the top of onThumbnailBeforeProduceHTML: when the
-     * IIIFFile somehow lacks a Title (no Title constructed for whatever
-     * reason), the hook must bail out cleanly without crashing on later
-     * `$title->getNsText()` calls.
+     * IIIFFile has no Title, the hook must bail out cleanly instead of
+     * crashing on later `$title->getNsText()` calls.
      */
     public function testThumbnailHookReturnsTrueWhenFileHasNoTitle(): void
     {
@@ -368,15 +367,15 @@ class HookHandlerTest extends TestCase
         );
 
         self::assertTrue($result);
-        // None of the data-iiif-* attribs were set — we bailed early.
+        // None of the data-iiif-* attribs were set, so the hook bailed early.
         self::assertArrayNotHasKey('data-iiif-title', $attribs);
     }
 
     /**
      * When the Title's namespace text is empty (e.g. on a wiki where the
      * file namespace alias isn't registered), the hook falls back to
-     * NamespaceInfo::getCanonicalName(NS_FILE). Verifying the fallback
-     * branch keeps the data-iiif-title attribute building defensively.
+     * NamespaceInfo::getCanonicalName(NS_FILE), so data-iiif-title is
+     * still built.
      */
     public function testThumbnailHookFallsBackToCanonicalNamespaceWhenNsTextEmpty(): void
     {
@@ -505,7 +504,7 @@ class HookHandlerTest extends TestCase
             lastTransformPage: 2,
         );
 
-        // Simulate: we're on the file detail page for this same file.
+        // Simulate being on the file detail page for this same file.
         $pageTitle = new Title('Df_dk_0007450', NS_FILE, 'File');
         RequestContext::getMain()->setTitle($pageTitle);
 
@@ -610,7 +609,7 @@ class HookHandlerTest extends TestCase
         self::assertSame($originalHref, $linkAttrs['href']);
     }
 
-    // ─── onImagePageFileHistoryLine — hide history ─────────
+    // ─── onImagePageFileHistoryLine: hide history ─────────
 
     public function testFileHistoryLineHidesForIiifFile(): void
     {
@@ -647,7 +646,7 @@ class HookHandlerTest extends TestCase
         self::assertSame('<tr>some content</tr>', $line);
     }
 
-    // ─── onImagePageShowTOC — remove filehistory entry ─────
+    // ─── onImagePageShowTOC: remove filehistory entry ─────
 
     public function testShowTOCRemovesFileHistoryForIiif(): void
     {
@@ -684,7 +683,7 @@ class HookHandlerTest extends TestCase
         self::assertSame($original, $toc);
     }
 
-    // ─── onGetExtendedMetadata — delegates to MetadataExtractor ────
+    // ─── onGetExtendedMetadata: delegates to MetadataExtractor ────
 
     public function testGetExtendedMetadataDelegatesForIiifFile(): void
     {
