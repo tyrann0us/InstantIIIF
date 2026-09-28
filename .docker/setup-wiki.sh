@@ -37,16 +37,6 @@ if [ "${INSTALL_DEV_DEPS:-0}" = "1" ] && [ ! -d /var/www/html/vendor/phpunit ]; 
     apache2ctl graceful || service apache2 reload || true
 fi
 
-# Wait for the mock IIIF server to be ready.
-echo "Waiting for mock IIIF server..."
-for i in $(seq 1 30); do
-    if curl -sf http://iiif-mock:8111/health > /dev/null 2>&1; then
-        echo "Mock IIIF server is ready."
-        break
-    fi
-    sleep 1
-done
-
 # Install MediaWiki if not already done.
 if [ ! -f /var/www/data/testwiki.sqlite ]; then
     echo "Installing MediaWiki..."
