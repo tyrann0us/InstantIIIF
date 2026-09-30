@@ -6,6 +6,7 @@ namespace MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki;
 
 use MediaWiki\Context\RequestContext;
 use MediaWiki\Hook\GetExtendedMetadataHook;
+use MediaWiki\Hook\ParserModifyImageHTMLHook;
 use MediaWiki\Hook\ThumbnailBeforeProduceHTMLHook;
 use MediaWiki\Output\Hook\BeforePageDisplayHook;
 use MediaWiki\Page\Hook\ImagePageFileHistoryLineHook;
@@ -14,6 +15,7 @@ use MediaWiki\Page\Hook\ImagePageShowTOCHook;
 class HookHandler implements
     BeforePageDisplayHook,
     ThumbnailBeforeProduceHTMLHook,
+    ParserModifyImageHTMLHook,
     ImagePageFileHistoryLineHook,
     ImagePageShowTOCHook,
     GetExtendedMetadataHook
@@ -28,7 +30,7 @@ class HookHandler implements
     /**
      * Load the RL modules for the page.
      *
-     * On File: pages with an IIIF file, also pass the provider URL as a
+     * On File: pages with a IIIF file, also pass the provider URL as a
      * JS config variable so the client-side code can fix the shared-upload
      * description link (which would otherwise point to the local URL,
      * because getDescriptionUrl() returns the wiki page URL) and load
@@ -235,6 +237,24 @@ class HookHandler implements
 
         $line = '';
         return false;
+    }
+
+    /**
+     * Add the "pages with IIIF images" tracking category to pages that
+     * embed a IIIF file. The category name is the content-language
+     * message `instantiiif-tracking-category`; `-` disables it.
+     *
+     * @param \MediaWiki\Parser\Parser $parser
+     * @param \File $file
+     * @param array<string, mixed> $params
+     * @param string $html
+     */
+    // phpcs:ignore Syde.Functions.ArgumentTypeDeclaration.NoArgumentType -- MediaWiki hook interface signature
+    public function onParserModifyImageHTML($parser, $file, $params, &$html): void
+    {
+        if ($file instanceof IIIFFile) {
+            $parser->addTrackingCategory('instantiiif-tracking-category');
+        }
     }
 
     /**

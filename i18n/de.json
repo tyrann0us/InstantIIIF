@@ -5,6 +5,8 @@
     ]
   },
   "instantiiif-desc": "Externes Datei-Repository für MediaWiki, das Bilder direkt aus IIIF-Quellen (Presentation API v2/v3) einbindet.",
+  "instantiiif-tracking-category": "Seiten mit IIIF-Bildern",
+  "instantiiif-tracking-category-desc": "Die Seite bindet mindestens ein Bild aus einer IIIF-Quelle ein.",
   "iiif-unresolved": "Das IIIF-Bild zu dieser Datei konnte nicht aufgelöst werden.",
   "instantiiif-license-shortname": "Nutzungsbedingungen",
   "instantiiif-inspect-title": "IIIF-Manifest-Inspektor",

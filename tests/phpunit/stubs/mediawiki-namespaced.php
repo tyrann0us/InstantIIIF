@@ -220,6 +220,13 @@ namespace MediaWiki\Hook {
         }
     }
 
+    if (!interface_exists(ParserModifyImageHTMLHook::class)) {
+        interface ParserModifyImageHTMLHook
+        {
+            public function onParserModifyImageHTML($parser, $file, $params, &$html): void;
+        }
+    }
+
     if (!interface_exists(GetExtendedMetadataHook::class)) {
         interface GetExtendedMetadataHook
         {
@@ -397,6 +404,24 @@ namespace MediaWiki\Context {
             public function getRequest(): \WebRequest
             {
                 return $this->request;
+            }
+        }
+    }
+}
+
+// ─── MediaWiki\Parser ─────────────────────────────────────────────
+
+namespace MediaWiki\Parser {
+    if (!class_exists(Parser::class)) {
+        class Parser
+        {
+            /** @var string[] Message keys passed to addTrackingCategory(). */
+            public array $trackingCategories = [];
+
+            public function addTrackingCategory(string $msg): bool
+            {
+                $this->trackingCategories[] = $msg;
+                return true;
             }
         }
     }

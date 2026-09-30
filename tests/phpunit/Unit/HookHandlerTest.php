@@ -20,7 +20,8 @@ use ThumbnailImage;
 
 /**
  * Tests for HookHandler: onBeforePageDisplay, onThumbnailBeforeProduceHTML,
- * onImagePageFileHistoryLine, onImagePageShowTOC, onGetExtendedMetadata.
+ * onParserModifyImageHTML, onImagePageFileHistoryLine, onImagePageShowTOC,
+ * onGetExtendedMetadata.
  */
 #[CoversClass(HookHandler::class)]
 class HookHandlerTest extends TestCase
@@ -70,7 +71,7 @@ class HookHandlerTest extends TestCase
     }
 
     /**
-     * Create an IIIFFile mock with specified manifest and title.
+     * Create a IIIFFile mock with specified manifest and title.
      */
     private function makeIiifFileMock(
         string $fixture,
@@ -607,6 +608,39 @@ class HookHandlerTest extends TestCase
 
         // Page 1 → no fix needed.
         self::assertSame($originalHref, $linkAttrs['href']);
+    }
+
+    // ─── onParserModifyImageHTML: tracking category ───────
+
+    public function testParserModifyImageHtmlAddsTrackingCategoryForIiifFile(): void
+    {
+        $parser = new \MediaWiki\Parser\Parser();
+        $html = '<img>';
+
+        $this->makeHandler()->onParserModifyImageHTML(
+            $parser,
+            $this->createStub(IIIFFile::class),
+            [],
+            $html
+        );
+
+        self::assertSame(['instantiiif-tracking-category'], $parser->trackingCategories);
+        self::assertSame('<img>', $html);
+    }
+
+    public function testParserModifyImageHtmlSkipsRegularFile(): void
+    {
+        $parser = new \MediaWiki\Parser\Parser();
+        $html = '<img>';
+
+        $this->makeHandler()->onParserModifyImageHTML(
+            $parser,
+            $this->makeRegularFileMock(),
+            [],
+            $html
+        );
+
+        self::assertSame([], $parser->trackingCategories);
     }
 
     // ─── onImagePageFileHistoryLine: hide history ─────────

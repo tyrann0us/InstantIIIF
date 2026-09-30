@@ -114,10 +114,14 @@
   "Hooks": {
     "BeforePageDisplay": "main",
     "ThumbnailBeforeProduceHTML": "main",
+    "ParserModifyImageHTML": "main",
     "ImagePageFileHistoryLine": "main",
     "ImagePageShowTOC": "main",
     "GetExtendedMetadata": "main"
   },
+  "TrackingCategories": [
+    "instantiiif-tracking-category"
+  ],
   "SpecialPages": {
     "InstantIIIFInspect": {
       "class": "MediaWiki\\Extension\\InstantIIIF\\Infrastructure\\MediaWiki\\SpecialInstantIIIFInspect",

@@ -115,6 +115,10 @@ Once at least one source is configured, reference an object by its identifier, w
 
 IIIF identifiers also resolve in VisualEditor's "Insert media" dialog. Type the identifier into the search field and the matching file appears as a result.
 
+### Tracking category
+
+Every page that embeds at least one IIIF image, inline or in a `<gallery>`, is added to the tracking category "Pages with IIIF images". The name is in the wiki's content language. To rename the category, edit `MediaWiki:Instantiiif-tracking-category`; setting it to `-` turns the category off. Existing pages are added on their next re-parse. To add all of them at once, run `php maintenance/run.php refreshLinks`.
+
 ## Configuration reference
 
 Top level of the `$wgForeignFileRepos[]` entry:

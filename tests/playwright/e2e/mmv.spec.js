@@ -26,7 +26,7 @@ async function openMmv( page ) {
 }
 
 test.describe( 'MultimediaViewer overlay', () => {
-	test( 'clicking an IIIF thumbnail opens MMV', async ( { page } ) => {
+	test( 'clicking a IIIF thumbnail opens MMV', async ( { page } ) => {
 		await page.goto( '/wiki/Mei%C3%9Fen_Rathaus' );
 		await openMmv( page );
 	} );
