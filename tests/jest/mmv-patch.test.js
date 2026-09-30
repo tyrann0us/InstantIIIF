@@ -1460,7 +1460,7 @@ describe( 'buildLocalFileUrl: defensive null returns', () => {
 		loadMmvPatch( window );
 		await new Promise( ( r ) => setTimeout( r, 10 ) );
 
-		// Click an IIIF img (the click handler's `if (titleAttr)` runs).
+		// Click a IIIF img (the click handler's `if (titleAttr)` runs).
 		document
 			.querySelector( '#file img' )
 			.dispatchEvent( new Event( 'click', { bubbles: true } ) );

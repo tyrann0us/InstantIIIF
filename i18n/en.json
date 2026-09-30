@@ -5,6 +5,8 @@
     ]
   },
   "instantiiif-desc": "MediaWiki Foreign FileRepo that hotlinks images from IIIF sources (Presentation API v2/v3).",
+  "instantiiif-tracking-category": "Pages with IIIF images",
+  "instantiiif-tracking-category-desc": "The page embeds at least one image from a IIIF source.",
   "iiif-unresolved": "Could not resolve IIIF image for this file.",
   "instantiiif-license-shortname": "Terms of use",
   "instantiiif-inspect-title": "IIIF Manifest Inspector",
