@@ -71,7 +71,7 @@ class HookHandlerTest extends TestCase
     }
 
     /**
-     * Create an IIIFFile mock with specified manifest and title.
+     * Create a IIIFFile mock with specified manifest and title.
      */
     private function makeIiifFileMock(
         string $fixture,

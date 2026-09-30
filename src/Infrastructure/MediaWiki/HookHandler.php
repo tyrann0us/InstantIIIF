@@ -30,7 +30,7 @@ class HookHandler implements
     /**
      * Load the RL modules for the page.
      *
-     * On File: pages with an IIIF file, also pass the provider URL as a
+     * On File: pages with a IIIF file, also pass the provider URL as a
      * JS config variable so the client-side code can fix the shared-upload
      * description link (which would otherwise point to the local URL,
      * because getDescriptionUrl() returns the wiki page URL) and load

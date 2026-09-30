@@ -28,7 +28,7 @@ use SpecialPage;
  */
 class SpecialInstantIIIFInspect extends SpecialPage
 {
-    /** Synthetic title used to spin up an IIIFFile for inspection. */
+    /** Synthetic title used to spin up a IIIFFile for inspection. */
     private const INSPECT_DBKEY = 'InstantIIIFInspect';
 
     public function __construct(

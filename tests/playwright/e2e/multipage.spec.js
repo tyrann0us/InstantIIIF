@@ -477,7 +477,7 @@ test.describe( 'Multi-page IIIF documents', () => {
 		// extension-less IIIF titles like `Df_dk_multipage`, which makes
 		// MMV's `isValidExtension` reject the file and skip the button.
 		// Our patch makes Title.getExtension() report "jpg" for
-		// file-namespace titles on an IIIF file detail page, so the
+		// file-namespace titles on a IIIF file detail page, so the
 		// button renders.
 		await expect(
 			page.locator( '.fullMedia .mw-mmv-view-expanded' )

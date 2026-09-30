@@ -304,7 +304,7 @@ class IIIFFileTest extends TestCase
      * MediaWiki core's File::getWidth($page = 1) / getHeight($page = 1)
      * signatures are untyped, and MW calls them with `false` to mean
      * "no page specified" (seen in production: ImagePage rendering for
-     * an IIIFFile triggers File::getWidth(false)). Page::normalize must
+     * a IIIFFile triggers File::getWidth(false)). Page::normalize must
      * absorb that, or strict_types throws a TypeError. Regression guard
      * for a bug that surfaced on the first deploy of the DDD refactor.
      */
@@ -973,7 +973,7 @@ class IIIFFileTest extends TestCase
     // ─── Real ensureResolved() / tryProvider() paths ─────────────
 
     /**
-     * Build an IIIFFile that exercises the real ensureResolved() /
+     * Build a IIIFFile that exercises the real ensureResolved() /
      * tryProvider() / getProviderConfig() bodies but stubs out
      * fetchJsonCached so no HTTP is performed.
      *

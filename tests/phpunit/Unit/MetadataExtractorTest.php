@@ -297,7 +297,7 @@ class MetadataExtractorTest extends TestCase
     }
 
     /**
-     * `rights` / `license` is an IIIF v2 list. When none of its entries is
+     * `rights` / `license` is a IIIF v2 list. When none of its entries is
      * an HTTP URL string, urlFromLicenseField must fall through to ''.
      * MetadataExtractor then tries the rest of its license chain (provider
      * metadata, provider landing). Both are empty here too, so no

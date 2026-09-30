@@ -25,7 +25,7 @@ class MetadataExtractor
     }
 
     /**
-     * Produce the extmetadata additions for an IIIF file.
+     * Produce the extmetadata additions for a IIIF file.
      *
      * Always sets the DateTime sentinel to suppress MMV's spurious
      * "Uploaded" line (FormatMetadata otherwise falls back to

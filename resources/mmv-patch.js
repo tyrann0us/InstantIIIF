@@ -271,7 +271,7 @@ mw.loader.using( 'mediawiki.Title' ).then( function () {
 	// Chain the loads so `mmv` is fully ready before we ask for
 	// `mmv.ui.reuse`.
 	//
-	// Only kick this off on pages that contain an IIIF thumbnail, to
+	// Only kick this off on pages that contain a IIIF thumbnail, to
 	// avoid pulling MMV into pages that don't need it.
 	const hasIiifImageOnPage = document.querySelector( 'img[data-iiif-title]' );
 	if ( hasIiifImageOnPage ) {

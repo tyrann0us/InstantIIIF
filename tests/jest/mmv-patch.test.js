@@ -391,7 +391,7 @@ describe( 'MMV image link fix via mmv-metadata', () => {
 describe( 'non-IIIF image passthrough', () => {
 	test( 'mmv-metadata handler returns early for non-IIIF images', async () => {
 		const thumbnailEl = document.createElement( 'img' );
-		// No data-iiif-title, so not an IIIF image.
+		// No data-iiif-title, so not a IIIF image.
 
 		const originalHref =
 			'https://upload.wikimedia.org/wikipedia/commons/test.jpg';
@@ -913,7 +913,7 @@ describe( 'iiifPageByUrl rebuild on wikipage.content', () => {
 // ─── mw.Title.prototype.getExtension override ─────────────
 
 describe( 'mw.Title.getExtension override on IIIF file detail pages', () => {
-	test( 'returns the spoofed extension for NS_FILE titles when an IIIF img sits in #file', async () => {
+	test( 'returns the spoofed extension for NS_FILE titles when a IIIF img sits in #file', async () => {
 		// The override only kicks in when `#file img[data-iiif-title]`
 		// exists in the DOM. Otherwise it's a no-op, so non-IIIF pages
 		// stay untouched.
@@ -1037,7 +1037,7 @@ describe( 'mmv-viewfile redirects to data-iiif-full-url', () => {
 
 describe( 'click capture resets IIIF state for non-IIIF MediaViewer thumbs', () => {
 	test( 'click on .mw-file-element (Commons) resets prior IIIF state', async () => {
-		// First: click an IIIF thumb to seed state.
+		// First: click a IIIF thumb to seed state.
 		buildDom( `
 			<img id="iiif"
 			     data-iiif-title="File:Bsb11610364.jpg"
@@ -1076,7 +1076,7 @@ describe( 'click capture resets IIIF state for non-IIIF MediaViewer thumbs', () 
 			.getElementById( 'commons' )
 			.dispatchEvent( new Event( 'click', { bubbles: true } ) );
 
-		// Fire mmv-metadata without an IIIF thumbnail to take the
+		// Fire mmv-metadata without a IIIF thumbnail to take the
 		// non-IIIF branch, where the patches should not run.
 		env.triggerJqEvent( 'mmv-metadata', {
 			image: {

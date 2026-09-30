@@ -171,7 +171,7 @@ class RepoTest extends MediaWikiIntegrationTestCase
 
     /**
      * `newFile()` is the FileRepo override that makes wikitext
-     * `[[File:…]]` resolve to an IIIFFile instead of a missing-file
+     * `[[File:…]]` resolve to a IIIFFile instead of a missing-file
      * placeholder. This test passes a Title object directly.
      */
     public function testNewFileFromTitleObjectReturnsIiifFile(): void
@@ -215,7 +215,7 @@ class RepoTest extends MediaWikiIntegrationTestCase
 
     /**
      * When `Title::newFromText` can't parse the input, Repo bails with
-     * an InvalidArgumentException instead of constructing an IIIFFile
+     * an InvalidArgumentException instead of constructing a IIIFFile
      * with a null Title (which would crash downstream in ensureResolved).
      */
     public function testNewFileThrowsForInvalidTitleString(): void
