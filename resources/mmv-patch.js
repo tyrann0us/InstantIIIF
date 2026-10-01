@@ -218,6 +218,25 @@ mw.loader.using( 'mediawiki.Title' ).then( function () {
 		return n > 0 ? n : 1;
 	}
 
+	/**
+	 * Resolve `data-iiif-full-url` and keep it only if it is http(s).
+	 * The value is written to hrefs and `document.location`, so a
+	 * `javascript:` URL in a tampered attribute would run as script.
+	 * @param {string|null} raw
+	 * @return {string|null} Absolute http(s) URL, or null.
+	 */
+	function parseIiifFullUrl( raw ) {
+		if ( ! raw ) {
+			return null;
+		}
+		try {
+			const url = new URL( raw, document.baseURI );
+			return /^https?:$/.test( url.protocol ) ? url.href : null;
+		} catch {
+			return null;
+		}
+	}
+
 	document.addEventListener(
 		'click',
 		function ( event ) {
@@ -235,7 +254,7 @@ mw.loader.using( 'mediawiki.Title' ).then( function () {
 							isCurrentImageIiif = true;
 						}
 						currentIiifPage = parseIiifPage( pageAttr );
-						currentIiifFullUrl = fullUrlAttr || null;
+						currentIiifFullUrl = parseIiifFullUrl( fullUrlAttr );
 					} else if (
 						node.classList.contains( 'mw-file-element' ) ||
 						node.closest( 'a.mw-file-description' )
@@ -643,8 +662,9 @@ mw.loader.using( 'mediawiki.Title' ).then( function () {
 		// Capture state about the currently displayed IIIF image so the
 		// share / download / "more details" patches can all consult it.
 		currentIiifTitle = image.thumbnail.getAttribute( 'data-iiif-title' );
-		currentIiifFullUrl =
-			image.thumbnail.getAttribute( 'data-iiif-full-url' ) || null;
+		currentIiifFullUrl = parseIiifFullUrl(
+			image.thumbnail.getAttribute( 'data-iiif-full-url' )
+		);
 		const pageAttr = image.thumbnail.getAttribute( 'data-iiif-page' );
 		currentIiifPage = pageAttr ? parseInt( pageAttr, 10 ) || 1 : 1;
 

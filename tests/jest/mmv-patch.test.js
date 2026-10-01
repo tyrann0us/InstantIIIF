@@ -351,39 +351,45 @@ describe( 'MMV image link fix via mmv-metadata', () => {
 		);
 	} );
 
-	test( 'does not touch MMV link when data-iiif-full-url is absent', async () => {
-		const thumbnailEl = document.createElement( 'img' );
-		thumbnailEl.setAttribute( 'data-iiif-title', 'File:Test.jpg' );
-		// No data-iiif-full-url: the page 1 case.
+	// null is the page 1 case, where the attribute is missing.
+	test.each( [ null, 'javascript:alert(1)' ] )(
+		'does not touch MMV link when data-iiif-full-url is %p',
+		async ( fullUrl ) => {
+			const thumbnailEl = document.createElement( 'img' );
+			thumbnailEl.setAttribute( 'data-iiif-title', 'File:Test.jpg' );
+			if ( fullUrl ) {
+				thumbnailEl.setAttribute( 'data-iiif-full-url', fullUrl );
+			}
 
-		const originalHref =
-			'https://iiif.example/page1/full/full/0/default.jpg';
-		buildDom(
-			`<div class="mw-mmv-image"><a href="${ originalHref }">image</a></div>`
-		);
+			const originalHref =
+				'https://iiif.example/page1/full/full/0/default.jpg';
+			buildDom(
+				`<div class="mw-mmv-image"><a href="${ originalHref }">image</a></div>`
+			);
 
-		env.registerModule( 'mmv', { ThumbnailInfo: class {} } );
-		env.registerModule( 'mmv.ui.reuse', {
-			Share: ( function () {
-				function S() {}
-				S.prototype.set = function () {};
-				return S;
-			} )(),
-		} );
+			env.registerModule( 'mmv', { ThumbnailInfo: class {} } );
+			env.registerModule( 'mmv.ui.reuse', {
+				Share: ( function () {
+					function S() {}
+					S.prototype.set = function () {};
+					return S;
+				} )(),
+			} );
 
-		loadMmvPatch( window );
-		await new Promise( ( r ) => setTimeout( r, 10 ) );
+			loadMmvPatch( window );
+			await new Promise( ( r ) => setTimeout( r, 10 ) );
 
-		env.triggerJqEvent( 'mmv-metadata', {
-			image: {
-				thumbnail: thumbnailEl,
-				src: 'https://iiif.example/thumb.jpg',
-			},
-		} );
+			env.triggerJqEvent( 'mmv-metadata', {
+				image: {
+					thumbnail: thumbnailEl,
+					src: 'https://iiif.example/thumb.jpg',
+				},
+			} );
 
-		const mmvLink = document.querySelector( '.mw-mmv-image a' );
-		expect( mmvLink.href ).toBe( originalHref );
-	} );
+			const mmvLink = document.querySelector( '.mw-mmv-image a' );
+			expect( mmvLink.href ).toBe( originalHref );
+		}
+	);
 } );
 
 // ─── Non-IIIF images pass through unchanged ─────────────
