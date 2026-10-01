@@ -352,7 +352,8 @@ describe( 'MMV image link fix via mmv-metadata', () => {
 	} );
 
 	// null is the page 1 case, where the attribute is missing.
-	test.each( [ null, 'javascript:alert(1)' ] )(
+	// 'https://[' has an invalid host, so new URL() throws.
+	test.each( [ null, 'javascript:alert(1)', 'https://[' ] )(
 		'does not touch MMV link when data-iiif-full-url is %p',
 		async ( fullUrl ) => {
 			const thumbnailEl = document.createElement( 'img' );
