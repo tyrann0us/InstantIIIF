@@ -245,7 +245,7 @@ class Repo extends FileRepo
     /**
      * @inheritDoc
      * @param Title|string $title
-     * @param string|false $time
+     * @param string|false $time Ignored: IIIF files have no versions.
      */
     // phpcs:ignore Syde.Functions.ArgumentTypeDeclaration.NoArgumentType -- MediaWiki FileRepo override
     public function newFile($title, $time = false): IIIFFile
@@ -256,7 +256,7 @@ class Repo extends FileRepo
         if ($title === null) {
             throw new \InvalidArgumentException('Invalid title provided');
         }
-        return new IIIFFile($this, $title, $time);
+        return new IIIFFile($this, $title);
     }
 
     /**

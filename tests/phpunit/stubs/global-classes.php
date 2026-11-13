@@ -94,6 +94,18 @@ if (!class_exists(MediaTransformOutput::class)) {
 if (!class_exists(MediaHandler::class)) {
     abstract class MediaHandler
     {
+        protected ?\MediaWiki\Language\Language $lang = null;
+
+        public function getLanguage(): \MediaWiki\Language\Language
+        {
+            return $this->lang ?? throw new \RuntimeException('Need to set language before accessing.');
+        }
+
+        public function setLanguage(\MediaWiki\Language\Language $lang): void
+        {
+            $this->lang = $lang;
+        }
+
         public function getParamMap(): array
         {
             return [];
@@ -155,7 +167,7 @@ if (!class_exists(File::class)) {
         /** @var \MediaWiki\Title\Title|null */
         protected ?\MediaWiki\Title\Title $title = null;
 
-        public function __construct(?\MediaWiki\Title\Title $title = null, ?FileRepo $repo = null, $time = false)
+        public function __construct(?\MediaWiki\Title\Title $title = null, ?FileRepo $repo = null)
         {
             if ($title !== null) {
                 $this->title = $title;
@@ -196,7 +208,7 @@ if (!class_exists(File::class)) {
         }
 
         /** @return MediaHandler|false */
-        public function getHandler()
+        public function getHandler(?\MediaWiki\Language\Language $lang = null)
         {
             return $this->handler;
         }
@@ -476,20 +488,6 @@ if (!class_exists(MWHttpRequest::class)) {
     }
 }
 
-if (!class_exists(Language::class)) {
-    class Language
-    {
-        public function __construct(private string $code = 'en')
-        {
-        }
-
-        public function getCode(): string
-        {
-            return $this->code;
-        }
-    }
-}
-
 if (!class_exists(WebRequest::class)) {
     class WebRequest
     {
@@ -533,15 +531,13 @@ if (!class_exists(SpecialPage::class)) {
     class SpecialPage
     {
         public string $mName;
-        public string $mRestriction;
         public ?\MediaWiki\Context\IContextSource $injectedContext = null;
         public ?WebRequest $injectedRequest = null;
         public ?OutputPage $injectedOutput = null;
 
-        public function __construct(string $name, string $restriction = '')
+        public function __construct(string $name)
         {
             $this->mName = $name;
-            $this->mRestriction = $restriction;
         }
 
         public function setHeaders(): void

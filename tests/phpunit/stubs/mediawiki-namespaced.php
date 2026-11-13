@@ -9,6 +9,31 @@
 
 declare(strict_types=1);
 
+// ─── MediaWiki\Language ──────────────────────────────────────────
+
+namespace MediaWiki\Language {
+    if (!class_exists(Language::class, false)) {
+        class Language
+        {
+            public function __construct(private string $code = 'en')
+            {
+            }
+
+            public function getCode(): string
+            {
+                return $this->code;
+            }
+        }
+    }
+}
+
+namespace {
+    if (!class_exists(Language::class, false)) {
+        // Real MediaWiki keeps the global name as an alias.
+        class_alias(MediaWiki\Language\Language::class, Language::class);
+    }
+}
+
 // ─── MediaWiki\Title ──────────────────────────────────────────────
 
 namespace MediaWiki\Title {
@@ -180,12 +205,12 @@ namespace MediaWiki {
              */
             public static ?\Throwable $mockContentLanguageThrows = null;
 
-            public function getContentLanguage(): \Language
+            public function getContentLanguage(): \MediaWiki\Language\Language
             {
                 if (self::$mockContentLanguageThrows !== null) {
                     throw self::$mockContentLanguageThrows;
                 }
-                return new \Language(self::$mockContentLanguageCode);
+                return new \MediaWiki\Language\Language(self::$mockContentLanguageCode);
             }
         }
     }
@@ -338,7 +363,7 @@ namespace MediaWiki\Context {
     if (!interface_exists(IContextSource::class)) {
         interface IContextSource
         {
-            public function getLanguage(): \Language;
+            public function getLanguage(): \MediaWiki\Language\Language;
 
             public function msg(string $key, mixed ...$params): \Message;
         }
@@ -350,15 +375,15 @@ namespace MediaWiki\Context {
             private static ?self $instance = null;
             private ?Title $title = null;
             private \WebRequest $request;
-            private \Language $language;
+            private \MediaWiki\Language\Language $language;
 
             public function __construct()
             {
                 $this->request = new \WebRequest();
-                $this->language = new \Language('en');
+                $this->language = new \MediaWiki\Language\Language('en');
             }
 
-            public function getLanguage(): \Language
+            public function getLanguage(): \MediaWiki\Language\Language
             {
                 return $this->language;
             }
@@ -368,7 +393,7 @@ namespace MediaWiki\Context {
                 return new \Message($key, $params);
             }
 
-            public function setLanguage(\Language $language): void
+            public function setLanguage(\MediaWiki\Language\Language $language): void
             {
                 $this->language = $language;
             }

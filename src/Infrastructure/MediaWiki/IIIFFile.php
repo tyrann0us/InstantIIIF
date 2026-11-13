@@ -14,6 +14,7 @@ use MediaWiki\Extension\InstantIIIF\Domain\Manifest;
 use MediaWiki\Extension\InstantIIIF\Domain\Page;
 use MediaWiki\Extension\InstantIIIF\Domain\ProviderQuirks;
 use MediaWiki\Extension\InstantIIIF\Infrastructure\CachedHttpManifestFetcher;
+use MediaWiki\Language\Language;
 use MediaWiki\MediaWikiServices;
 use MediaWiki\Title\Title;
 use ThumbnailImage;
@@ -60,14 +61,9 @@ class IIIFFile extends File
      */
     public const NO_TIMESTAMP_SENTINEL = '<>';
 
-    /**
-     * @param Repo $repo
-     * @param Title $title
-     * @param string|false $time
-     */
-    public function __construct(Repo $repo, Title $title, $time = false)
+    public function __construct(Repo $repo, Title $title)
     {
-        parent::__construct($title, $repo, $time);
+        parent::__construct($title, $repo);
         $this->repo = $repo;
     }
 
@@ -121,13 +117,19 @@ class IIIFFile extends File
      * → JpegHandler), which does not support the `page` parameter.
      * Overriding here lets us use IIIFHandler with multi-page support.
      *
+     * A passed language is also set on creation: MediaHandler::getLanguage()
+     * throws when unset.
+     *
      * @return MediaHandler|false
      */
     // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound, Syde.Functions.ReturnTypeDeclaration.NoReturnType -- MediaWiki File override
-    public function getHandler()
+    public function getHandler(?Language $lang = null)
     {
         if (!$this->handler) {
             $this->handler = new IIIFHandler();
+        }
+        if ($lang) {
+            $this->handler->setLanguage($lang);
         }
         return $this->handler;
     }

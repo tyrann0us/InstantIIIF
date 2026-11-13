@@ -41,7 +41,7 @@ npm run lint:md          # Markdown lint
 ### Docker (local wiki + mock IIIF server)
 
 ```bash
-npm run docker:up   # start MediaWiki 1.44 at localhost:8080, mock IIIF at localhost:8111
+npm run docker:up   # start MediaWiki at localhost:8080, mock IIIF at localhost:8111
 npm run docker:down # tear down with volumes
 ```
 
