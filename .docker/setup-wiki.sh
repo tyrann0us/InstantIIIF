@@ -3,7 +3,7 @@ set -e
 
 # Install MW dev dependencies (PHPUnit, wikimedia/testing-access-wrapper)
 # so the Integration suite can run inside the container. The official
-# mediawiki:1.44 image ships production deps only.
+# mediawiki image ships production deps only.
 #
 # Opt in with INSTALL_DEV_DEPS=1. The dev-deps install rewrites
 # /var/www/html/vendor and invalidates Apache's warm opcache, which
@@ -55,6 +55,15 @@ fi
 # Overwrite LocalSettings with our test config.
 cp /var/www/html/extensions/InstantIIIF/.docker/LocalSettings.php /var/www/html/LocalSettings.php
 chown www-data:www-data /var/www/html/LocalSettings.php
+
+# MW 1.46 runs tests with vendor/bin/phpunit. Its bootstrap requires a
+# phpunit.xml generated from phpunit.xml.template, and the image ships
+# neither, so fetch the template from the image's branch and generate one.
+if [ -d /var/www/html/vendor/phpunit ] && [ ! -f /var/www/html/phpunit.xml ]; then
+    curl -sSfo phpunit.xml.template \
+        https://raw.githubusercontent.com/wikimedia/mediawiki/REL1_46/phpunit.xml.template
+    composer phpunit:config 2>&1 | tail -1
+fi
 
 # Ensure www-data can access the SQLite database (exec runs as root).
 chown -R www-data:www-data /var/www/data

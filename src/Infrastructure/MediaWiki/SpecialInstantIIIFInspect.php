@@ -37,7 +37,13 @@ class SpecialInstantIIIFInspect extends SpecialPage
         private MetadataExtractor $metadataExtractor
     ) {
 
-        parent::__construct('InstantIIIFInspect', 'instantiiif-inspect');
+        parent::__construct('InstantIIIFInspect');
+    }
+
+    // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound -- SpecialPage::getRestriction override
+    public function getRestriction(): string
+    {
+        return 'instantiiif-inspect';
     }
 
     // phpcs:ignore Syde.Classes.DisallowGetterSetter.GetterFound, Syde.Functions.ReturnTypeDeclaration.NoReturnType -- SpecialPage::getDescription override

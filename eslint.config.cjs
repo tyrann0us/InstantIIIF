@@ -1,12 +1,12 @@
 /**
- * ESLint flat config for @wordpress/scripts v32+ (ESLint v10).
+ * ESLint flat config for `@wordpress/scripts` v32+.
  *
- * Mirrors the default config that `wp-scripts lint-js` would apply
- * (`@wordpress/eslint-plugin/recommended` + the test-unit override),
- * and adds project-specific globals and per-file rule tweaks.
+ * Applies `@wordpress/eslint-plugin/recommended` plus Jest rules for
+ * tests/jest, and adds project-specific globals and per-file rule tweaks.
  */
 
 const wpPlugin = require( '@wordpress/eslint-plugin' );
+const jestPlugin = require( 'eslint-plugin-jest' );
 
 module.exports = [
 	{
@@ -22,17 +22,13 @@ module.exports = [
 
 	...wpPlugin.configs.recommended,
 
-	...wpPlugin.configs[ 'test-unit' ].map( ( c ) => ( {
-		...c,
-		// Apply the Jest environment (globals like `jest`, `expect`, …)
-		// to every file under tests/jest, not only `*.test.js`, so
-		// shared helpers like mw-mock.js are covered too.
-		files: [
-			'**/@(test|__tests__)/**/*.js',
-			'**/?(*.)test.js',
-			'tests/jest/**/*.js',
-		],
-	} ) ),
+	{
+		...jestPlugin.configs[ 'flat/recommended' ],
+		// wpPlugin's `test-unit` config targets Vitest since v27, and this
+		// suite runs on Jest. Matching all of tests/jest also gives shared
+		// helpers like mw-mock.js the Jest globals.
+		files: [ 'tests/jest/**/*.js' ],
+	},
 
 	{
 		languageOptions: {

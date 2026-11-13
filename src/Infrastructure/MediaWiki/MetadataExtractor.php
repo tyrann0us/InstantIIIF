@@ -8,6 +8,7 @@ use MediaWiki\Context\IContextSource;
 use MediaWiki\Extension\InstantIIIF\Domain\LicenseClassifier;
 use MediaWiki\Extension\InstantIIIF\Domain\LocalizedText;
 use MediaWiki\Extension\InstantIIIF\Domain\Manifest;
+use MediaWiki\Language\Language;
 
 /**
  * Builds the extmetadata field map MMV (and the inspector Special page)
@@ -20,7 +21,7 @@ use MediaWiki\Extension\InstantIIIF\Domain\Manifest;
  */
 class MetadataExtractor
 {
-    public function __construct(private \Language $contentLanguage)
+    public function __construct(private Language $contentLanguage)
     {
     }
 

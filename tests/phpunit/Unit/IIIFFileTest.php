@@ -589,6 +589,15 @@ class IIIFFileTest extends TestCase
         self::assertInstanceOf(\MediaWiki\Extension\InstantIIIF\Infrastructure\MediaWiki\IIIFHandler::class, $handler);
     }
 
+    public function testHandlerReceivesPassedLanguage(): void
+    {
+        $manifest = $this->loadFixture('manifest-fotothek-v2.json');
+        $file = $this->makeFile($manifest);
+
+        self::assertSame('de', $file->getHandler(new \Language('de'))->getLanguage()->getCode());
+        self::assertSame('fr', $file->getHandler(new \Language('fr'))->getLanguage()->getCode());
+    }
+
     public function testGetResolvedManifestExposesData(): void
     {
         $manifest = $this->loadFixture('manifest-fotothek-v2.json');

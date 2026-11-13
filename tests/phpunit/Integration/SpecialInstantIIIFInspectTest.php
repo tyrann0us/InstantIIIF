@@ -31,6 +31,15 @@ class SpecialInstantIIIFInspectTest extends MediaWikiIntegrationTestCase
         );
     }
 
+    public function testRequiresInspectRight(): void
+    {
+        $page = $this->getServiceContainer()->getSpecialPageFactory()->getPage('InstantIIIFInspect');
+        self::assertInstanceOf(SpecialInstantIIIFInspect::class, $page);
+
+        self::assertSame('instantiiif-inspect', $page->getRestriction());
+        self::assertTrue($page->isRestricted());
+    }
+
     public function testGetGroupNameIsWiki(): void
     {
         $factory = $this->getServiceContainer()->getSpecialPageFactory();
